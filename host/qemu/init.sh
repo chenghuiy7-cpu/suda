@@ -86,7 +86,9 @@ sudo chroot $MOUNT_DIR /bin/bash -c "apt-get update && \
     openssh-server \
     pciutils \
     man-db \
-    curl "
+    curl \
+    meson \
+    ntpdate"
 
 
 # 创建网络自动配置脚本

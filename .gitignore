@@ -35,3 +35,4 @@ host/api/liburing/config-host.mak
 host/api/liburing/src/liburing-ffi.so.*
 
 host/api/liburing/src/include/liburing/compat.h
+host/api/libnvme/.build/*

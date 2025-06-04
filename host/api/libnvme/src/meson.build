@@ -31,13 +31,14 @@ else
     sources += 'nvme/no-json.c'
 endif
 
+liburing_path = join_paths(meson.current_source_dir(), '../../liburing/src')
 liburing_dep = meson.get_compiler('c').find_library('uring',
-    dirs : join_paths(meson.current_source_dir(), '../../liburing/src/liburing.a'),
+    dirs : liburing_path,
     static : true
 )
 
 if not liburing_dep.found()
-    error('liburing not found in ../../liburing/src/liburing.a directory')
+    error('liburing not found in ' + liburing_path + ' directory')
 endif
 
 deps = [

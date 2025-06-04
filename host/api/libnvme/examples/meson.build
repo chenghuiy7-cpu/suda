@@ -70,30 +70,11 @@ executable(
     include_directories: [incdir, internal_incdir]
 )
 
-ext2fs_lib = meson.get_compiler('c').find_library('ext2fs',dirs:'/lib/x86_64-linux-gnu')
-if not ext2fs_lib.found()
-    error('no ext2fs fountXD. Please apt install libext2fs-dev')
-endif
 
 
-liburing = meson.get_compiler('c').find_library('uring',
-    dirs : join_paths(meson.current_source_dir(), '../../liburing/src/liburing.so.2.9')
-)
-
-if not liburing.found()
-    error('liburing not found in ../../liburing/src/liburing.so.2.9 directory')
-endif
-
-executable(
-    'vscode-blowfish-en-nok',
-    ['vscode-blowfish-en-nok.cpp'],
-    dependencies: [libnvme_dep, ext2fs_lib],
-    link_args: ['-pthread'],
-    include_directories: [incdir, internal_incdir]
-)
 
 liburing_dep = meson.get_compiler('c').find_library('uring',
-    dirs : join_paths(meson.current_source_dir(), '../../liburing/src/liburing.a'),
+    dirs : join_paths(meson.current_source_dir(), '../../liburing/src/'),
     static : true
 )
 
