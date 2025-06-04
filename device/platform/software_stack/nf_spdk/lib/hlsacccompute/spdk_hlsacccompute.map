@@ -1,0 +1,10 @@
+{
+	global:
+
+	# Public functions in hlsacccompute.h
+    spdk_hlsacccompute_dev_init;
+	spdk_hlsacccompute_qpair_create;
+
+	# Everything else
+	local: *;
+};

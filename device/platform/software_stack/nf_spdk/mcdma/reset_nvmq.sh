@@ -1,0 +1,2 @@
+ps aux | grep nvmf | grep -v grep | awk '{print $2}' | xargs kill -9
+./run_nvmq.sh

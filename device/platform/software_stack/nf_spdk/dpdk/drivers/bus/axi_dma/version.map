@@ -1,0 +1,8 @@
+DPDK_22 {
+	global:
+
+	rte_axi_dma_get_device;
+	rte_axi_dma_create_tx_channel;
+
+	local: *;
+};

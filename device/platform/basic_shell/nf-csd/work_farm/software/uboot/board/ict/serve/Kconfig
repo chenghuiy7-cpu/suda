@@ -1,0 +1,42 @@
+if TARGET_ICT_SERVE
+
+config SYS_BOARD
+	default "serve"
+
+config SYS_VENDOR
+	default "ict"
+
+config SYS_CPU
+	default "generic"
+
+config SYS_SOC
+	default "serve"
+
+config SYS_CONFIG_NAME
+	string "Board configuration name"
+	default "ict-serve-r"
+
+config BOARD_SPECIFIC_OPTIONS # dummy
+	def_bool y
+	select GENERIC_RISCV
+	select CMD_DHCP
+	select CMD_EXT2
+	select CMD_EXT4
+	select CMD_FAT
+	select CMD_FS_GENERIC
+	select CMD_NET
+	select CMD_PING
+	select DOS_PARTITION
+	select EFI_PARTITION
+	select IP_DYN
+	select ISO_PARTITION
+	select XILINX_UARTLITE
+	select XILINX_AXIEMAC 
+	select MII
+	select NET_RANDOM_ETHADDR
+	select PHYLIB
+	select PHY_FIXED
+	select PHY_TI
+	select SMP
+
+endif

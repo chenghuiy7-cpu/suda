@@ -1,0 +1,125 @@
+stages:
+  - pcie_ep_gen
+  - fpga_shell_syn
+  - fpga_shell_gen
+  - boot_bin_gen
+
+variables:
+    GIT_DEPTH: "2"
+    GIT_STRATEGY: clone
+    GIT_SUBMODULE_STRATEGY: normal
+    GIT_SUBMODULE_FORCE_HTTPS: "true"
+
+    # Board name of target SHELL design
+    TARGET_BOARD: "fidus"
+
+    FPGA_PRJ: "shell:virt_one_drive"
+
+workflow:
+  name: '$CI_COMMIT_TITLE ($BUILD_NAME)'
+  rules:
+    - if: '$CI_COMMIT_TITLE =~ /^(docs|Docs|DOCS)/'
+      when: never
+    - when: always
+
+default:
+  image: gitlab.agileserve.org.cn:15050/zelin/vivado-ci-tools/ucas-cod-2022:v0.6
+  tags:
+    - docker_with_term
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - unknown_failure
+
+#=============================================================
+pcie_ep_gen:
+  stage: pcie_ep_gen
+  script:
+    - mkdir -p work_farm/target/
+    - cd work_farm/target
+    - ln -s ../../nf-csd nf-csd
+    - cd ../ && ln -s ../shell shell
+    - echo "CI job token is $CI_JOB_TOKEN"
+    - make PRJ=$FPGA_PRJ:pcie_ep FPGA_BD=$TARGET_BOARD FPGA_ACT=dcp_gen vivado_prj
+    - make PRJ=$FPGA_PRJ:accframework FPGA_BD=$TARGET_BOARD FPGA_ACT=dcp_gen vivado_prj
+  timeout: 1 hours
+  artifacts:
+    name: "$CI_JOB_STAGE-$TARGET_BOARD-$BUILD_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - work_farm/fpga/vivado_out/**/*.rpt
+      - work_farm/fpga/vivado_out/**/pcie_ep.dcp
+      - work_farm/fpga/vivado_out/**/accframework.dcp
+
+hdl_syntax_check:
+  stage: pcie_ep_gen
+  script:
+    - cd shell/virt_one_drive/fpga/sources/hdl
+    - ls *.v | xargs iverilog
+  timeout: 1 hours
+
+#=============================================================
+fpga_shell_syn:
+  stage: fpga_shell_syn
+  script:
+    - mkdir -p work_farm/target/
+    - cd work_farm/target
+    - ln -s ../../nf-csd nf-csd
+    - cd ../ && ln -s ../shell shell
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD FPGA_ACT=prj_gen vivado_prj
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD FPGA_ACT=run_syn vivado_prj
+  dependencies:
+    - pcie_ep_gen
+  timeout: 3 hours
+  artifacts:
+    name: "$CI_JOB_STAGE-$TARGET_BOARD-$BUILD_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - work_farm/fpga/vivado_prj/*
+      - work_farm/fpga/vivado_out/**/synth.dcp
+      - work_farm/fpga/vivado_out/**/*.rpt
+      - work_farm/hw_plat/*
+
+#=============================================================
+fpga_shell_gen:
+  stage: fpga_shell_gen
+  script:
+    - mkdir -p work_farm/target/
+    - cd work_farm/target
+    - ln -s ../../nf-csd nf-csd
+    - cd ../ && ln -s ../shell shell
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD FPGA_ACT=bit_gen vivado_prj
+  dependencies:
+    - fpga_shell_syn
+  timeout: 10 hours
+  artifacts:
+    name: "$CI_JOB_STAGE-$TARGET_BOARD-$BUILD_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - work_farm/fpga/vivado_out/**/*.dcp
+      - work_farm/fpga/vivado_out/**/post_route*.rpt
+      - work_farm/hw_plat/*
+
+#=============================================================
+boot_bin_gen:
+  stage: boot_bin_gen
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - mkdir -p work_farm/target/
+    - cd work_farm/target
+    - ln -s ../../nf-csd nf-csd
+    - cd ../ && ln -s ../shell shell
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD fsbl
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD pmufw
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD dt
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD atf
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD uboot
+    - make PRJ=$FPGA_PRJ FPGA_BD=$TARGET_BOARD WITH_BIT=y bootbin
+  dependencies:
+    - fpga_shell_syn
+    - fpga_shell_gen
+  timeout: 2 hours
+  artifacts:
+    name: "$CI_JOB_STAGE-$TARGET_BOARD-$BUILD_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - work_farm/shell/virt_one_drive/ready_for_download/*

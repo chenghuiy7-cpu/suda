@@ -1,0 +1,4 @@
+[submodule "host/qemu/qemu"]
+	path = host/qemu/qemu
+	url = https://github.com/qemu/qemu.git
+	shallow = true

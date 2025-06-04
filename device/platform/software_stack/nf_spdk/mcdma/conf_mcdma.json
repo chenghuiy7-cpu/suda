@@ -1,0 +1,67 @@
+{
+    "subsystems": [
+        {
+            "subsystem": "bdev",
+            "config": [
+                {
+                    "method": "bdev_nvme_attach_controller",
+                    "params": {
+                        "name": "Nvme0",
+                        "trtype": "pcie",
+                        "traddr": "0000:01:00.0"
+                    }
+                },
+                {
+                    "method": "bdev_nvme_attach_controller",
+                    "params": {
+                        "name": "Nvme1",
+                        "trtype": "pcie",
+                        "traddr": "0000:02:00.0"
+                    }
+                }
+            ]
+        },
+        {
+            "subsystem": "nvmf",
+            "config": [
+                {
+                    "method": "nvmf_create_transport",
+                    "params": {
+                      "trtype": "QDMA",
+                      "max_queue_depth": 128
+                    }
+                },
+                {
+                    "method": "nvmf_create_subsystem",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:uuid:609e57d3-c438-476b-9a90-2af8f9c86585",
+                      "allow_any_host": true,
+                      "serial_number": "ictaccelnvmq",
+                      "model_number": "ICT NVMq"
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_ns",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:uuid:609e57d3-c438-476b-9a90-2af8f9c86585",
+                      "namespace": {
+                        "nsid": 1,
+                        "bdev_name": "Nvme1n1"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_listener",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:uuid:609e57d3-c438-476b-9a90-2af8f9c86585",
+                      "listen_address": {
+                        "trtype": "QDMA",
+                        "adrfam": "QBDF",
+                        "traddr": "qdma01000"
+                      }
+                    }
+                }
+            ]
+        }
+    ]
+}

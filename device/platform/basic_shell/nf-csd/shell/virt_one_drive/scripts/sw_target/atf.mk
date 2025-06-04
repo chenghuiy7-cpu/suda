@@ -1,0 +1,35 @@
+ATF_SRC := software/atf
+ATF_LOC := $(abspath ./software/arm-atf)
+
+# TODO: set your ATF compilation flags and targets
+ATF_PLAT := zynqmp
+ATF_CROSS_COMPILE_FLAGS := PLAT=$(ATF_PLAT) \
+	ARCH=aarch64 \
+	RESET_TO_BL31=1 \
+	CROSS_COMPILE=$(LINUX_GCC_PREFIX) \
+	LOG_LEVEL=20 \
+	BUILD_BASE=$(ATF_LOC)
+ATF_TARGET := bl31
+
+ifneq (${TOS},)
+ATF_CROSS_COMPILE_FLAGS += SPD=$(TOS)d
+endif
+
+ATF_ELF := $(ATF_LOC)/$(ATF_PLAT)/release/bl31/bl31.elf
+BL31_BIN := $(ATF_LOC)/bl31.elf
+
+#==================================
+# ARM Trusted Firmware compilation 
+#==================================
+atf: $(obj-tos-y) FORCE
+	$(EXPORT_CC_PATH) && $(MAKE) -C $(ATF_SRC) \
+		$(ATF_CROSS_COMPILE_FLAGS) $(ATF_TARGET)
+	@cp $(ATF_ELF) $(BL31_BIN)
+
+atf_clean: $(obj-tos-clean-y)
+	$(MAKE) -C $(ATF_SRC) BUILD_BASE=$(ATF_LOC) clean
+	@rm -f $(BL31_BIN)
+
+atf_distclean: $(obj-tos-dist-y)
+	@rm -rf $(ATF_LOC)
+

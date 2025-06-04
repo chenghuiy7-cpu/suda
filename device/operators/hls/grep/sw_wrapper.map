@@ -1,0 +1,10 @@
+ {
+    global:
+        data_in_write;
+        data_out_read;
+        context_write;
+        data_last;
+        run;
+        get_data_size;
+    local: *;
+};

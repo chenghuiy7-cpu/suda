@@ -1,0 +1,156 @@
+{
+    "subsystems": [
+        {
+            "subsystem": "bdev",
+            "config": [
+                {
+                  "method": "bdev_nvme_attach_controller",
+                  "params": {
+                      "name": "Nvme1",
+                      "trtype": "pcie",
+                      "traddr": "0000:02:00.0"
+                  }
+                },
+                {
+                  "method": "bdev_split_create",
+                  "params": {
+                    "base_bdev": "Nvme1n1",
+                    "split_count": 4
+                  }
+                }
+            ]
+        },
+        {
+            "subsystem": "nvmf",
+            "config": [
+                {
+                    "method": "nvmf_create_transport",
+                    "params": {
+                      "trtype": "QDMA",
+                      "max_queue_depth": 128
+                    }
+                },
+                {
+                    "method": "nvmf_create_subsystem",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq0",
+                      "allow_any_host": true,
+                      "serial_number": "ictaccelnvmq0",
+                      "model_number": "ICT NVMq multi-VM"
+                    }
+                },
+                {
+                    "method": "nvmf_create_subsystem",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq1",
+                      "allow_any_host": true,
+                      "serial_number": "ictaccelnvmq1",
+                      "model_number": "ICT NVMq multi-VM"
+                    }
+                },
+                {
+                    "method": "nvmf_create_subsystem",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq2",
+                      "allow_any_host": true,
+                      "serial_number": "ictaccelnvmq2",
+                      "model_number": "ICT NVMq multi-VM"
+                    }
+                },
+                {
+                    "method": "nvmf_create_subsystem",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq3",
+                      "allow_any_host": true,
+                      "serial_number": "ictaccelnvmq3",
+                      "model_number": "ICT NVMq multi-VM"
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_ns",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq0",
+                      "namespace": {
+                        "nsid": 1,
+                        "bdev_name": "Nvme1n1p0"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_ns",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq1",
+                      "namespace": {
+                        "nsid": 1,
+                        "bdev_name": "Nvme1n1p1"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_ns",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq2",
+                      "namespace": {
+                        "nsid": 1,
+                        "bdev_name": "Nvme1n1p2"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_ns",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq3",
+                      "namespace": {
+                        "nsid": 1,
+                        "bdev_name": "Nvme1n1p3"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_listener",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq0",
+                      "listen_address": {
+                        "trtype": "QDMA",
+                        "adrfam": "QBDF",
+                        "traddr": "qdma01000"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_listener",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq1",
+                      "listen_address": {
+                        "trtype": "QDMA",
+                        "adrfam": "QBDF",
+                        "traddr": "qdma01000"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_listener",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq2",
+                      "listen_address": {
+                        "trtype": "QDMA",
+                        "adrfam": "QBDF",
+                        "traddr": "qdma01000"
+                      }
+                    }
+                },
+                {
+                    "method": "nvmf_subsystem_add_listener",
+                    "params": {
+                      "nqn": "nqn.2014-08.org.nvmexpress:nvmq3",
+                      "listen_address": {
+                        "trtype": "QDMA",
+                        "adrfam": "QBDF",
+                        "traddr": "qdma01000"
+                      }
+                    }
+                }
+            ]
+        }
+    ]
+}

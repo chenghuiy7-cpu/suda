@@ -1,0 +1,8 @@
+{
+	global:
+
+	# Public functions in env.h
+	spdk_env_get_current_core;
+
+	local: *;
+};
