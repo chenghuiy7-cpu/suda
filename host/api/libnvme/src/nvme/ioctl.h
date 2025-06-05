@@ -4333,7 +4333,7 @@ static inline int nvme_operate_memory_range_set(
 		cmd.addr = (__u64)(uintptr_t)mmrange_descri;
 		cmd.data_len = (numr) * sizeof(union memory_range_set_decriptor);
 	}else{
-		cmd.addr = NULL;
+		cmd.addr = (__u64)NULL;
 		cmd.data_len = 0;
 	}
 	return nvme_submit_admin_passthru(fd, &cmd, rsid);
@@ -4438,7 +4438,7 @@ static inline int nvme_program_mgmt(
 	cmd.opcode = nvme_admin_prog_mgmt;
 	cmd.cdw10 = sel << 16 | pind;
 	cmd.data_len = 0;
-	cmd.addr = NULL;
+	cmd.addr = (__u64)NULL;
 	cmd.metadata_len = 0;
 	cmd.flags = 0;
 	return nvme_submit_admin_passthru(fd,&cmd,NULL);

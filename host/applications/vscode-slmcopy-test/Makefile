@@ -47,8 +47,8 @@ OBJS = $(CXX_SRCS:.cpp=.o)
 
 # 链接库
 LIBS = $(ROOT_DIR)/api/libnvme/.build/src/libnvme.a
-LIBS += $(ROOT_DIR)/api/liburing/liburing.a
-LIBS += -lstdc++ -lm -lpthread
+LIBS += -lssl -lcrypto -lstdc++ -lm -lpthread 
+LIBS += $(ROOT_DIR)/api/liburing/src/liburing.a
 
 .PHONY: all clean
 

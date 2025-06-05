@@ -1,7 +1,7 @@
 
 
 #include "snia_util.h"
-
+#include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -210,7 +210,7 @@ CS_STATUS csQueryCSFList(const char *Path, int *Length, int *Count, CSFUniqueId 
         }
         unsigned long log_page_data[4096];
         memset(log_page_data, 0, 4096);
-        union nvme_prog_desc_list *desclist = log_page_data;
+        union nvme_prog_desc_list *desclist = (union nvme_prog_desc_list *)log_page_data;
         ret = nvme_get_nsid_log(ret, false, 0x82, 2, 4096, (void *)log_page_data);
         if (ret != 0 || desclist[0].header.numd != 48)
         {
@@ -445,9 +445,10 @@ void vscode_async_thread(void* ctx){
             return;
         }
         struct io_uring_cqe cqe;
+        struct io_uring_cqe* cqe_ptr = &cqe;
         for(int i=0;i<data.cmd_num;i++)
         {
-            int ret = io_uring_wait_cqe(&desc->ring,&cqe);
+            int ret = io_uring_wait_cqe(desc->ring,(struct io_uring_cqe **)&cqe_ptr);
             if(ret < 0){
                 fprintf(stderr,"io_uring_wait_cqe:%s\n",strerror(-ret));
                 return;
@@ -548,7 +549,7 @@ CS_STATUS csOpenCSx(char *DevName, void *DevContext,
             free(dev_handler_register[key].ring);
             return CS_INVALID_OPTION;
         }
-        ret = pthread_create(&(dev_handler_register[key].async_thread),NULL,vscode_async_thread,&(dev_handler_register[key]));
+        ret = pthread_create(&(dev_handler_register[key].async_thread),NULL,(void *)vscode_async_thread,&(dev_handler_register[key]));
         if(ret!=0){
             fprintf(stderr,"Failed To allocate async pthread\n");
             close(dev_handler_register[key].pipe_fd[0]);
@@ -662,7 +663,7 @@ CS_STATUS csAllocMem(CS_DEV_HANDLE DevHandle, int Bytes, const CsMemFlags *MemFl
     }
 
     PHYSICAL_ADDR phys_addr = NULL;
-    int ret = nvme_create_slm_ns(dev_handler_register[DevHandle].admin_dev_handle, &phys_addr, Bytes);
+    int ret = nvme_create_slm_ns(dev_handler_register[DevHandle].admin_dev_handle, (unsigned int*)(&phys_addr), Bytes);
     // The device will return a physical address
     if (ret != CS_SUCCESS)
     {
@@ -671,7 +672,7 @@ CS_STATUS csAllocMem(CS_DEV_HANDLE DevHandle, int Bytes, const CsMemFlags *MemFl
 
     CS_MEM_HANDLE key = atomic_fetch_add(&mem_handler_allocator, 1);
     mem_handler_register[key].cs_dev_handle = DevHandle;
-    mem_handler_register[key].mem_handle = phys_addr;
+    mem_handler_register[key].mem_handle = (CS_MEM_HANDLE)phys_addr;
     *MemHandle = (CS_MEM_HANDLE)key;
 
     if (VAddressPtr)
@@ -713,7 +714,7 @@ CS_STATUS csQueueStorageRequest(const CsStorageRequest *Req, void *Context,
         return CS_INVALID_OPTION;
     }
     void *temp_data[4096] = {0};
-    union nvme_source_range *sr = temp_data;
+    union nvme_source_range *sr = (union nvme_source_range *)temp_data;
     int bdev_id, m_id;
     int ret = 0;
     int fid = 0;
@@ -752,7 +753,7 @@ CS_STATUS csQueueStorageRequest(const CsStorageRequest *Req, void *Context,
             copy_args.nr = 1;
             copy_args.result = NULL;
             copy_args.nsid = 1; // NVM Namespace change it in the future TODO:)
-            copy_args.copy = temp_data;
+            copy_args.copy = (struct nvme_copy_range *)temp_data;
             copy_args.format = 4;
             unsigned long long cur_off = 0;
             for (int i = 0; i < Req->u.BlockIo.NumRanges; i++)
@@ -821,7 +822,7 @@ CS_STATUS csQueueStorageRequest(const CsStorageRequest *Req, void *Context,
         //TODO Check DEV PATH EQUAL TO FILE DEV PATH
         void* fiemapraw[4096];
         struct fiemap*fiemap;
-        fiemap = fiemapraw;
+        fiemap = (struct fiemap*)fiemapraw;
         memset(fiemap,0,sizeof(fiemap)+sizeof(struct fiemap_extent)*FIEMAP_MAX_EXTENTS);
         fiemap->fm_start = Req->u.FileIo.Offset;
         fiemap->fm_length = Req->u.FileIo.Bytes;
@@ -861,7 +862,7 @@ CS_STATUS csQueueStorageRequest(const CsStorageRequest *Req, void *Context,
             copy_args.nr = 1;
             copy_args.result = NULL;
             copy_args.nsid = 1; // NVM Namespace change it in the future TODO:)
-            copy_args.copy = temp_data;
+            copy_args.copy = (struct nvme_copy_range *)temp_data;
             copy_args.format = 4;
             unsigned long long cur_off = 0;
             for (int i = 0; i < fiemap->fm_mapped_extents; i++)
@@ -948,7 +949,7 @@ CS_STATUS csQueueComputeRequest(CsComputeRequest *Req, void *Context,
         //Create Memory Range Set
         union memory_range_set_decriptor* mdes = (union memory_range_set_decriptor*)Req->Args[1].u.Value64;
         
-        int ret = nvme_create_memory_range_set(bdev_id,2,CompValue,Req->Args[2].u.Value64,mdes);
+        int ret = nvme_create_memory_range_set(bdev_id,2,(unsigned int*)CompValue,Req->Args[2].u.Value64,mdes);
         if(ret != 0){
             printf("Error Failed to create memory range set!\n");
             return CS_ERROR_IN_EXECUTION;
@@ -961,7 +962,7 @@ CS_STATUS csQueueComputeRequest(CsComputeRequest *Req, void *Context,
         u64 rsid = Req->Args[3].u.Value64;
         u64 priority = Req->Args[4].u.Value64;
         if(CallbackFn==NULL){
-            int ret = nvme_execute_hlsacc_program(bdev_id,2,rsid,Req->FunctionId,context,context_num,0,priority,CompValue);
+            int ret = nvme_execute_hlsacc_program(bdev_id,2,rsid,Req->FunctionId,context,context_num,0,priority,(unsigned int*)CompValue);
             if(ret != 0){
                 printf("Error Failed to execute program\n");
                 return CS_ERROR_IN_EXECUTION;

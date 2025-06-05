@@ -40,16 +40,18 @@ APP = vscode-blowfish-offload
 CXX_SRCS := vscode-blowfish-offload.cpp
 
 # 添加包含路径
-CXXFLAGS += -I$(ROOT_DIR)/api/libnvme/src
+
 CXXFLAGS += -I$(ROOT_DIR)/api/liburing/src/include
+CXXFLAGS += -I$(ROOT_DIR)/api/libnvme/src
 
 # 生成目标文件列表
 OBJS = $(CXX_SRCS:.cpp=.o)
 
 # 链接库
 LIBS = $(ROOT_DIR)/api/libnvme/.build/src/libnvme.a
-LIBS += $(ROOT_DIR)/api/liburing/liburing.a
-LIBS += -lstdc++ -lm -lpthread
+LIBS += -lssl -lcrypto -lstdc++ -lm -lpthread 
+LIBS += $(ROOT_DIR)/api/liburing/src/liburing.a
+
 
 .PHONY: all clean
 

@@ -40,35 +40,7 @@ executable(
     include_directories: [incdir, internal_incdir]
 )
 
-executable(
-    'vscode-copy-test',
-    ['vscode-copy-test.c'],
-    dependencies: libnvme_dep,
-    include_directories: [incdir, internal_incdir]
-)
 
-
-
-executable(
-    'vscode-memcopy',
-    ['vscode-memcopy.c'],
-    dependencies: libnvme_dep,
-    include_directories: [incdir, internal_incdir]
-)
-
-executable(
-    'vscode-compute',
-    ['vscode-compute.c'],
-    dependencies: libnvme_dep,
-    include_directories: [incdir, internal_incdir]
-)
-
-executable(
-    'vscode-compute-chain',
-    ['vscode-compute-chain.c'],
-    dependencies: libnvme_dep,
-    include_directories: [incdir, internal_incdir]
-)
 
 
 

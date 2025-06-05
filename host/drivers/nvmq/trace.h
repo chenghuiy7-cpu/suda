@@ -167,9 +167,10 @@ TRACE_EVENT(nvmq_sq,
 #endif /* _TRACE_NVME_H */
 
 #undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH /home/qemu/nvme-qdma
+#define TRACE_INCLUDE_PATH /mnt/suda/host/drivers/nvmq
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE trace
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
+

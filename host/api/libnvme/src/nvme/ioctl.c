@@ -2089,7 +2089,7 @@ struct nvme_kernel_vp nvme_kernel_create_host_mem_vp(
 ){
 	struct nvme_kernel_vp vp;
 	vp.type = MEMORY;
-	vp.addr[0] = mem_ptr;
+	vp.addr[0] = (__u64)mem_ptr;
 	vp.size = size;
 	return vp;
 }
@@ -2101,7 +2101,7 @@ struct nvme_kernel_vp nvme_kernel_create_dev_mem_vp(
 ){
 	struct nvme_kernel_vp vp;
 	vp.type = MEMORY;
-	vp.addr[0] = mem_ptr;
+	vp.addr[0] = (__u64)mem_ptr;
 	vp.addr[1] = offset;
 	vp.size = size;
 	return vp;
@@ -2620,7 +2620,7 @@ int nvme_delete_slm_ns(
 		.timeout_ms = args.timeout,
 	};
 	cmd.data_len = 0;
-	cmd.addr = NULL;
+	cmd.addr = (__u64)NULL;
 	return nvme_submit_admin_passthru(args.fd, &cmd, (args.result));
 }
 

@@ -60,3 +60,17 @@ host/api/liburing/config-host.mak
 host/api/liburing/src/liburing-ffi.so.*
 host/api/liburing/src/include/liburing/compat.h
 host/api/libnvme/.build/
+host/drivers/nvmq/nvmq.mod.c
+host/drivers/nvmq/Module.symvers
+host/drivers/nvmq/modules.order
+host/drivers/qdma/driver/src/Module.symvers
+host/drivers/qdma/driver/src/qdma-pf.ko
+host/drivers/qdma/driver/src/qdma-pf.mod.c
+host/drivers/qdma/driver/src/modules.order
+host/drivers/qdma/driver/src/qdma-pf.mod
+host/drivers/nvmq/nvmq.mod
+host/applications/vscode-blowfish-offload/vscode-blowfish-offload
+host/applications/vscode-grep-sw/vscode-grep-sw
+host/applications/vscode-slmcopy-test/vscode-slmcopy-test
+host/drivers/nvmq/nvmq.ko
+

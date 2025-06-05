@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <libnvme.h>
+#include <unistd.h>
 
 #define LBA_SIZE 4096
 
@@ -112,7 +113,7 @@ int main()
     
     copy_args.copy = malloc(4096);
     copy_args.format = 4;
-    struct  nvme_mc_source_range* copy = copy_args.copy;
+    struct  nvme_mc_source_range* copy = (struct  nvme_mc_source_range*)copy_args.copy;
     /*
     uint32_t snsid;
 	uint32_t reserved0;
@@ -203,7 +204,7 @@ int main()
     }
     */
     
-    struct hlsacccompute_program* pp = software_data;
+    struct hlsacccompute_program* pp = (struct hlsacccompute_program*)software_data;
     printf("OPS SIZE DUMP%d\n",pp->apply_ops_size);
     for(int i=0;i<8;i++){
         for(int j=0;j<4096;j++){
@@ -239,7 +240,7 @@ int main()
     memcpy(context_data,context,sizeof(struct AccContext));
     memcpy(context_data+4096,&(context[1]),sizeof(struct AccContext));
     memcpy(context_data+4096*2,&(context[2]),sizeof(struct AccContext));
-    ret = nvme_execute_hlsacc_program(fd1,2,rsid,1,context[0].static_data,1,0,0,&exec_result);
+    ret = nvme_execute_hlsacc_program(fd1,2,rsid,1,(struct AccContext *)(context[0].static_data),1,0,0,&exec_result);
     if(ret!=0){
         printf("ERR Failed to Execute program!\n");
         return -1;
@@ -256,7 +257,7 @@ int main()
         printf("ERR Failed to Get Log Pages!\n");
         return -1;
     }
-    union nvme_prog_desc_list* desclist = log_page_data;
+    union nvme_prog_desc_list* desclist = (union nvme_prog_desc_list*)log_page_data;
     printf("LIST NUMBER:%d\n",desclist[0].header.numd);
     for(int i=0;i<16;i++){
         if(desclist[i+1].data.peocc!=0){
