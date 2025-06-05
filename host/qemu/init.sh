@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+echo "编译内核"
+bash -c "cd ../kernel/source && git apply ../0001-Add-QDMA-header-files.patch && git apply ../0002-Export-bio_map_user_iov.patch && make -j"
+
+
 # 创建一个5GB的原始虚拟磁盘
 DISK_IMG="debian_qdma_dev.img"
 DISK_SIZE="5G"
