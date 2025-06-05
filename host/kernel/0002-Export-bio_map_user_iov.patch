@@ -1,0 +1,24 @@
+From 6c16bb7cf4e24fd0383ea8cdfa7718799c17ce4e Mon Sep 17 00:00:00 2001
+From: FAN Jinhao <fandahao17@mail.ustc.edu.cn>
+Date: Tue, 6 Feb 2024 23:05:57 +0800
+Subject: [PATCH 2/2] Export bio_map_user_iov
+
+---
+ block/bio.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/block/bio.c b/block/bio.c
+index 08dbdc32ceaa..c4d6465fea45 100644
+--- a/block/bio.c
++++ b/block/bio.c
+@@ -1471,6 +1471,7 @@ struct bio *bio_map_user_iov(struct request_queue *q,
+ 	bio_put(bio);
+ 	return ERR_PTR(ret);
+ }
++EXPORT_SYMBOL(bio_map_user_iov);
+ 
+ /**
+  *	bio_unmap_user	-	unmap a bio
+-- 
+2.34.1
+

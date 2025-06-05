@@ -20,7 +20,7 @@ mkdir -p $MOUNT_DIR
 sudo mount -o loop $DISK_IMG $MOUNT_DIR
 
 echo "使用debootstrap安装基本Debian系统..."
-sudo debootstrap --arch=amd64 bullseye $MOUNT_DIR http://deb.debian.org/debian/
+sudo debootstrap --arch=amd64 bookworm $MOUNT_DIR http://deb.debian.org/debian/
 
 # 3. 配置系统
 echo "配置系统..."

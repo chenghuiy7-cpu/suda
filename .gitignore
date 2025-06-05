@@ -1,26 +1,51 @@
+# General build artifacts
+*.o
+*.a
+*.so*
+*.t
+*.d
+*.os
+*.ol
+*.cmd
+*.zip
+*.log
+*.bin
+build/
+
+# Specific large files
 host/qemu/debian_qdma_dev.img
-device/platform/basic_shell/nf-csd/work_farm/hw_plat/*
-host/qemu/debian_qdma_dev.img
+
+# QDMA drivers and apps
+host/drivers/qdma/apps/**/*.o
+host/drivers/qdma/apps/**/dma-*
+host/drivers/qdma/bin/
+host/drivers/qdma/driver/src/libqdma
+host/drivers/qdma/driver/src/.*.cmd
+
+# Device platform specific
+device/platform/basic_shell/nf-csd/work_farm/hw_plat/
 device/platform/software_stack/nf_spdk/.astylerc
-device/platform/basic_shell/nf-csd/shell/virt_one_drive/ready_for_download/*
-device/platform/basic_shell/nf-csd/work_farm/software/arm-atf/*
-device/platform/basic_shell/nf-csd/work_farm/software/arm-uboot/*
-device/platform/ips/hls/hlsacc_assscheduler/.vscode/*
-device/platform/ips/hls/hlsacc_assscheduler/.xil/*
-device/platform/ips/hls/hlsacc_assscheduler/solution1/*
-device/platform/basic_shell/nf-csd/shell/virt_one_drive/ready_for_download/fidus/BOOT.bin
-device/platform/ips/hls/hlsacc_assscheduler/vitis_hls.log
-device/platform/ips/hls/hlsacc_assscheduler/hlsacc_assscheduler/solution1/*
+device/platform/basic_shell/nf-csd/shell/virt_one_drive/ready_for_download/
+device/platform/basic_shell/nf-csd/work_farm/software/arm-atf/
+device/platform/basic_shell/nf-csd/work_farm/software/arm-uboot/
+
+# HLS and operators
+device/platform/ips/hls/hlsacc_assscheduler/.vscode/
+device/platform/ips/hls/hlsacc_assscheduler/.xil/
+device/platform/ips/hls/hlsacc_assscheduler/solution1/
+device/platform/ips/hls/hlsacc_assscheduler/hlsacc_assscheduler/solution1/
 device/platform/ips/hls/hlsacc_assscheduler/hlsacc_assscheduler_ip.zip
 device/platform/ips/hls/hlsacc_assscheduler/hlsacc_assscheduler/hls.app
-device/operators/hls/Blowfish/build/*
-device/operators/hls/*/*/solution1/*
+device/operators/hls/Blowfish/build/
+device/operators/hls/*/*/solution1/
 device/operators/hls/*/lib*
 device/operators/hls/*/*.zip
 device/operators/hls/*/vitis_hls.log
 device/operators/hls/*/*/hls.app
 device/operators/hls/*/*/dynamiclib_test
-host/api/liburing/examples/*
+
+# API libraries
+host/api/liburing/examples/
 host/api/liburing/src/*.a
 host/api/liburing/src/*.d
 host/api/liburing/test/*.t
@@ -34,17 +59,4 @@ host/api/liburing/config.log
 host/api/liburing/config-host.mak
 host/api/liburing/src/liburing-ffi.so.*
 host/api/liburing/src/include/liburing/compat.h
-host/api/libnvme/.build/*
-host/drivers/qdma/apps/*/*.o
-host/drivers/qdma/apps/dma-ctl/dma-ctl
-host/drivers/qdma/apps/dma-from-device/dma-from-device
-host/drivers/qdma/apps/dma-latency/dma-latency
-host/drivers/qdma/apps/dma-perf/dma-perf
-host/drivers/qdma/apps/dma-to-device/dma-to-device
-host/drivers/qdma/apps/dma-xfer/dma-xfer
-host/drivers/qdma/bin/*
-host/drivers/qdma/apps/dma-ctl/dma-ctl
-host/drivers/qdma/apps/dma-xfer/dma-xfer
-host/drivers/qdma/apps/dma-perf/dma-perf
-host/drivers/qdma/driver/src/libqdma
-host/drivers/qdma/driver/src/.nl.o.cmd
+host/api/libnvme/.build/
