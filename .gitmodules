@@ -8,3 +8,6 @@
 	url = git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable-rc.git
 	branch = linux-5.4.y
 	shallow = true
+[submodule "host/kernel/source"]
+	path = host/kernel/source
+	url = git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable-rc.git
