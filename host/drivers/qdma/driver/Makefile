@@ -13,7 +13,7 @@ SHELL = /bin/bash
 # - disable_st_c2h_completion=<0|1>	disable completion
 # - CROSS_COMPILE=,  gcc compiler prefix for architecture eg. aarch64-linux-gnu-
 
-KDIR := /home/qemu/linux
+KDIR := $(srcdir)/../../kernel
 
 # Define grep error output to NULL, since -s is not portable.
 grep = grep 2>/dev/null

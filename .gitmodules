@@ -1,4 +1,10 @@
 [submodule "host/qemu/qemu"]
 	path = host/qemu/qemu
-	url = https://github.com/qemu/qemu.git
+	url = https://gitlab.com/qemu-project/qemu.git
+	shallow = true
+
+[submodule "host/kernel"]
+	path = host/linux/source
+	url = git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable-rc.git
+	branch = linux-5.4.y
 	shallow = true
