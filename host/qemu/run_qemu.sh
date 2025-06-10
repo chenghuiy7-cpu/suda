@@ -84,7 +84,6 @@ echo $$ >> /sys/kernel/debug/tracing/set_event_pid
     -netdev user,id=net0,hostfwd=tcp::$SSHPORT-:22 \
     -device virtio-net-pci,netdev=net0 \
     -device pcie-root-port,id=pcie.1,addr=08.0,slot=1 \
-    -device vfio-pci,host=3b:00.0,bus=pcie.1 \
     -fsdev local,id=fs1,path="../../.",security_model=none \
     -device virtio-9p-pci,fsdev=fs1,mount_tag=suda \
     -monitor unix:./qmp-sock,server,nowait \

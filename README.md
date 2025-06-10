@@ -98,6 +98,192 @@ device #SoC-FPGA需要的依赖
 └── README.md
 ```
 
-## 部署方式
+## 环境准备
 
 如下为SUDA原型经过验证的实验环境：
+![exprsettings](docs/images/exprsettings.png)
+
+SUDA原型目前使用[Fidus Sidewinder-100板卡](https://fidus.com/sidewinder/)，该板卡允许接入四块SSD，但SUDA实现当前仅支持通过板卡的两个m.2插槽插入两块NVMe SSD。板卡通过PCIe插槽插入任意现代x86服务器主机。以下为经过验证的，可以使用SUDA的服务器的CPU型号：
+
+|CPU型号|主机内核版本|系统版本|SUDA支持|
+| ---- | ---- | ---- | ---- |
+|Intel Xeon Gold 6248R | 5.4.211 | Ubuntu 20.04  LTS | ✅️ |
+|Intel Xeon Gold 5218 | 5.4.211 | Ubuntu 20.04 LTS | ✅️ |
+
+
+在部署完硬件后，需要克隆SUDA项目并分别配置本文硬件和软件。
+```shell
+git clone git@10.30.19.43:nf-csd/suda.git
+git submodule update --init -recursive
+```
+### 设备环境配置
+需要将vivado安装在`/opt/Xilinx_2020.2/Vivado/2020.2/`下（符号链接也可以），在服务器运行如下命令，生成比特流：
+```shell
+cd device/basic_shell/nf-csd
+source build_bd.sh
+```
+如果中途失败，检查项目是否正常配置，如果项目未经修改依旧出错，重新设置文件夹：
+```shell
+cd device/basic_shell/nf-csd
+mkdir -p work_farm/target/
+cd work_farm/target 
+ln -s ../../nf-csd nf-csd   
+cd ../ && ln -s ../shell shell
+source build_bd.sh
+```
+生成的`BOOT.bin`和`zynqmp.dtb`在`nf-csd/shell/virt_one_drive/ready_for_download/fidus/`路径下，将其拷贝到板卡的引导分区。
+
+然后，使用NFS或者拷贝的方式，将软件栈提供给板卡：
+```shell
+scp -r device/platform/software_stack/ root@10.156.153.120:~/software_stack/
+```
+
+software_stack中config.json描述了FPGA当前已经部署算子的配置信息（不包括动态可重构的算子）,默认的比特流中包含了两个算子，一个是名字为add的伪算子，另一个是名为encrypt的Blowfish加解密算子。算子主要的参数为`operator_type_id`和`slot_id`，相同的`operator_type_id`负责实现相同的功能，`slot_id`是唯一的，标记部署在FPGA的不同算子。如果FPGA算子包含多个数据流接口(channel)，数据流会根据`slot_id`和`channel_id`路由。
+```
+{
+    "operators": [
+        {
+            "operator_type_id":0,
+            "operator_type_name": "add",
+            "operator_inport_num": 1,
+            "operator_outport_num": 1,
+            "esti_executed_times": 80,
+            "worse_executed_times": 240,
+            "bram_size": 2048,
+            "slot_id" : 0
+        },
+        {
+            "operator_type_id":1,
+            "operator_type_name": "encrypt",
+            "operator_inport_num": 1,
+            "operator_outport_num": 1,
+            "esti_executed_times": 20,
+            "worse_executed_times": 80,
+            "bram_size": 2048,
+            "slot_id" : 1
+        }
+    ]
+}
+```
+![SUDA默认FPGA算子链接结构](docs/images/DefaultOperatorPool.png)
+
+如果software_stack的路径不是`/root/software_stack/`，则需要修改代码中读取config.json的位置，打开`/root/software_stack/nf_spdk/lib/hlsacccompute/hlsacccompute.c`:
+
+```c
+void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
+{
+    FILE *f;
+    char *buffer = NULL;
+    long file_size;
+    struct spdk_json_val *values = NULL;
+    size_t values_cnt = 0;
+    struct spdk_json_val *operators_val;
+    int rc = -1;
+
+    // 读取配置文件
+    // 修改这一行的路径
+    f = fopen("/root/software_stack/nf_spdk/config.json", "r");
+    if (!f)
+    {
+        SPDK_ERRLOG("Failed to open config file\n");
+        return -1;
+    }
+...
+}
+```
+
+然后，编译软件栈：
+
+```shell
+./configure 
+make
+```
+在编译成功后，代表设备侧已经配置完成。
+
+### 主机环境准备
+
+当前的SUDA驱动**仅在内核5.4.211**验证，且需要使用补丁修改后的内核。因此建议在qemu虚拟机里操作。首先需要配置qemu虚拟机
+
+```shell
+cd host/qemu/qemu/
+mkdir build && cd build
+../configure --enable-kvm --enable-virtfs --target-list=x86_64-softmmu
+make
+```
+
+然后，需要配置内核和虚拟磁盘。以下命令会首先编译内核并将内核`bzImage`拷贝到`host/qemu/`目录下，随后创建虚拟磁盘`debian_qdma_dev.img`，创建文件系统并且安装全部所需依赖。
+```shell
+cd host/qemu/
+sudo bash init.sh
+```
+
+在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址：
+```shell
+./qemu/build/qemu-system-x86_64 \
+    -name "qdma-test-0",debug-threads=on \
+    -machine accel=kvm \
+    -cpu host \
+    -smp 4 \
+    -m 16G \
+    -device virtio-scsi-pci,id=scsi0 \
+    -kernel $KERNELIMGF \
+    -drive file=$OSIMGF,format=raw \
+    -append "root=/dev/sda rw console=ttyS0 nokaslr net.ifnames=0 biosdevname=0 cgroup_no_v1=all" \
+    -netdev user,id=net0,hostfwd=tcp::$SSHPORT-:22 \
+    -device virtio-net-pci,netdev=net0 \
+    -device pcie-root-port,id=pcie.1,addr=08.0,slot=1 \
+    -device vfio-pci,host=3b:00.0,bus=pcie.1 \ ------>修改PCIe地址
+    -fsdev local,id=fs1,path="../../.",security_model=none \
+    -device virtio-9p-pci,fsdev=fs1,mount_tag=suda \
+    -monitor unix:./qmp-sock,server,nowait \
+    -serial stdio 
+```
+
+接下来，修改`/host/qemu/bind_vfio.sh`，并且修改需要绑定vfio的PCIe地址，然后运行脚本`sudo source bind_vfio.sh`。绑定vfio之后，启动qemu虚拟机`sudo bash run_nvmq.sh -f`，启动之后，可以使用ssh通过`run_nvmq.sh`中的`SSHPORT`端口访问虚拟机，虚拟机将SUDA目录挂载到了`/mnt/suda/`，进入`/mnt/suda/host`编译虚拟机需要的内核模块、SUDA应用和依赖库：
+
+```shell
+cd /mnt/suda/host
+sudo make
+sudo poweroff
+```
+
+至此，已经环境准备工作已经全部完成。
+
+
+## SUDA使用
+
+在配置完成环境后，即可以使用SUDA了。首先从SoC-FPGA CSD上启动软件栈：
+```shell
+cd software_stack/nf_spdk
+bash setup.sh
+cd mcdma 
+bash run_nvmq.sh 
+```
+在等待SoC-FPGA CSD软件栈初始化完成后（一般等待5s），然后在主机端启动虚拟机：
+```shell
+sudo bash run_nvmq.sh -f
+ssh -p8999 developer@localhost
+#在虚拟机中
+cd /mnt/suda/host/drivers/nvmq
+sudo su
+bash init_nvmq.sh
+cat nvmq0_opts > /dev/nvmq-fabrics # fabric connect & identify
+fio tests/single_write.fio # 或者其他测试程序，例如计算
+```
+
+测试通过代表SoC-FPGA CSD已经可以被虚拟机访问，接下来，可以尝试运行一个简单的SUDA示例应用。
+```shell
+vscode-blowfish-offload 使用SUDA调用一个FPGA侧Blowfish加密算子，加密CSD中的数据
+vscode-grep-sw 使用SUDA调用一个SoC侧的Grep算子，从盘中抓去部分数据
+vscode-slmcopy-test 从SUDA CSD内存与主机内存中执行多次内存拷贝
+```
+以`vscode-blowfish-offload`为例，它使用基于`libnvme`和`liburing`的SUDA API，通过符合NVMe CS标准的NVMe命令直接传递给CSD的方式控制CSD计算。
+
+
+```shell
+#在虚拟机运行vscode-blowfish-offload
+cd /mnt/suda/host/applications/vscode-blowfish-offload
+./vscode-blowfish-offload
+```
+
+

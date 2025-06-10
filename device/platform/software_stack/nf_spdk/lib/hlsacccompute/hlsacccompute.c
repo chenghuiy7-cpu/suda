@@ -379,7 +379,7 @@ void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
     int rc = -1;
 
     // 读取配置文件
-    f = fopen("/root/lyh_nf_spdk/config.json", "r");
+    f = fopen("/root/software_stack/nf_spdk/config.json", "r");
     if (!f)
     {
         SPDK_ERRLOG("Failed to open config file\n");

@@ -2,8 +2,9 @@
 set -e
 
 echo "编译内核"
-bash -c "cd ../kernel/source && git apply ../0001-Add-QDMA-header-files.patch && git apply ../0002-Export-bio_map_user_iov.patch && make -j"
-
+bash -c "cd ../kernel/source && git apply ../0001-Add-QDMA-header-files.patch && git apply ../0002-Export-bio_map_user_iov.patch &&  cp ../config.txt .config && make -j"
+echo "拷贝内核到当前目录"
+bash -c "cp ../kernel/source/arch/x86_64/boot/bzImage ./bzImage"
 
 # 创建一个5GB的原始虚拟磁盘
 DISK_IMG="debian_qdma_dev.img"
@@ -38,6 +39,7 @@ cat << EOF | sudo tee $MOUNT_DIR/etc/fstab
 proc /proc proc defaults 0 0
 sysfs /sys sysfs defaults 0 0
 devpts /dev/pts devpts defaults 0 0
+suda /mnt/suda 9p trans=virtio,version=9p2000.L,_netdev,rw 0 0
 EOF
 
 # 设置root密码和创建用户
