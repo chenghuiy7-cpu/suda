@@ -1,5 +1,5 @@
 # SUDA (Computational **S**torage with **U**nified Programming Model **D**evice **A**rchetype)
-[SUDAlogo](docs/images/sudalogo.png)
+![SUDAlogo](docs/images/sudalogo.png)
 [中文](README.md) | [English](README_EN.md)
 
 ## What is SUDA?
@@ -30,7 +30,7 @@ Host applications can use SNIA API or NVMe API (not defined by NVMe standard, bu
 
 Operators are developed using high-level synthesis. Operator code, through the unified development toolchain, can be compiled into hardware operators (Verilog implementation) or software operators (dynamic link libraries).
 
-[sudaarch](docs/images/SUDAArch.png)
+![sudaarch](docs/images/SUDAArch.png)
 
 ## Project Structure
 
@@ -96,7 +96,7 @@ device #Dependencies needed by SoC-FPGA
 ## Environment Preparation
 
 The following is the verified experimental environment for the SUDA prototype:
-[exprsettings](docs/images/exprsettings.png)
+![exprsettings](docs/images/exprsettings.png)
 
 The SUDA prototype currently uses the [Fidus Sidewinder-100 card](https://fidus.com/sidewinder/), which allows connection to four SSDs, but the current SUDA implementation only supports inserting two NVMe SSDs through the card's two m.2 slots. The card is inserted into any modern x86 server host via a PCIe slot. The following are the CPU models of servers that have been verified to work with SUDA:
 
@@ -160,7 +160,7 @@ The config.json in software_stack describes the configuration information of ope
     ]
 }
 ```
-[SUDA Default FPGA Operator Connection Structure](docs/images/DefaultOperatorPool.png)
+![SUDA Default FPGA Operator Connection Structure](docs/images/DefaultOperatorPool.png)
 
 If the path of software_stack is not `/root/software_stack/`, you need to modify the location of reading config.json in the code. Open `/root/software_stack/nf_spdk/lib/hlsacccompute/hlsacccompute.c`:
 
@@ -273,7 +273,7 @@ vscode-slmcopy-test Performs multiple memory copies between SUDA CSD memory and 
 ```
 Taking `vscode-blowfish-offload` as an example, it uses SUDA API based on `libnvme` and `liburing` to control CSD computation by directly passing NVMe commands that comply with the NVMe CS standard to the CSD.
 The following figure shows the API sequence that vscode-blowfish-offload.cpp needs to call when performing synchronous blowfish computation:
-[SUDA Sequence](docs/images/BlowfishExecFlowEN.png)
+![SUDA Sequence](docs/images/BlowfishExecFlowEN.png)
 ```shell
 #Run vscode-blowfish-offload in the virtual machine
 cd /mnt/suda/host/applications/vscode-blowfish-offload
