@@ -278,8 +278,8 @@ vscode-grep-sw 使用SUDA调用一个SoC侧的Grep算子，从盘中抓去部分
 vscode-slmcopy-test 从SUDA CSD内存与主机内存中执行多次内存拷贝
 ```
 以`vscode-blowfish-offload`为例，它使用基于`libnvme`和`liburing`的SUDA API，通过符合NVMe CS标准的NVMe命令直接传递给CSD的方式控制CSD计算。
-
-
+下图为vscode-blowfish-offload.cpp执行同步blowfish计算时候需要调用的API顺序：
+![SUDA顺序](docs/images/BlowfishExecFlowCN.png)
 ```shell
 #在虚拟机运行vscode-blowfish-offload
 cd /mnt/suda/host/applications/vscode-blowfish-offload
