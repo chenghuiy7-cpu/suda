@@ -284,6 +284,17 @@ vscode-slmcopy-test 从SUDA CSD内存与主机内存中执行多次内存拷贝
 #在虚拟机运行vscode-blowfish-offload
 cd /mnt/suda/host/applications/vscode-blowfish-offload
 ./vscode-blowfish-offload
+
 ```
+
+## 用户指引
+
+[新增算子/计算程序/主机应用](docs/user-guides/新增算子和程序.md)
+[SUDA调试手段](docs/user-guides/调试技巧.md)
+
+## 架构解析
+
+## 应用编程接口
+
 
 
