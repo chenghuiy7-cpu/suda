@@ -279,3 +279,13 @@ The following figure shows the API sequence that vscode-blowfish-offload.cpp nee
 cd /mnt/suda/host/applications/vscode-blowfish-offload
 ./vscode-blowfish-offload
 ```
+
+## User Guide
+
+[AddNewOperatorsAndApplications](docs/user-guides/AddOperatorsAndProgram.md)
+
+[DebugGuide](docs/user-guides/DebugHelp.md.md)
+
+## API Reference
+
+[SUDAAPI](docs/api/APIReference.md)
