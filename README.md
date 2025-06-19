@@ -294,7 +294,11 @@ cd /mnt/suda/host/applications/vscode-blowfish-offload
 
 ## 架构解析
 
+[架构解析](docs/architecture/SUDA架构.md)
+
 ## 应用编程接口
+
+[API](docs/api/API参考手册.md)
 
 
 

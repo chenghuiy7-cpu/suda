@@ -284,7 +284,7 @@ cd /mnt/suda/host/applications/vscode-blowfish-offload
 
 [AddNewOperatorsAndApplications](docs/user-guides/AddOperatorsAndProgram.md)
 
-[DebugGuide](docs/user-guides/DebugHelp.md.md)
+[DebugGuide](docs/user-guides/DebugHelp.md)
 
 ## API Reference
 
