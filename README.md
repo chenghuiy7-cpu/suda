@@ -119,21 +119,34 @@ git submodule update --init -recursive
 ### 设备环境配置
 需要将vivado安装在`/opt/Xilinx_2020.2/Vivado/2020.2/`下（符号链接也可以），在服务器运行如下命令，生成比特流：
 ```shell
-cd device/basic_shell/nf-csd
+cd device/platform/basic_shell/nf-csd
 source build_bd.sh
 ```
-如果中途失败，检查项目是否正常配置，如果项目未经修改依旧出错，重新设置文件夹：
+> 如果中途失败，检查项目是否正常配置，如果项目未经修改依旧出错，重新设置文件夹：
 ```shell
-cd device/basic_shell/nf-csd
+cd device/platform/basic_shell/nf-csd
 mkdir -p work_farm/target/
 cd work_farm/target 
 ln -s ../../nf-csd nf-csd   
 cd ../ && ln -s ../shell shell
 source build_bd.sh
 ```
+
+> 如果出现设备树错误，如`Device Tree Source is not correctly specified.`进行如下操作：
+
+```shell
+cd device/platform/basic_shell/nf-csd
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=fidus dt-distclean
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=fidus dt
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD WITH_BIT=y IO_CACHE_COHERENCE=y bootbin
+```
+
+
 生成的`BOOT.bin`和`zynqmp.dtb`在`nf-csd/shell/virt_one_drive/ready_for_download/fidus/`路径下，将其拷贝到板卡的引导分区。
 
-然后，使用NFS或者拷贝的方式，将软件栈提供给板卡：
+
+
+然后，使用NFS或者拷贝的方式，将软件栈提供给板卡（板卡IP假设为10.156.153.120）：
 ```shell
 scp -r device/platform/software_stack/ root@10.156.153.120:~/software_stack/
 ```
