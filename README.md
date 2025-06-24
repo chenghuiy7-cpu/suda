@@ -313,5 +313,8 @@ cd /mnt/suda/host/applications/vscode-blowfish-offload
 
 [API](docs/api/API参考手册.md)
 
+## 内部用户提示
+如果是SUDA的内部开发者，需要使用到SUDA底层基础设施VSCODOR的相关技术，请参考文档：
+http://10.16.0.127/apps/files/files/3456?dir=/%E5%B7%A5%E7%A8%8B%E7%BB%84/%E5%AD%98%E5%82%A8%E5%8A%A0%E9%80%9F%E4%B8%8E%E8%99%9A%E6%8B%9F%E5%8C%96%E7%A0%94%E7%A9%B6/
 
 

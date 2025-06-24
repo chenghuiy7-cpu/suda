@@ -140,4 +140,10 @@ void *rte_axi_dma_poll_complete(struct rte_axi_dma_channel *ch);
 
 void rte_axi_dma_channel_get_stat(struct rte_axi_dma_channel *ch, struct rte_axi_dma_channel_stat *stat);
 
+inline void rte_axi_dma_stop_channel(struct rte_axi_dma_channel *ch);
+
+inline void rte_axi_dma_enable_channel(volatile struct rte_axi_dma_channel *ch);
+
+int rte_axi_dma_send_seg(struct rte_axi_dma_channel *ch, struct rte_axi_dma_iovec *iovs, int iovcnt, void *ctx,bool last_data);
+
 #endif // !RTE_AXI_DMA_H
