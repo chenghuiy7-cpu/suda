@@ -13,4 +13,9 @@ make -C work_farm PRJ=shell:virt_one_drive:pcie_ep FPGA_BD=$TARGET_BOARD FPGA_AC
 make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD FPGA_ACT=prj_gen vivado_prj
 make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD FPGA_ACT=run_syn vivado_prj && \
 make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD FPGA_ACT=bit_gen vivado_prj && \
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD fsbl
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD pmufw     
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD dt 
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD atf   
+make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD uboot    
 make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD WITH_BIT=y IO_CACHE_COHERENCE=y bootbin # boot.bin
