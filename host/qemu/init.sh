@@ -25,7 +25,7 @@ mkdir -p $MOUNT_DIR
 sudo mount -o loop $DISK_IMG $MOUNT_DIR
 
 echo "使用debootstrap安装基本Debian系统..."
-sudo debootstrap --arch=amd64 bookworm $MOUNT_DIR http://deb.debian.org/debian/
+sudo bash -c "debootstrap --arch=amd64 bookworm $MOUNT_DIR http://deb.debian.org/debian/"
 
 # 3. 配置系统
 echo "配置系统..."
@@ -120,11 +120,10 @@ sudo umount $MOUNT_DIR
 rmdir $MOUNT_DIR
 
 echo "编译QEMU"
-cd qemu && mkdir build && cd build
-../configure --enable-kvm --enable-virtfs --enable-slirp --target-list=x86_64-softmmu
-make
+cd qemu && mkdir build && cd build && ../configure --enable-kvm --enable-virtfs --enable-slirp --target-list=x86_64-softmmu && make && cd ../../
+
 echo "编译完成"
-cd ../../
+
 
 echo "完成! 虚拟磁盘已创建: $DISK_IMG"
 echo "使用以下命令启动虚拟机:"

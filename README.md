@@ -220,7 +220,7 @@ make
 ```shell
 cd host/qemu/qemu/
 mkdir build && cd build
-../configure --enable-kvm --enable-virtfs --target-list=x86_64-softmmu
+./configure --enable-kvm --enable-virtfs --target-list=x86_64-softmmu
 make
 ```
 
@@ -230,7 +230,7 @@ cd host/qemu/
 sudo bash init.sh
 ```
 
-在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址：
+在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址（假设当前为3b:00.0）：
 ```shell
 ./qemu/build/qemu-system-x86_64 \
     -name "qdma-test-0",debug-threads=on \

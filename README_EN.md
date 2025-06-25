@@ -202,7 +202,7 @@ The current SUDA driver is **only verified on kernel 5.4.211** and requires a pa
 ```shell
 cd host/qemu/qemu/
 mkdir build && cd build
-../configure --enable-kvm --enable-virtfs --target-list=x86_64-softmmu
+./configure --enable-kvm --enable-virtfs --target-list=x86_64-softmmu
 make
 ```
 
