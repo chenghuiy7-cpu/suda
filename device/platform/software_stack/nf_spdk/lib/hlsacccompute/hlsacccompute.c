@@ -853,14 +853,14 @@ static void __spdk_hlsacccompute_run_easy_sw(void *ctx)
         //run_blowfish_with_data(tx_ob->iov_base,rx_ob->iov_base);
         ////SPDK_DEBUGLOG(hlsacc,"BEGIN");
        
-        grep_matching(rx_ob->iov_base,tx_ob->iov_base,(char*)(req->acccontext[0]->context.static_data));
-        //while (1)
-        //{
-        //    run(req->software_resources->thread_id);
-        //    if(last(0,req->software_resources->thread_id)){
-        //        break;
-        //    }
-       // }
+        //grep_matching(rx_ob->iov_base,tx_ob->iov_base,(char*)(req->acccontext[0]->context.static_data));
+        while (1)
+        {
+            run(req->software_resources->thread_id);
+            if(last(0,req->software_resources->thread_id)){
+                break;
+            }
+        }
         ////SPDK_DEBUGLOG(hlsacc,"END");
        
         TAILQ_REMOVE(&(req->rx_vos[0]), rx_ob, link);

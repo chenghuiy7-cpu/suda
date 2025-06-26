@@ -511,29 +511,29 @@ int main(int argc, char **argv){
             sr[j].scc.snsid = 1;
         }
 
-        //ret = nvme_slm_copy(io_fd,sr,sizeof(union nvme_source_range)*8,0,0x3,8,input_mem_id);
-        //if(ret<0){
-        //    fprintf(stderr,"Failed to copy block data to slm,exiting...\n");
-        //    free(output_buf);
-        //    return 0;
-       // }
+        ret = nvme_slm_copy(io_fd,sr,sizeof(union nvme_source_range)*8,0,0x3,8,input_mem_id);
+        if(ret<0){
+            fprintf(stderr,"Failed to copy block data to slm,exiting...\n");
+            free(output_buf);
+            return 0;
+       }
 
         // 异步执行程序 / Execute program asynchronously
-        program_exec_async(uring_fd, read_from+i*(input_buf_size/LBA_SIZE), 0, rsid, 1, input_mem_id, &ring);
+        //program_exec_async(uring_fd, read_from+i*(input_buf_size/LBA_SIZE), 0, rsid, 1, input_mem_id, &ring);
         /**
          * 尝试运行计算程序
          * Try to run computation program
          */
         
         
-        //struct AccContext* context_data = nullptr;
-        //unsigned int res = 0;
-        //ret = nvme_execute_hlsacc_program(io_fd,2,rsid,1,context_data,0,0,0,&res);
-        //if(ret != 0){
-        //    fprintf(stderr,"Failed to execute program.Exiting...\n");
-        //    free(output_buf);
-        //    return 0;
-        //}
+        struct AccContext* context_data = nullptr;
+        unsigned int res = 0;
+        ret = nvme_execute_hlsacc_program(io_fd,2,rsid,1,context_data,0,0,0,&res);
+        if(ret != 0){
+            fprintf(stderr,"Failed to execute program.Exiting...\n");
+            free(output_buf);
+            return 0;
+        }
         DEBUG_LOG("iter %d result%d\n", i, res);
         /**
          * 把访问的结果从设备内存中拷贝到主机内存
@@ -549,21 +549,7 @@ int main(int argc, char **argv){
                 return 0;
             }
         }
-       /*
-        for(int j=0;j<4;j++){
-            ret = slm_read_fixed(&ring,output_buf+i*(input_buf_size)+j*(LBA_SIZE)*64,LBA_SIZE*64,uring_fd,output_mem_id,j*LBA_SIZE*64);
-            //ret = nvme_slm_read(io_fd,output_mem_id,j*LBA_SIZE*32,LBA_SIZE*32,output_buf+i*(input_buf_size)+j*(LBA_SIZE*32));
-            if(ret != 0){
-                fprintf(stderr,"Failed to copy data to host.Exiting...\n");
-                free(output_buf);
-                return 0;
-            }
-        }
-        */
-
-        //ret = nvme_slm_read(io_fd,output_mem_id,0,input_buf_size,output_buf+i*(input_buf_size));
       
-        //sleep(1);
        
     }
     

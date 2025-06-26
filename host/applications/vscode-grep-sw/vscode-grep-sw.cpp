@@ -135,7 +135,7 @@ int main()
     
     // 创建SLM命名空间，用于传输和接收数据 / Create SLM namespaces for transmitting and receiving data
     unsigned int tx_id, rx_id;
-    int ret = nvme_create_slm_ns(fd, &tx_id, LBA_SIZE*256*1024); // 创建传输命名空间 / Create transmission namespace
+    int ret = nvme_create_slm_ns(fd, &tx_id, LBA_SIZE*256); // 创建传输命名空间 / Create transmission namespace
  
     // 打开NVMe数据设备 / Open NVMe data device
     int fd1 = nvme_open("nvmq0n1");
@@ -155,16 +155,15 @@ int main()
     
     // 打开输入和输出文件 / Open input and output files
     FILE* from_fp, *to_fp;
-    from_fp = fopen("../../examples/data/grep_input.txt", "r");
-    to_fp = fopen("/dev/nvmq0n1", "a+");
-    if(from_fp == NULL || to_fp == NULL){
+    from_fp = fopen("../../util/grep_data_gen/grep_input.txt", "r");
+    if(from_fp == NULL){
         fprintf(stderr, "Failed to open file\n");
         exit(1);
     }
     
     // 文件数据缓冲区 / File data buffer
     char* file_databuf[128*1024];
-    fseek(to_fp, 0, SEEK_SET);
+    
     int cur_read = 0;
     
     // 设置NVMe IO参数 / Setup NVMe IO parameters
@@ -176,13 +175,16 @@ int main()
     args.nlb = 31;
     args.slba = 0;
     
-    /*
+    printf("READ DATA\n");
+
     // 从文件读取数据写入NVMe设备的代码（已注释） / Code to read data from file and write to NVMe device (commented out)
     while(1){
-        size_t nread = fread(file_databuf+cur_read,128*1024,1,from_fp);
-        
-        if(nread==0||cur_read>=1024*1024*1024){
-            if(cur_read>=1024*1024*1024)
+        size_t nread = fread(file_databuf,128*1024,1,from_fp);
+        if(feof(from_fp)){
+            break;
+        }
+        if(nread==0||cur_read>=(1024*1024/(128*1024))){
+            if(cur_read>=(1024*1024/(128*1024)))
                 break;
             if(feof(from_fp)){
                 break;
@@ -191,22 +193,22 @@ int main()
                 exit(1);
             }
         }else{
-            //fwrite(file_databuf,128*1024,1,to_fp);
-            args.data = file_databuf + cur_read;
+         
+            args.data = file_databuf;
             args.data_len = LBA_SIZE * (args.nlb + 1);
             nvme_write(&args);
-            cur_read+=nread;
+            cur_read+=1;
             args.slba += args.nlb + 1;
             args.nlb = 31;
         
         
         }
-    }*/
+    }
     
     // 创建内存范围集描述符 / Create memory range set descriptors
     union memory_range_set_decriptor mdes[2];
     mdes[0].payload.mnsid = tx_id;                 // 传输命名空间ID / Transmission namespace ID
-    mdes[0].payload.length = LBA_SIZE*256*1024;    // 传输长度 / Transmission length
+    mdes[0].payload.length = LBA_SIZE*256;    // 传输长度 / Transmission length
     mdes[0].payload.starting_byte = 0;             // 起始字节 / Starting byte
     mdes[0].payload.flag = memory_range_descriptor::mdes_flag::MEM_RANGE_DEVICE_MEM; // 设备内存标志 / Device memory flag
     
@@ -225,7 +227,7 @@ int main()
     }
     
     printf("LOAD PROGRAM\n");
-    
+    sleep(2);
     // 创建并初始化计算程序结构 / Create and initialize computation program structure
     struct hlsacccompute_program p, *program;
     memset(&p, 0, sizeof(struct hlsacccompute_program));
@@ -260,7 +262,7 @@ int main()
  
     // 打开程序库文件 / Open program library file
     FILE* p_fp;
-    p_fp = fopen("../../examples/data/libgrep.so.1.0.0", "r");
+    p_fp = fopen("../../../device/operators/hls/grep/libgrep.so", "r");
     if(p_fp == NULL){
         fprintf(stderr, "Failed to open lib!\n");
         exit(1);
@@ -315,15 +317,15 @@ int main()
         timer.reset();
         
         // 从设备读取数据到SLM / Copy data from device to SLM
-        for(int i = 0; i < ((1024*1024*1024)/(128*1024*64)); i++){
-            for(int j = 0; j < (64); j++){
+        for(int i = 0; i < 1; i++){
+            for(int j = 0; j < (8); j++){
                 // 设置源范围参数 / Set source range parameters
                 sr[j].scc.slba = (i*(128*1024*64) + j*128*1024)/LBA_SIZE; // 源LBA / Source LBA
                 sr[j].scc.nlb = 31;                                       // 块数量-1 / Number of blocks minus 1
                 sr[j].scc.snsid = 1;                                      // 源命名空间ID / Source namespace ID
             }
             // 执行SLM复制 / Perform SLM copy
-            nvme_slm_copy(fd1, sr, sizeof(union nvme_source_range)*64, i*(128*1024*64), 0x3, 64, tx_id);
+            nvme_slm_copy(fd1, sr, sizeof(union nvme_source_range)*8, 0, 0x3, 8, tx_id);
             
         }
         std::cout << "拷贝 用时: " << timer.elapsed() << " ms" << std::endl;
@@ -386,19 +388,18 @@ int main()
         int rcnt = 0;
         
         // 从设备读取数据到主机内存 / Read data from device to host memory
-        for(uint32_t i = 0; i < 256*1024;){
+        for(uint32_t i = 0; i < 8;i++){
             rcnt++;
             args.data = input_buf + i*LBA_SIZE * (args.nlb + 1);
             args.data_len = LBA_SIZE * (args.nlb + 1);
             nvme_read(&args);
-            i += args.nlb + 1;
             args.slba += args.nlb + 1;
             args.nlb = 31;
         }
         
         std::cout << "拷贝用时: " << timer.elapsed() << " ms" << " rcnt " << rcnt << std::endl;
         
-        // 可能有bug所以从SLM复制 / May have bug so copy from SLM
+      
         timer.reset();
         
         // 在CPU上执行grep匹配 / Perform grep matching on CPU

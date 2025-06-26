@@ -2578,7 +2578,7 @@ int nvme_create_slm_ns(
 		}
 	}
 	int res =  nvme_submit_admin_passthru(args.fd, &cmd, (args.result));
-	free(data);
+	//free(data);
 	return res;
 }
 

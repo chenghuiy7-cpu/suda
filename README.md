@@ -309,6 +309,19 @@ cd /mnt/suda/host/applications/vscode-blowfish-offload
 
 ```
 
+接下来，以`vscode-grep-sw`为例，这个程序尝试加载软算子`suda/device/operators/hls/grep/libgrep.so`到SUDA CSD上并运行1MB负载，因此一定要先参照device的配置把算子编译出来才能继续接下来的步骤，首先生成测试数据集：
+
+```shell
+cd host/util/grep_data_gen
+bash compile.sh
+./data_gen
+```
+然后启动qemu虚拟机，运行测试程序：
+```shell
+cd /mnt/suda/host/applications/vscode-grep-sw
+./vscode-grep-sw
+```
+
 ## 用户指引
 
 [新增算子/计算程序/主机应用](docs/user-guides/新增算子和程序.md)
