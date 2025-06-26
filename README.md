@@ -230,6 +230,11 @@ cd host/qemu/
 sudo bash init.sh
 ```
 
+然后，虚拟机即可开启，但是在虚拟机开启之前，还需要检查主机的vfio已经开启，查看`/etc/default/grub`，查看iommu选项是否设置为`on`：
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt intel_iommu=on pcie_acs_override=downstream,multifunction vfio-pci.ids=10ee:903f"
+```
+
 在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址（假设当前为3b:00.0）：
 ```shell
 ./qemu/build/qemu-system-x86_64 \
