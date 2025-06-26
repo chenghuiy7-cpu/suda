@@ -3,9 +3,9 @@
  * NVM Express device driver tracepoints
  * Copyright (c) 2018 Johannes Thumshirn, SUSE Linux GmbH
  */
-
 #include <asm/unaligned.h>
 #include "trace.h"
+
 
 static const char *nvmq_trace_delete_sq(struct trace_seq *p, u8 *cdw10)
 {
@@ -254,3 +254,6 @@ const char *nvmq_trace_disk_name(struct trace_seq *p, char *name)
 }
 
 // EXPORT_TRACEPOINT_SYMBOL_GPL(nvmq_sq);
+EXPORT_TRACEPOINT_SYMBOL_GPL(nvmq_setup_cmd);
+EXPORT_TRACEPOINT_SYMBOL_GPL(nvmq_complete_rq);
+EXPORT_TRACEPOINT_SYMBOL_GPL(nvmq_async_event);

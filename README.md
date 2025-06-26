@@ -234,7 +234,11 @@ sudo bash init.sh
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt intel_iommu=on pcie_acs_override=downstream,multifunction vfio-pci.ids=10ee:903f"
 ```
-
+如果没有按照上述内容进行修改，则需要按照上述内容进行对应修改，然后更新grub并且重启服务器：
+```shell
+sudo update-grub
+sudo reboot
+```
 在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址（假设当前为3b:00.0）：
 ```shell
 ./qemu/build/qemu-system-x86_64 \

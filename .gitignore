@@ -74,3 +74,4 @@ host/applications/vscode-grep-sw/vscode-grep-sw
 host/applications/vscode-slmcopy-test/vscode-slmcopy-test
 host/drivers/nvmq/nvmq.ko
 
+.vscode
