@@ -18,6 +18,7 @@ host/qemu/debian_qdma_dev.img
 # QDMA drivers and apps
 host/drivers/qdma/apps/**/*.o
 host/drivers/qdma/apps/**/dma-*
+!host/drivers/qdma/apps/dma-*
 host/drivers/qdma/bin/
 host/drivers/qdma/driver/src/libqdma
 host/drivers/qdma/driver/src/.*.cmd
