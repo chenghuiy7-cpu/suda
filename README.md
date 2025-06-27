@@ -274,14 +274,14 @@ sudo poweroff
 
 ## SUDA使用
 
-在配置完成环境后，即可以使用SUDA了。首先从SoC-FPGA CSD上启动软件栈：
+在配置完成环境后，即可以使用SUDA了。首先从SoC-FPGA CSD上启动软件栈，也就是登录到板卡的ARM核上，在ARM核上操作：
 ```shell
 cd software_stack/nf_spdk
 bash setup.sh
 cd mcdma 
 bash run_nvmq.sh 
 ```
-在等待SoC-FPGA CSD软件栈初始化完成后（一般等待5s），然后在主机端启动虚拟机：
+在等待SoC-FPGA CSD软件栈初始化完成后（一般等待5s），然后不要退出ARM核上运行的进程，回到主机，在主机端启动虚拟机：
 ```shell
 sudo bash run_nvmq.sh -f
 ssh -p8999 developer@localhost
@@ -315,6 +315,11 @@ cd /mnt/suda/host/applications/vscode-blowfish-offload
 cd host/util/grep_data_gen
 bash compile.sh
 ./data_gen
+```
+然后在主机侧，生成在SUDA CSD运行的软件算子：
+```shell
+cd device/operators
+make swop_gen #使用make all也可以
 ```
 然后启动qemu虚拟机，运行测试程序：
 ```shell

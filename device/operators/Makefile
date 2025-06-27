@@ -36,7 +36,7 @@ LDFLAGS := -fvisibility=hidden
 # 默认目标
 .PHONY: all clean prj_gen hwop_gen sw_test swop_gen 
 
-all: prj_gen
+all: hwop_gen swop_gen
 
 # 清理所有项目
 clean:
