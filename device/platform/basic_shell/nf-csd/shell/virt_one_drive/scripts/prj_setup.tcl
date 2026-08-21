@@ -7,6 +7,8 @@ add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hls
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/SimpleOperator/*.v]
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/SoftResetMCDMA/*.v]
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/blowfish_en/*.v]
+add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/lwe_encrypt/*.v]
+add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/lwe_decrypt/*.v]
 
 
 # 更新编译顺序
@@ -53,4 +55,3 @@ exec cp ${dcp_dir}/../../${prj_loc}_${prj_name}_pcie_ep_${board}/dcp/pcie_ep.dcp
 # Copy AccFramework DCP file generated in dcp_gen state
 exec cp ${dcp_dir}/../../${prj_loc}_${prj_name}_accframework_${board}/dcp/accframework.dcp \
     ${dcp_dir}/
-

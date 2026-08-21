@@ -6,11 +6,42 @@
 *.d
 *.os
 *.ol
+*.lo
+*.la
 *.cmd
 *.zip
 *.log
 *.bin
+*.bincode
+*.pyc
 build/
+build.*/
+__pycache__/
+.pytest_cache/
+.deps/
+autom4te.cache/
+
+# Local research state and recoverable machine artifacts
+.codex
+backups/
+device/platform/software_stack/cross_compiling/
+device/platform/software_stack/nf_spdk/include/spdk/config.h
+device/platform/software_stack/nf_spdk/isa-l/.libs/
+device/platform/software_stack/nf_spdk/isa-l/Makefile
+device/platform/software_stack/nf_spdk/isa-l/Makefile.in
+device/platform/software_stack/nf_spdk/isa-l/aclocal.m4
+device/platform/software_stack/nf_spdk/isa-l/build-aux/
+device/platform/software_stack/nf_spdk/isa-l/config.status
+device/platform/software_stack/nf_spdk/isa-l/configure
+device/platform/software_stack/nf_spdk/isa-l/configure~
+device/platform/software_stack/nf_spdk/isa-l/isa-l
+device/platform/software_stack/nf_spdk/isa-l/isa-l.h
+device/platform/software_stack/nf_spdk/isa-l/libisal.pc
+device/platform/software_stack/nf_spdk/isa-l/libtool
+device/platform/software_stack/nf_spdk/mk/cc.flags.mk
+device/platform/software_stack/nf_spdk/mk/cc.mk
+device/platform/software_stack/nf_spdk/mk/config.mk
+device/platform/software_stack/nf_spdk/test/common/build_config.sh
 
 # Specific large files
 host/qemu/debian_qdma_dev.img
@@ -29,6 +60,8 @@ device/platform/software_stack/nf_spdk/.astylerc
 device/platform/basic_shell/nf-csd/shell/virt_one_drive/ready_for_download/
 device/platform/basic_shell/nf-csd/work_farm/software/arm-atf/
 device/platform/basic_shell/nf-csd/work_farm/software/arm-uboot/
+device/platform/basic_shell/nf-csd/nf-csd/nf-csd
+device/platform/basic_shell/nf-csd/shell/shell
 
 # HLS and operators
 device/platform/ips/hls/hlsacc_assscheduler/.vscode/
@@ -73,6 +106,14 @@ host/drivers/nvmq/nvmq.mod
 host/applications/vscode-blowfish-offload/vscode-blowfish-offload
 host/applications/vscode-grep-sw/vscode-grep-sw
 host/applications/vscode-slmcopy-test/vscode-slmcopy-test
+host/applications/vscode-lwe-decrypt-offload/vscode-lwe-decrypt-offload
+host/applications/vscode-lwe-encrypt-data-gen/vscode-lwe-encrypt-data-gen
+host/applications/vscode-lwe-encrypt-offload/vscode-lwe-encrypt-offload
+host/applications/vscode-lwe-encrypt-remote-offload/test_protocol
+host/applications/vscode-lwe-encrypt-remote-offload/vscode-lwe-encrypt-remote-offload
+host/applications/vscode-lwe-full-pipeline/vscode-lwe-full-pipeline
+host/util/grep_data_gen/data_gen
+host/util/grep_data_gen/grep_input.txt
 host/drivers/nvmq/nvmq.ko
 
 .vscode

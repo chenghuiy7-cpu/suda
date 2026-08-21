@@ -171,6 +171,8 @@ OperatorController\
 OperatorController\
 accExamplePlusOperator\
 encrypt\
+lwe_encrypt\
+lwe_decrypt\
 two_user_wr_mem_access_throttler\
 "
 
@@ -363,6 +365,28 @@ proc create_root_design { parentCell } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
    }
+
+  # Create instance: OperatorController_2, and set properties
+  set block_name OperatorController
+  set block_cell_name OperatorController_2
+  if { [catch {set OperatorController_2 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $OperatorController_2 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+
+  # Create instance: OperatorController_3, and set properties
+  set block_name OperatorController
+  set block_cell_name OperatorController_3
+  if { [catch {set OperatorController_3 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $OperatorController_3 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
   
   # Create instance: accExamplePlusOperat_0, and set properties
   set block_name accExamplePlusOperator
@@ -427,7 +451,7 @@ proc create_root_design { parentCell } {
   set axis_switch_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_switch:1.1 axis_switch_0 ]
   set_property -dict [ list \
    CONFIG.DECODER_REG {1} \
-   CONFIG.NUM_MI {2} \
+   CONFIG.NUM_MI {4} \
    CONFIG.NUM_SI {1} \
  ] $axis_switch_0
 
@@ -436,7 +460,7 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.DECODER_REG {0} \
    CONFIG.NUM_MI {1} \
-   CONFIG.NUM_SI {2} \
+   CONFIG.NUM_SI {4} \
  ] $axis_switch_1
 
   # Create instance: axis_switch_2, and set properties
@@ -444,7 +468,7 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.DECODER_REG {1} \
    CONFIG.HAS_TLAST {1} \
-   CONFIG.NUM_MI {2} \
+   CONFIG.NUM_MI {4} \
    CONFIG.NUM_SI {1} \
  ] $axis_switch_2
 
@@ -459,8 +483,14 @@ proc create_root_design { parentCell } {
    CONFIG.M02_AXIS_BASETDEST {0x00000010} \
    CONFIG.M02_AXIS_HIGHTDEST {0x0000001f} \
    CONFIG.M02_S02_CONNECTIVITY {0} \
-   CONFIG.NUM_MI {3} \
-   CONFIG.NUM_SI {3} \
+   CONFIG.M03_AXIS_BASETDEST {0x00000020} \
+   CONFIG.M03_AXIS_HIGHTDEST {0x0000002f} \
+   CONFIG.M03_S03_CONNECTIVITY {0} \
+   CONFIG.M04_AXIS_BASETDEST {0x00000030} \
+   CONFIG.M04_AXIS_HIGHTDEST {0x0000003f} \
+   CONFIG.M04_S04_CONNECTIVITY {0} \
+   CONFIG.NUM_MI {5} \
+   CONFIG.NUM_SI {5} \
  ] $axis_switch_4
 
   # Create instance: cq, and set properties
@@ -489,6 +519,28 @@ proc create_root_design { parentCell } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
    } elseif { $encrypt_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+
+  # Create instance: lwe_encrypt_0, and set properties
+  set block_name lwe_encrypt
+  set block_cell_name lwe_encrypt_0
+  if { [catch {set lwe_encrypt_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $lwe_encrypt_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+
+  # Create instance: lwe_decrypt_0, and set properties
+  set block_name lwe_decrypt
+  set block_cell_name lwe_decrypt_0
+  if { [catch {set lwe_decrypt_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $lwe_decrypt_0 eq "" } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
    }
@@ -566,6 +618,42 @@ proc create_root_design { parentCell } {
    CONFIG.use_bram_block {Stand_Alone} \
  ] $static_var_bram1
 
+  # Create instance: static_var_bram2, and set properties
+  set static_var_bram2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen:8.4 static_var_bram2 ]
+  set_property -dict [ list \
+   CONFIG.Byte_Size {8} \
+   CONFIG.EN_SAFETY_CKT {true} \
+   CONFIG.Enable_32bit_Address {true} \
+   CONFIG.Operating_Mode_A {WRITE_FIRST} \
+   CONFIG.Read_Width_A {512} \
+   CONFIG.Read_Width_B {512} \
+   CONFIG.Register_PortA_Output_of_Memory_Primitives {false} \
+   CONFIG.Use_Byte_Write_Enable {true} \
+   CONFIG.Use_RSTA_Pin {true} \
+   CONFIG.Write_Depth_A {512} \
+   CONFIG.Write_Width_A {512} \
+   CONFIG.Write_Width_B {512} \
+   CONFIG.use_bram_block {Stand_Alone} \
+ ] $static_var_bram2
+
+  # Create instance: static_var_bram3, and set properties
+  set static_var_bram3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen:8.4 static_var_bram3 ]
+  set_property -dict [ list \
+   CONFIG.Byte_Size {8} \
+   CONFIG.EN_SAFETY_CKT {true} \
+   CONFIG.Enable_32bit_Address {true} \
+   CONFIG.Operating_Mode_A {WRITE_FIRST} \
+   CONFIG.Read_Width_A {512} \
+   CONFIG.Read_Width_B {512} \
+   CONFIG.Register_PortA_Output_of_Memory_Primitives {false} \
+   CONFIG.Use_Byte_Write_Enable {true} \
+   CONFIG.Use_RSTA_Pin {true} \
+   CONFIG.Write_Depth_A {512} \
+   CONFIG.Write_Width_A {512} \
+   CONFIG.Write_Width_B {512} \
+   CONFIG.use_bram_block {Stand_Alone} \
+ ] $static_var_bram3
+
   # Create instance: util_vector_logic_0, and set properties
   set util_vector_logic_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 util_vector_logic_0 ]
   set_property -dict [ list \
@@ -626,6 +714,20 @@ proc create_root_design { parentCell } {
    CONFIG.CONST_VAL {0} \
  ] $xlconstant_5
 
+  # Create instance: xlconstant_6, and set properties
+  set xlconstant_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_6 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {2} \
+   CONFIG.CONST_WIDTH {4} \
+ ] $xlconstant_6
+
+  # Create instance: xlconstant_7, and set properties
+  set xlconstant_7 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_7 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {3} \
+   CONFIG.CONST_WIDTH {4} \
+ ] $xlconstant_7
+
   # Create instance: xlslice_1, and set properties
   set xlslice_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_1 ]
   set_property -dict [ list \
@@ -649,6 +751,12 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net OperatorController_1_ctrl_rsp_to_ctrl [get_bd_intf_pins OperatorController_1/ctrl_rsp_to_ctrl] [get_bd_intf_pins axis_switch_1/S01_AXIS]
   connect_bd_intf_net -intf_net OperatorController_1_m_axis_inside [get_bd_intf_pins OperatorController_1/m_axis_inside] [get_bd_intf_pins encrypt_0/stream_in]
   connect_bd_intf_net -intf_net OperatorController_1_m_axis_outside [get_bd_intf_pins OperatorController_1/m_axis_outside] [get_bd_intf_pins axis_switch_4/S02_AXIS]
+  connect_bd_intf_net -intf_net OperatorController_2_ctrl_rsp_to_ctrl [get_bd_intf_pins OperatorController_2/ctrl_rsp_to_ctrl] [get_bd_intf_pins axis_switch_1/S02_AXIS]
+  connect_bd_intf_net -intf_net OperatorController_2_m_axis_inside [get_bd_intf_pins OperatorController_2/m_axis_inside] [get_bd_intf_pins lwe_encrypt_0/data_in]
+  connect_bd_intf_net -intf_net OperatorController_2_m_axis_outside [get_bd_intf_pins OperatorController_2/m_axis_outside] [get_bd_intf_pins axis_switch_4/S03_AXIS]
+  connect_bd_intf_net -intf_net OperatorController_3_ctrl_rsp_to_ctrl [get_bd_intf_pins OperatorController_3/ctrl_rsp_to_ctrl] [get_bd_intf_pins axis_switch_1/S03_AXIS]
+  connect_bd_intf_net -intf_net OperatorController_3_m_axis_inside [get_bd_intf_pins OperatorController_3/m_axis_inside] [get_bd_intf_pins lwe_decrypt_0/data_in]
+  connect_bd_intf_net -intf_net OperatorController_3_m_axis_outside [get_bd_intf_pins OperatorController_3/m_axis_outside] [get_bd_intf_pins axis_switch_4/S04_AXIS]
   connect_bd_intf_net -intf_net S00_AXI_0_1 [get_bd_intf_ports s_axi_Manager] [get_bd_intf_pins axi_interconnect_1/S00_AXI]
   connect_bd_intf_net -intf_net accExamplePlusOperat_0_data_out [get_bd_intf_pins OperatorController_0/s_axis_inside] [get_bd_intf_pins accExamplePlusOperat_0/data_out]
   connect_bd_intf_net -intf_net accExamplePlusOperat_0_operator_done_signal [get_bd_intf_pins OperatorController_0/done_stream] [get_bd_intf_pins accExamplePlusOperat_0/operator_done_signal]
@@ -660,12 +768,20 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net axis_interconnect_1_M00_AXIS [get_bd_intf_pins OperatorController_0/s_axis_outside] [get_bd_intf_pins axis_switch_4/M00_AXIS]
   connect_bd_intf_net -intf_net axis_switch_0_M00_AXIS [get_bd_intf_pins OperatorController_0/ctrl_req_from_ctrl] [get_bd_intf_pins axis_switch_0/M00_AXIS]
   connect_bd_intf_net -intf_net axis_switch_0_M01_AXIS [get_bd_intf_pins OperatorController_1/ctrl_req_from_ctrl] [get_bd_intf_pins axis_switch_0/M01_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_0_M02_AXIS [get_bd_intf_pins OperatorController_2/ctrl_req_from_ctrl] [get_bd_intf_pins axis_switch_0/M02_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_0_M03_AXIS [get_bd_intf_pins OperatorController_3/ctrl_req_from_ctrl] [get_bd_intf_pins axis_switch_0/M03_AXIS]
   connect_bd_intf_net -intf_net axis_switch_1_M00_AXIS [get_bd_intf_pins CtrlRspReceiver_0/ctrl_rsp_from_acc_in] [get_bd_intf_pins axis_switch_1/M00_AXIS]
   connect_bd_intf_net -intf_net axis_switch_2_M00_AXIS [get_bd_intf_pins OperatorController_0/recovery_context_from_ctrl] [get_bd_intf_pins axis_switch_2/M00_AXIS]
   connect_bd_intf_net -intf_net axis_switch_2_M01_AXIS [get_bd_intf_pins OperatorController_1/recovery_context_from_ctrl] [get_bd_intf_pins axis_switch_2/M01_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_2_M02_AXIS [get_bd_intf_pins OperatorController_2/recovery_context_from_ctrl] [get_bd_intf_pins axis_switch_2/M02_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_2_M03_AXIS [get_bd_intf_pins OperatorController_3/recovery_context_from_ctrl] [get_bd_intf_pins axis_switch_2/M03_AXIS]
   connect_bd_intf_net -intf_net axis_switch_4_M01_AXIS [get_bd_intf_ports m_ext_axis] [get_bd_intf_pins axis_switch_4/M01_AXIS]
   connect_bd_intf_net -intf_net axis_switch_4_M02_AXIS [get_bd_intf_pins OperatorController_1/s_axis_outside] [get_bd_intf_pins axis_switch_4/M02_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_4_M03_AXIS [get_bd_intf_pins OperatorController_2/s_axis_outside] [get_bd_intf_pins axis_switch_4/M03_AXIS]
+  connect_bd_intf_net -intf_net axis_switch_4_M04_AXIS [get_bd_intf_pins OperatorController_3/s_axis_outside] [get_bd_intf_pins axis_switch_4/M04_AXIS]
   connect_bd_intf_net -intf_net encrypt_0_stream_out [get_bd_intf_pins OperatorController_1/s_axis_inside] [get_bd_intf_pins encrypt_0/stream_out]
+  connect_bd_intf_net -intf_net lwe_encrypt_0_data_out [get_bd_intf_pins OperatorController_2/s_axis_inside] [get_bd_intf_pins lwe_encrypt_0/data_out]
+  connect_bd_intf_net -intf_net lwe_decrypt_0_data_out [get_bd_intf_pins OperatorController_3/s_axis_inside] [get_bd_intf_pins lwe_decrypt_0/data_out]
   connect_bd_intf_net -intf_net host_write_mem_ctrl_m_axis_cmd_channel [get_bd_intf_ports prp_out] [get_bd_intf_pins host_write_mem_ctrl/m_axis_cmd_channel]
   connect_bd_intf_net -intf_net host_write_mem_ctrl_s_axis_data_channel [get_bd_intf_ports c2h_data] [get_bd_intf_pins host_write_mem_ctrl/s_axis_data_channel]
   connect_bd_intf_net -intf_net read_mem_data_1 [get_bd_intf_ports read_mem_data] [get_bd_intf_pins AssScheduler_0/acc_context_data_recv_from_datamover]
@@ -691,10 +807,32 @@ proc create_root_design { parentCell } {
   connect_bd_net -net OperatorController_1_bram_ce_out [get_bd_pins OperatorController_1/bram_ce_out] [get_bd_pins static_var_bram1/ena]
   connect_bd_net -net OperatorController_1_bram_d_out [get_bd_pins OperatorController_1/bram_d_out] [get_bd_pins static_var_bram1/dina]
   connect_bd_net -net OperatorController_1_bram_we_out [get_bd_pins OperatorController_1/bram_we_out] [get_bd_pins static_var_bram1/wea]
+  connect_bd_net -net OperatorController_2_ap_rst_n [get_bd_pins OperatorController_2/ap_rst_n] [get_bd_pins lwe_encrypt_0/ap_rst_n]
+  connect_bd_net -net OperatorController_2_ap_start [get_bd_pins OperatorController_2/ap_start] [get_bd_pins lwe_encrypt_0/ap_start]
+  connect_bd_net -net OperatorController_2_bram_address_out [get_bd_pins OperatorController_2/bram_address_out] [get_bd_pins static_var_bram2/addra]
+  connect_bd_net -net OperatorController_2_bram_ce_out [get_bd_pins OperatorController_2/bram_ce_out] [get_bd_pins static_var_bram2/ena]
+  connect_bd_net -net OperatorController_2_bram_d_out [get_bd_pins OperatorController_2/bram_d_out] [get_bd_pins static_var_bram2/dina]
+  connect_bd_net -net OperatorController_2_bram_we_out [get_bd_pins OperatorController_2/bram_we_out] [get_bd_pins static_var_bram2/wea]
+  connect_bd_net -net OperatorController_3_ap_rst_n [get_bd_pins OperatorController_3/ap_rst_n] [get_bd_pins lwe_decrypt_0/ap_rst_n]
+  connect_bd_net -net OperatorController_3_ap_start [get_bd_pins OperatorController_3/ap_start] [get_bd_pins lwe_decrypt_0/ap_start]
+  connect_bd_net -net OperatorController_3_bram_address_out [get_bd_pins OperatorController_3/bram_address_out] [get_bd_pins static_var_bram3/addra]
+  connect_bd_net -net OperatorController_3_bram_ce_out [get_bd_pins OperatorController_3/bram_ce_out] [get_bd_pins static_var_bram3/ena]
+  connect_bd_net -net OperatorController_3_bram_d_out [get_bd_pins OperatorController_3/bram_d_out] [get_bd_pins static_var_bram3/dina]
+  connect_bd_net -net OperatorController_3_bram_we_out [get_bd_pins OperatorController_3/bram_we_out] [get_bd_pins static_var_bram3/wea]
   connect_bd_net -net accExamplePlusOperat_0_context_r_Addr_A [get_bd_pins OperatorController_0/bram_address_in] [get_bd_pins accExamplePlusOperat_0/context_r_Addr_A]
   connect_bd_net -net accExamplePlusOperat_0_context_r_Din_A [get_bd_pins OperatorController_0/bram_d_in] [get_bd_pins accExamplePlusOperat_0/context_r_Din_A]
   connect_bd_net -net accExamplePlusOperat_0_context_r_EN_A [get_bd_pins OperatorController_0/bram_ce_in] [get_bd_pins accExamplePlusOperat_0/context_r_EN_A]
   connect_bd_net -net accExamplePlusOperat_0_context_r_WEN_A [get_bd_pins OperatorController_0/bram_we_in] [get_bd_pins accExamplePlusOperat_0/context_r_WEN_A]
+  connect_bd_net -net lwe_encrypt_0_context_Addr_A [get_bd_pins OperatorController_2/bram_address_in] [get_bd_pins lwe_encrypt_0/context_Addr_A]
+  connect_bd_net -net lwe_encrypt_0_context_Din_A [get_bd_pins OperatorController_2/bram_d_in] [get_bd_pins lwe_encrypt_0/context_Din_A]
+  connect_bd_net -net lwe_encrypt_0_context_Dout_A [get_bd_pins OperatorController_2/bram_q_in] [get_bd_pins lwe_encrypt_0/context_Dout_A]
+  connect_bd_net -net lwe_encrypt_0_context_EN_A [get_bd_pins OperatorController_2/bram_ce_in] [get_bd_pins lwe_encrypt_0/context_EN_A]
+  connect_bd_net -net lwe_encrypt_0_context_WEN_A [get_bd_pins OperatorController_2/bram_we_in] [get_bd_pins lwe_encrypt_0/context_WEN_A]
+  connect_bd_net -net lwe_decrypt_0_context_Addr_A [get_bd_pins OperatorController_3/bram_address_in] [get_bd_pins lwe_decrypt_0/context_Addr_A]
+  connect_bd_net -net lwe_decrypt_0_context_Din_A [get_bd_pins OperatorController_3/bram_d_in] [get_bd_pins lwe_decrypt_0/context_Din_A]
+  connect_bd_net -net lwe_decrypt_0_context_Dout_A [get_bd_pins OperatorController_3/bram_q_in] [get_bd_pins lwe_decrypt_0/context_Dout_A]
+  connect_bd_net -net lwe_decrypt_0_context_EN_A [get_bd_pins OperatorController_3/bram_ce_in] [get_bd_pins lwe_decrypt_0/context_EN_A]
+  connect_bd_net -net lwe_decrypt_0_context_WEN_A [get_bd_pins OperatorController_3/bram_we_in] [get_bd_pins lwe_decrypt_0/context_WEN_A]
   connect_bd_net -net axi_bram_ctrl_0_bram_addr_a [get_bd_pins axi_bram_ctrl_0/bram_addr_a] [get_bd_pins sq/addra]
   connect_bd_net -net axi_bram_ctrl_0_bram_clk_a [get_bd_pins axi_bram_ctrl_0/bram_clk_a] [get_bd_pins sq/clka]
   connect_bd_net -net axi_bram_ctrl_0_bram_en_a [get_bd_pins axi_bram_ctrl_0/bram_en_a] [get_bd_pins sq/ena]
@@ -708,7 +846,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net axis_switch_1_s_decode_err [get_bd_pins axis_switch_1/s_decode_err] [get_bd_pins xlconcat_0/In1]
   connect_bd_net -net axis_switch_2_s_decode_err [get_bd_pins axis_switch_2/s_decode_err] [get_bd_pins xlconcat_0/In0]
   connect_bd_net -net axis_switch_4_s_decode_err [get_bd_pins axis_switch_4/s_decode_err] [get_bd_pins xlconcat_0/In2]
-  connect_bd_net -net clk [get_bd_ports clk] [get_bd_pins AssScheduler_0/ap_clk] [get_bd_pins CtrlRspReceiver_0/ap_clk] [get_bd_pins OperatorController_0/clk] [get_bd_pins OperatorController_1/clk] [get_bd_pins accExamplePlusOperat_0/ap_clk] [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins axi_bram_ctrl_1/s_axi_aclk] [get_bd_pins axi_dwidth_converter_0/s_axi_aclk] [get_bd_pins axi_gpio_0/s_axi_aclk] [get_bd_pins axi_interconnect_1/ACLK] [get_bd_pins axi_interconnect_1/M00_ACLK] [get_bd_pins axi_interconnect_1/M01_ACLK] [get_bd_pins axi_interconnect_1/M02_ACLK] [get_bd_pins axi_interconnect_1/M03_ACLK] [get_bd_pins axi_interconnect_1/S00_ACLK] [get_bd_pins axis_switch_0/aclk] [get_bd_pins axis_switch_1/aclk] [get_bd_pins axis_switch_2/aclk] [get_bd_pins axis_switch_4/aclk] [get_bd_pins encrypt_0/ap_clk] [get_bd_pins host_write_mem_ctrl/clk] [get_bd_pins sq/clkb] [get_bd_pins static_var_bram/clka] [get_bd_pins static_var_bram1/clka]
+  connect_bd_net -net clk [get_bd_ports clk] [get_bd_pins AssScheduler_0/ap_clk] [get_bd_pins CtrlRspReceiver_0/ap_clk] [get_bd_pins OperatorController_0/clk] [get_bd_pins OperatorController_1/clk] [get_bd_pins OperatorController_2/clk] [get_bd_pins OperatorController_3/clk] [get_bd_pins accExamplePlusOperat_0/ap_clk] [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins axi_bram_ctrl_1/s_axi_aclk] [get_bd_pins axi_dwidth_converter_0/s_axi_aclk] [get_bd_pins axi_gpio_0/s_axi_aclk] [get_bd_pins axi_interconnect_1/ACLK] [get_bd_pins axi_interconnect_1/M00_ACLK] [get_bd_pins axi_interconnect_1/M01_ACLK] [get_bd_pins axi_interconnect_1/M02_ACLK] [get_bd_pins axi_interconnect_1/M03_ACLK] [get_bd_pins axi_interconnect_1/S00_ACLK] [get_bd_pins axis_switch_0/aclk] [get_bd_pins axis_switch_1/aclk] [get_bd_pins axis_switch_2/aclk] [get_bd_pins axis_switch_4/aclk] [get_bd_pins encrypt_0/ap_clk] [get_bd_pins host_write_mem_ctrl/clk] [get_bd_pins lwe_encrypt_0/ap_clk] [get_bd_pins lwe_decrypt_0/ap_clk] [get_bd_pins sq/clkb] [get_bd_pins static_var_bram/clka] [get_bd_pins static_var_bram1/clka] [get_bd_pins static_var_bram2/clka] [get_bd_pins static_var_bram3/clka]
   connect_bd_net -net cq_doutb [get_bd_pins axi_bram_ctrl_1/bram_rddata_a] [get_bd_pins cq/doutb]
   connect_bd_net -net encrypt_0_ap_done [get_bd_pins OperatorController_1/ap_done] [get_bd_pins encrypt_0/ap_done]
   connect_bd_net -net encrypt_0_ap_idle [get_bd_pins OperatorController_1/ap_idle] [get_bd_pins encrypt_0/ap_idle]
@@ -716,19 +854,29 @@ proc create_root_design { parentCell } {
   connect_bd_net -net encrypt_1_ap_done [get_bd_pins OperatorController_0/ap_done] [get_bd_pins accExamplePlusOperat_0/ap_done]
   connect_bd_net -net encrypt_1_ap_idle [get_bd_pins OperatorController_0/ap_idle] [get_bd_pins accExamplePlusOperat_0/ap_idle]
   connect_bd_net -net encrypt_1_ap_ready [get_bd_pins OperatorController_0/ap_ready] [get_bd_pins accExamplePlusOperat_0/ap_ready]
+  connect_bd_net -net lwe_encrypt_0_ap_done [get_bd_pins OperatorController_2/ap_done] [get_bd_pins lwe_encrypt_0/ap_done]
+  connect_bd_net -net lwe_encrypt_0_ap_idle [get_bd_pins OperatorController_2/ap_idle] [get_bd_pins lwe_encrypt_0/ap_idle]
+  connect_bd_net -net lwe_encrypt_0_ap_ready [get_bd_pins OperatorController_2/ap_ready] [get_bd_pins lwe_encrypt_0/ap_ready]
+  connect_bd_net -net lwe_decrypt_0_ap_done [get_bd_pins OperatorController_3/ap_done] [get_bd_pins lwe_decrypt_0/ap_done]
+  connect_bd_net -net lwe_decrypt_0_ap_idle [get_bd_pins OperatorController_3/ap_idle] [get_bd_pins lwe_decrypt_0/ap_idle]
+  connect_bd_net -net lwe_decrypt_0_ap_ready [get_bd_pins OperatorController_3/ap_ready] [get_bd_pins lwe_decrypt_0/ap_ready]
   connect_bd_net -net resetn_1 [get_bd_ports resetn] [get_bd_pins CtrlRspReceiver_0/ap_rst_n] [get_bd_pins axi_bram_ctrl_0/s_axi_aresetn] [get_bd_pins axi_bram_ctrl_1/s_axi_aresetn] [get_bd_pins axi_dwidth_converter_0/s_axi_aresetn] [get_bd_pins axi_gpio_0/s_axi_aresetn] [get_bd_pins axi_interconnect_1/ARESETN] [get_bd_pins axi_interconnect_1/M00_ARESETN] [get_bd_pins axi_interconnect_1/M01_ARESETN] [get_bd_pins axi_interconnect_1/M02_ARESETN] [get_bd_pins axi_interconnect_1/M03_ARESETN] [get_bd_pins axi_interconnect_1/S00_ARESETN] [get_bd_pins axis_switch_2/aresetn] [get_bd_pins host_write_mem_ctrl/user_resetn] [get_bd_pins util_vector_logic_0/Op2]
   connect_bd_net -net sq_doutb [get_bd_pins AssScheduler_0/sq_q0] [get_bd_pins axi_bram_ctrl_0/bram_rddata_a] [get_bd_pins sq/doutb]
   connect_bd_net -net static_var_bram1_douta [get_bd_pins OperatorController_1/bram_q_out] [get_bd_pins static_var_bram1/douta]
+  connect_bd_net -net static_var_bram2_douta [get_bd_pins OperatorController_2/bram_q_out] [get_bd_pins static_var_bram2/douta]
+  connect_bd_net -net static_var_bram3_douta [get_bd_pins OperatorController_3/bram_q_out] [get_bd_pins static_var_bram3/douta]
   connect_bd_net -net static_var_bram_douta [get_bd_pins OperatorController_0/bram_q_out] [get_bd_pins static_var_bram/douta]
-  connect_bd_net -net util_vector_logic_0_Res [get_bd_pins AssScheduler_0/ap_rst_n] [get_bd_pins OperatorController_0/resetn] [get_bd_pins OperatorController_1/resetn] [get_bd_pins axis_switch_0/aresetn] [get_bd_pins axis_switch_1/aresetn] [get_bd_pins axis_switch_4/aresetn] [get_bd_pins util_vector_logic_0/Res]
+  connect_bd_net -net util_vector_logic_0_Res [get_bd_pins AssScheduler_0/ap_rst_n] [get_bd_pins OperatorController_0/resetn] [get_bd_pins OperatorController_1/resetn] [get_bd_pins OperatorController_2/resetn] [get_bd_pins OperatorController_3/resetn] [get_bd_pins axis_switch_0/aresetn] [get_bd_pins axis_switch_1/aresetn] [get_bd_pins axis_switch_4/aresetn] [get_bd_pins util_vector_logic_0/Res]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins axi_gpio_0/gpio_io_i] [get_bd_pins xlconcat_0/dout]
   connect_bd_net -net xlconcat_1_dout [get_bd_pins sq/addrb] [get_bd_pins xlconcat_1/dout]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins AssScheduler_0/ap_start] [get_bd_pins CtrlRspReceiver_0/ap_start] [get_bd_pins xlconstant_0/dout]
   connect_bd_net -net xlconstant_1_dout [get_bd_pins OperatorController_0/op_id] [get_bd_pins xlconstant_1/dout]
   connect_bd_net -net xlconstant_2_dout [get_bd_pins host_write_mem_ctrl/m_axis_data_channel1_tvalid] [get_bd_pins xlconstant_2/dout]
   connect_bd_net -net xlconstant_3_dout [get_bd_pins OperatorController_1/op_id] [get_bd_pins xlconstant_3/dout]
-  connect_bd_net -net xlconstant_4_dout [get_bd_pins OperatorController_1/bram_address_in] [get_bd_pins OperatorController_1/bram_ce_in] [get_bd_pins OperatorController_1/bram_d_in] [get_bd_pins OperatorController_1/bram_we_in] [get_bd_pins OperatorController_1/done_stream_tvalid] [get_bd_pins xlconstant_4/dout]
+  connect_bd_net -net xlconstant_4_dout [get_bd_pins OperatorController_1/bram_address_in] [get_bd_pins OperatorController_1/bram_ce_in] [get_bd_pins OperatorController_1/bram_d_in] [get_bd_pins OperatorController_1/bram_we_in] [get_bd_pins OperatorController_1/done_stream_tvalid] [get_bd_pins OperatorController_2/done_stream_tvalid] [get_bd_pins OperatorController_3/done_stream_tvalid] [get_bd_pins xlconstant_4/dout]
   connect_bd_net -net xlconstant_5_dout [get_bd_pins xlconcat_1/In0] [get_bd_pins xlconstant_5/dout]
+  connect_bd_net -net xlconstant_6_dout [get_bd_pins OperatorController_2/op_id] [get_bd_pins xlconstant_6/dout]
+  connect_bd_net -net xlconstant_7_dout [get_bd_pins OperatorController_3/op_id] [get_bd_pins xlconstant_7/dout]
   connect_bd_net -net xlslice_1_Dout [get_bd_pins cq/addrb] [get_bd_pins xlslice_1/Dout]
 
   # Create address segments
@@ -754,4 +902,3 @@ create_root_design ""
 
 
 common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
-

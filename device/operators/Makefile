@@ -1,6 +1,6 @@
 # 定义目标名称
-SWOP_TARGETS := blowfish grep
-HWOP_TARGETS := blowfish
+SWOP_TARGETS := grep
+HWOP_TARGETS := blowfish lwe_encrypt lwe_decrypt
 
 # 顶层目录路径
 TOP_DIR := $(shell pwd)

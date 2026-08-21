@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 TARGET_BOARD=fidus
 SHELL_TYPE="nvme"
 
