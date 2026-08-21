@@ -215,6 +215,50 @@ static inline bool nvme_opcode_is_compute_cmd(uint8_t opcode)
 	return opcode >= 0x22 && opcode <= 0x30;
 }
 
+static inline struct nvme_command *nvmq_diag_req_cmd(struct nvme_qdma_request *req)
+{
+	if (!req)
+		return NULL;
+	if (req->u.req.flags & NVME_REQ_USERKERNEL)
+		return req->u.knl.cmds;
+	return req->u.req.cmd;
+}
+
+static inline bool nvmq_diag_interesting_cmd(struct nvme_command *cmd)
+{
+	if (!cmd)
+		return false;
+	return nvme_is_slm_set(cmd) ||
+	       nvme_opcode_is_compute_cmd(cmd->common.opcode) ||
+	       cmd->common.opcode == 0x84 ||
+	       cmd->common.opcode == 0x85 ||
+	       cmd->common.opcode == 0x88 ||
+	       cmd->common.opcode == 0x89;
+}
+
+static void nvmq_diag_log_cmd(const char *stage, struct nvme_qdma_queue *queue,
+			      struct request *rq, struct nvme_command *cmd, int ret)
+{
+	if (!nvmq_diag_interesting_cmd(cmd))
+		return;
+
+	pr_warn("NVMQ_DIAG %s qid=%u tag=%d opc=0x%02x nsid=0x%x cid=%u cdw10=0x%x cdw11=0x%x cdw12=0x%x prp1=0x%llx prp2=0x%llx bytes=%u segs=%u ret=%d\n",
+		stage,
+		queue ? queue->qid : 0xffff,
+		rq ? rq->tag : -1,
+		cmd->common.opcode,
+		le32_to_cpu(cmd->common.nsid),
+		le16_to_cpu(cmd->common.command_id),
+		le32_to_cpu(cmd->common.cdw10),
+		le32_to_cpu(cmd->common.cdw11),
+		le32_to_cpu(cmd->common.cdw12),
+		(unsigned long long)le64_to_cpu(cmd->common.dptr.prp1),
+		(unsigned long long)le64_to_cpu(cmd->common.dptr.prp2),
+		rq ? blk_rq_bytes(rq) : 0,
+		rq ? blk_rq_nr_phys_segments(rq) : 0,
+		ret);
+}
+
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_mutex);
 
@@ -2445,6 +2489,7 @@ static int nvme_qdma_qe_send_done(struct qdma_request *qdma_req, unsigned int by
 	if (unlikely(err)) {
 		pr_err("Failed to send qdma request: %d\n", err);
 	}
+	nvmq_diag_log_cmd("H2C_DONE", req->queue, rq, nvmq_diag_req_cmd(req), err);
 
 	pr_debug("DEC %p: %u\n", req, refcount_read(&req->ref));
 	if (refcount_dec_and_test(&req->ref)) {
@@ -2533,11 +2578,23 @@ static int nvme_qdma_post_send(struct nvme_qdma_queue *queue,
 
 	// pr_debug("submit: dev_hndl %lu, h2c qhndl %lu, \n", dev_hndl, queue->qe_qp.h2c_qhndl);
 	// print_sqe((uint8_t *)page_to_virt(qdma_req->sgl[0].pg) + qdma_req->sgl[0].offset);
+	if (!is_aer) {
+		struct nvme_qdma_request *req =
+			container_of(qdma_req, struct nvme_qdma_request, qdma_req);
+		struct request *rq = blk_mq_rq_from_pdu(req);
+		nvmq_diag_log_cmd("H2C_SUBMIT", queue, rq, nvmq_diag_req_cmd(req), 0);
+	}
 
 	ret = qdma_request_submit(dev_hndl, queue->qe_qp.h2c_qhndl, qdma_req);
 	if (unlikely(ret)) {
 		dev_err(queue->ctrl->ctrl.device,
 			     "%s failed with error code %d\n", __func__, ret);
+		if (!is_aer) {
+			struct nvme_qdma_request *req =
+				container_of(qdma_req, struct nvme_qdma_request, qdma_req);
+			struct request *rq = blk_mq_rq_from_pdu(req);
+			nvmq_diag_log_cmd("H2C_SUBMIT_FAIL", queue, rq, nvmq_diag_req_cmd(req), ret);
+		}
 	}
 	return ret;
 }
@@ -2569,6 +2626,7 @@ static void nvme_qdma_process_nvme_rsp(struct nvme_qdma_queue *queue,
 
 	req->status = cqe->status;
 	req->result = cqe->result;
+	nvmq_diag_log_cmd("C2H_CQE", queue, rq, nvmq_diag_req_cmd(req), cqe->status);
 
 	// if (wc->wc_flags & IB_WC_WITH_INVALIDATE) {
 	// 	if (unlikely(wc->ex.invalidate_rkey != req->mr->rkey)) {
@@ -2718,11 +2776,13 @@ static int nvme_qdma_post_rsp(struct nvme_qdma_queue *queue,
 
 	pr_debug("submit: dev_hndl %lu, c2h qhndl %lu, sg cnt%d\n", dev_hndl, queue->qe_qp.c2h_qhndl,qdma_req->sgcnt);
 	// print_cqe((uint8_t *)page_to_virt(qdma_req->sgl[0].pg) + qdma_req->sgl[0].offset);
+	nvmq_diag_log_cmd("C2H_POST", queue, rq, nvmq_diag_req_cmd(rsp->req), 0);
 
 	ret = qdma_request_submit(dev_hndl, queue->qe_qp.c2h_qhndl, qdma_req);
 	if (unlikely(ret)) {
 		dev_err(queue->ctrl->ctrl.device,
 			     "qdma_request_submit failed with error code %d\n", ret);
+		nvmq_diag_log_cmd("C2H_POST_FAIL", queue, rq, nvmq_diag_req_cmd(rsp->req), ret);
 	}
 	return ret;
 }
@@ -2966,6 +3026,7 @@ nvme_qdma_timeout(struct request *rq, bool reserved)
 
 	dev_warn(ctrl->ctrl.device, "I/O %d QID %d timeout\n",
 		 rq->tag, nvme_qdma_queue_idx(queue));
+	nvmq_diag_log_cmd("TIMEOUT", queue, rq, nvmq_diag_req_cmd(req), 0);
 		
 	qdma_queue_dump(ctrl->device->xpdev->dev_hndl, queue->qe_qp.c2h_qhndl, g_msg_buf, 4096 * 5);
 	// pr_debug("%s\n", g_msg_buf);
@@ -3364,6 +3425,7 @@ static blk_status_t nvme_qdma_queue_rq(struct blk_mq_hw_ctx *hctx,
 		if (ret)
 			goto err;
 
+		nvmq_diag_log_cmd("QUEUE_RQ", queue, rq, c, 0);
 		list_add_tail(&sqe->entry, &req->sqe_list);
 	}
 

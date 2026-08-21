@@ -168,9 +168,9 @@ TRACE_EVENT(nvmq_sq,
 
 #ifndef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH /mnt/suda/host/drivers/nvmq
+#endif
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE trace
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
-#endif

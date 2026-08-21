@@ -417,16 +417,16 @@ int main(int argc, char **argv){
     int psize = sizeof(struct hlsacccompute_program);
     // 加载程序 / Load program
     ret = nvme_load_hlsacc_program(admin_fd, psize, 1, 2, program);
-    if(ret < 0){
-        fprintf(stderr, "Failed to load program,exiting...\n");
+    if(ret != 0){
+        fprintf(stderr, "Failed to load program: %d, exiting...\n", ret);
         free(output_buf);
         return 0;
     }
     
     // 激活程序 / Activate program
     ret = nvme_activate_program(admin_fd, 1, 2);
-    if(ret < 0){
-        fprintf(stderr, "Failed to activate program,exiting...\n");
+    if(ret != 0){
+        fprintf(stderr, "Failed to activate program: %d, exiting...\n", ret);
         free(output_buf);
         return 0;
     }

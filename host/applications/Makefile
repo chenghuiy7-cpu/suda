@@ -35,7 +35,7 @@ ROOT_DIR := $(abspath $(CURDIR)/..)
 include $(ROOT_DIR)/mk/common.mk
 
 # 所有的应用程序子目录
-APP_DIRS = vscode-blowfish-offload vscode-grep-sw vscode-slmcopy-test
+APP_DIRS = vscode-blowfish-offload vscode-grep-sw vscode-slmcopy-test vscode-lwe-encrypt-offload vscode-lwe-encrypt-remote-offload vscode-lwe-encrypt-data-gen vscode-lwe-decrypt-offload vscode-lwe-full-pipeline
 
 .PHONY: all clean $(APP_DIRS)
 
