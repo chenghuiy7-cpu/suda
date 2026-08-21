@@ -2,8 +2,9 @@
 
 set -e
 
-pci_device=0000:01:00.0
-qdma_module=/mnt/suda/host/drivers/qdma/driver/src/qdma-pf.ko
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+pci_device=${NEST_QDMA_GUEST_BDF:-0000:01:00.0}
+qdma_module=${NEST_QDMA_MODULE:-"$script_dir/../qdma/driver/src/qdma-pf.ko"}
 qmax_file="/sys/bus/pci/devices/$pci_device/qdma/qmax"
 
 insmod "$qdma_module"

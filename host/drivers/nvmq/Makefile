@@ -12,8 +12,8 @@ KBUILD_EXTRA_SYMBOLS += "$(PWD)/../qdma/driver/src/Module.symvers"
 #KBUILD_EXTRA_SYMBOLS += /mnt/suda/host/drivers/qdma/driver/src/Module.symvers
 export KBUILD_EXTRA_SYMBOLS
 #ccflags-y := -DDEBUG
-#ccflags-y := -UDEBUG -DTRACE_INCLUDE_PATH=\"$(PWD)\"
-ccflags-y += -I$(PWD)
+#ccflags-y := -UDEBUG
+ccflags-y += -I$(src)
 all: 
 	@echo "symbols ${KBUILD_EXTRA_SYMBOLS}"
 	make -C $(KSRC) M=$(PWD) modules 
