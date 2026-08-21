@@ -32,6 +32,16 @@ git clone -b nest git@10.30.19.43:yangchenghui/suda.git "$SUDA_ROOT"
 git -C "$SUDA_ROOT" submodule update --init --recursive
 ```
 
+自定义 guest kernel 所需的 QDMA headers 和 `bio_map_user_iov` 导出修改已经保存为：
+
+```text
+host/kernel/0001-Add-QDMA-header-files.patch
+host/kernel/0002-Export-bio_map_user_iov.patch
+```
+
+`host/qemu/init.sh` 会在内核子模块中应用它们。不要提交“已应用 patch 后”的
+dirty 子模块状态，patch 文件才是可重复构建的来源。
+
 如果本机空间不足，可以把构建目录放在 `/data/$USER`，再使用软链接连接到
 个人 HOME 下的源码树。
 

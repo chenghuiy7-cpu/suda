@@ -20,6 +20,7 @@ __pycache__/
 .pytest_cache/
 .deps/
 autom4te.cache/
+.dirstamp
 
 # Local research state and recoverable machine artifacts
 .codex
@@ -77,6 +78,10 @@ device/operators/hls/*/*.zip
 device/operators/hls/*/vitis_hls.log
 device/operators/hls/*/*/hls.app
 device/operators/hls/*/*/dynamiclib_test
+device/operators/hls/lwe_encrypt/compat/
+device/operators/hls/lwe_decrypt/compat/
+device/operators/hls/lwe_encrypt/testdata/*
+!device/operators/hls/lwe_encrypt/testdata/README.md
 
 # API libraries
 host/api/liburing/examples/
@@ -112,6 +117,11 @@ host/applications/vscode-lwe-encrypt-offload/vscode-lwe-encrypt-offload
 host/applications/vscode-lwe-encrypt-remote-offload/test_protocol
 host/applications/vscode-lwe-encrypt-remote-offload/vscode-lwe-encrypt-remote-offload
 host/applications/vscode-lwe-full-pipeline/vscode-lwe-full-pipeline
+host/applications/vscode-lwe-*/testdata/
+host/applications/vscode-lwe-*/*.csv
+host/applications/vscode-lwe-encrypt-offload/*_summary.md
+host/applications/vscode-lwe-encrypt-remote-offload/plot_data_*/
+host/applications/vscode-lwe-encrypt-remote-offload/*_summary.md
 host/util/grep_data_gen/data_gen
 host/util/grep_data_gen/grep_input.txt
 host/drivers/nvmq/nvmq.ko
