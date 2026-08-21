@@ -84,7 +84,10 @@ int spdk_hlsacccompute_dev_init(struct spdk_hlsacccompute_dev *dev, uint64_t bar
         return -1;
     }
     spdk_hlsacccompute_qpair_create(dev);
-    spdk_hlsacccompute_init_opconfig(dev);
+    if (spdk_hlsacccompute_init_opconfig(dev) != 0) {
+        SPDK_ERRLOG("Failed to initialize operator configuration\n");
+        return -1;
+    }
     dev->dev_mem_table = spdk_cuckoo_table_create(spdk_env_get_socket_id(spdk_env_get_current_core()), sizeof(struct spdk_hlsacccompute_virtual_object));
     dev->next_mem_id = 0x1;
     if (dev->dev_mem_table == NULL)
@@ -353,6 +356,7 @@ static int parse_operators_array(struct spdk_json_val *values, struct spdk_hlsac
             TAILQ_INIT(&(op->elements));
         }else{
             free(op_inform);
+            op = dev->opconfigs[operator_type_id];
         }
         
         //TAILQ_INSERT_TAIL(&(dev->opconfigs[op->operator_type_id]), op, link);
@@ -368,9 +372,10 @@ static int parse_operators_array(struct spdk_json_val *values, struct spdk_hlsac
     return 0;
 }
 
-void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
+int spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
 {
     FILE *f;
+    const char *config_path;
     char *buffer = NULL;
     long file_size;
     struct spdk_json_val *values = NULL;
@@ -378,11 +383,16 @@ void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
     struct spdk_json_val *operators_val;
     int rc = -1;
 
-    // 读取配置文件
-    f = fopen("/root/software_stack/nf_spdk/config.json", "r");
+    config_path = getenv("HLSACC_OPERATOR_CONFIG");
+    if (config_path == NULL || config_path[0] == '\0') {
+        config_path = "/root/software_stack/nf_spdk/config.json";
+    }
+
+    SPDK_NOTICELOG("Loading operator configuration from %s\n", config_path);
+    f = fopen(config_path, "r");
     if (!f)
     {
-        SPDK_ERRLOG("Failed to open config file\n");
+        SPDK_ERRLOG("Failed to open operator config file %s\n", config_path);
         return -1;
     }
 
@@ -461,7 +471,7 @@ void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
         TAILQ_FOREACH(op_elm, &(dev->opconfigs[i]->elements), link)
         {
             // 遍历所有Operators结果
-            printf("Operator: index %d type=%s, in=%u, out=%u, time=%u, bram=%u type_id%d slot_id%d \n",
+            printf("Operator: index %d type=%s, in=%u, out=%u, time=%u, bram=%u, type_id=%d, slot_id=%d, dev_id=%d\n",
                            i,
                            op->operator_type_name,
                            op->input_port_num,
@@ -1716,11 +1726,14 @@ int spdk_hlsacccompute_add_program(struct spdk_hlsacccompute_dev *dev,
         if (dev->program_list[i] == NULL)
         {
             // 先进行一下程序的正确性检查
-            for (int j = 0; j < program->freeops[0].header.ops_num; j++)
+            for (int j = 0; j < program->apply_operators_num; j++)
             {
-                if (((dev->opconfigs[program->freeops[1].generic_ops_payload.op_lists[j]])==NULL))
+                uint8_t operator_type_id = program->apply_operators_id_map[j];
+                if (operator_type_id >= SPDK_HLSACCCOMPUTE_MAX_OPERATORS_SUPPORT ||
+                    dev->opconfigs[operator_type_id] == NULL)
                 {
-                    SPDK_ERRLOG("Program Has Undefined Operator!\n");
+                    SPDK_ERRLOG("Program references undefined operator type %u\n",
+                                operator_type_id);
                     return -1;
                 }
             }
@@ -1758,6 +1771,12 @@ int spdk_hlsacccompute_add_program_with_id(struct spdk_hlsacccompute_dev *dev,
                                            struct spdk_hlsacccompute_program *program,
                                            int id)
 {
+    if (id < 0 || id >= 64)
+    {
+        SPDK_ERRLOG("Invalid program ID %d\n", id);
+        return -1;
+    }
+
     spdk_hlsacccompute_dump_program_data(program);
     for (int i = id; i == id; i++)
     {
@@ -1765,11 +1784,14 @@ int spdk_hlsacccompute_add_program_with_id(struct spdk_hlsacccompute_dev *dev,
         if (dev->program_list[i] == NULL)
         {
             // 先进行一下程序的正确性检查
-            for (int j = 0; j < program->freeops[0].header.ops_num; j++)
+            for (int j = 0; j < program->apply_operators_num; j++)
             {
-                if (((dev->opconfigs[program->freeops[1].generic_ops_payload.op_lists[j]])==NULL))
+                uint8_t operator_type_id = program->apply_operators_id_map[j];
+                if (operator_type_id >= SPDK_HLSACCCOMPUTE_MAX_OPERATORS_SUPPORT ||
+                    dev->opconfigs[operator_type_id] == NULL)
                 {
-                    SPDK_ERRLOG("Program Has Undefined Operator!\n");
+                    SPDK_ERRLOG("Program references undefined operator type %u\n",
+                                operator_type_id);
                     return -1;
                 }
             }

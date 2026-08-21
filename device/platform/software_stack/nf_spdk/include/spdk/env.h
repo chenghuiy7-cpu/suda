@@ -382,6 +382,16 @@ static inline int spdk_simple_pool_init(struct spdk_simple_pool *pool, uint16_t 
 
 static inline int spdk_simple_pool_reset(struct spdk_simple_pool *pool)
 {
+    /*
+     * get/put rotates entries through io_ring. Resetting only head/tail can
+     * therefore expose duplicate pointers and permanently hide other pool
+     * elements. Rebuild the ring from the backing array before making every
+     * element available again.
+     */
+    for (uint16_t i = 0; i < pool->io_ring_size; i++) {
+        pool->io_ring[i] =
+            (void *)((uintptr_t)pool->io_arr + (uintptr_t)pool->elem_size * i);
+    }
     pool->io_head = 0;
     pool->io_tail = pool->io_ring_size - 1;
     return 0;

@@ -3,16 +3,19 @@
 # exit on errors
 set -e
 
-ROOT_DIR=$(readlink -f $(dirname $0))/../..
+SPDK_DIR=$(readlink -f "$(dirname "$0")/..")
+ROOT_DIR=$(readlink -f "$SPDK_DIR/..")
 export CROSS_COMPILE_DIR=$ROOT_DIR/cross_compiling
-export SPDK_DIR=$ROOT_DIR/spdk
+export SPDK_DIR
 export DPDK_DIR=$SPDK_DIR/dpdk
+export TOOLCHAIN_DIR=$CROSS_COMPILE_DIR/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu
+export TOOLCHAIN_SYSROOT=$TOOLCHAIN_DIR/aarch64-none-linux-gnu/libc
 
 # Get Toolchain
 function get_cc_toolchain() {
 	cd $CROSS_COMPILE_DIR
 
-	if [ ! -d "$CROSS_COMPILE_DIR/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu" ]; then
+	if [ ! -d "$TOOLCHAIN_DIR" ]; then
 		echo -e "Getting ARM Cross Compiler Toolchain..."
 		wget https://developer.arm.com/-/media/Files/downloads/gnu-a/10.2-2020.11/binrel/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu.tar.xz --no-check-certificate
 		tar xvf gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu.tar.xz
@@ -20,7 +23,10 @@ function get_cc_toolchain() {
 		echo -e "ARM Cross Compiler Toolchain already downloaded"
 	fi
 
-	export PATH=$PATH:$CROSS_COMPILE_DIR/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/bin
+	export PATH=$PATH:$TOOLCHAIN_DIR/bin
+	if ! command -v aarch64-none-linux-gnu-pkg-config >/dev/null 2>&1; then
+		ln -sf "$(command -v pkg-config)" "$TOOLCHAIN_DIR/bin/aarch64-none-linux-gnu-pkg-config"
+	fi
 }
 
 # NUMA
@@ -65,7 +71,7 @@ function cross_compile_uuid() {
 	# Download util-linux UUID library
 	if [ ! -d "$CROSS_COMPILE_DIR/util-linux" ]; then
 		echo -e "Downloading util-linux UUID library..."
-		git clone https://github.com/karelzak/util-linux.git
+		git clone --depth 1 https://github.com/karelzak/util-linux.git
 	else
 		echo -e "util-linux UUID library already downloaded"
 	fi
@@ -77,9 +83,12 @@ function cross_compile_uuid() {
 		echo -e "Building util-linux UUID library..."
 
 		./autogen.sh
-		CC=aarch64-none-linux-gnu-gcc CXX=aarch64-none-linux-gnu-g++ LD=aarch64-none-linux-gnu-ld CFLAGS+=-Wl,-rpath=$CROSS_COMPILE_DIR/util-linux/.libs ./configure --host=aarch64-none-linux-gnu --without-tinfo --without-ncurses --without-ncursesw --disable-mount --disable-libmount --disable-pylibmount --disable-libblkid --disable-fdisks --disable-libfdisk
-		make clean
-		make -j
+		make distclean >/dev/null 2>&1 || true
+		CC=aarch64-none-linux-gnu-gcc CXX=aarch64-none-linux-gnu-g++ LD=aarch64-none-linux-gnu-ld \
+			CFLAGS+=-Wl,-rpath=$CROSS_COMPILE_DIR/util-linux/.libs \
+			./configure --host=aarch64-none-linux-gnu --disable-all-programs \
+			--enable-libuuid --disable-nls --without-cap-ng
+		make -j libuuid.la
 
 		# Copy util-linux UUID related dependencies
 		echo -e "Copying util-linux UUID library dependencies..."
@@ -99,7 +108,8 @@ function cross_compile_crypto_ssl() {
 	# Download Openssl Crypto and SSL libraries
 	if [ ! -d "$CROSS_COMPILE_DIR/openssl" ]; then
 		echo -e "Downloading Openssl Crypto and SSL libraries..."
-		git clone https://github.com/openssl/openssl.git
+		git clone --depth 1 --branch openssl-3.0 --single-branch \
+			https://github.com/openssl/openssl.git
 	else
 		echo -e "Openssl Crypto and SSL libraries already downloaded"
 	fi
@@ -211,7 +221,7 @@ function cross_compile_cunit() {
 	if [ ! -d "$CROSS_COMPILE_DIR/CUnit" ]; then
 		echo -e "Downloading cunit library..."
 
-		git clone https://github.com/jacklicn/CUnit.git
+		git clone --depth 1 https://github.com/jacklicn/CUnit.git
 	else
 		echo -e "cunit library already downloaded"
 	fi
@@ -253,10 +263,11 @@ function cross_compile_isal() {
 
 		cd isa-l
 		./autogen.sh
+		make distclean >/dev/null 2>&1 || true
 		mkdir -p build/lib
 		ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes ./configure --prefix=$SPDK_DIR/isa-l/build --libdir=$SPDK_DIR/isa-l/build/lib --host=aarch64-none-linux-gnu
-		make -j
-		make -j install
+		make -j libisal.la
+		make install-libLTLIBRARIES install-nobase_includeHEADERS install-pkgincludeHEADERS
 
 		# Copy ISAL related dependencies
 		echo -e "Copying ISA-L library dependencies..."
@@ -280,8 +291,10 @@ function cross_compile_dpdk() {
 		# Build DPDK libraries
 		echo -e "Building DPDK libraries..."
 
-		apt install pkg-config-aarch64-linux-gnu
-		meson aarch64-build-gcc --cross-file config/arm/arm64_armv8_linux_gcc -Dprefix=$DPDK_DIR/build
+		export PKG_CONFIG_SYSROOT_DIR=$TOOLCHAIN_SYSROOT
+		export PKG_CONFIG_LIBDIR=$TOOLCHAIN_SYSROOT/usr/lib/pkgconfig:$TOOLCHAIN_SYSROOT/usr/share/pkgconfig
+		meson aarch64-build-gcc --cross-file config/arm/arm64_armv8_linux_gcc \
+			-Dprefix=$DPDK_DIR/build -Ddisable_drivers=compress/isal
 		ninja -C aarch64-build-gcc
 		ninja -C aarch64-build-gcc install
 		cd ..
@@ -289,9 +302,11 @@ function cross_compile_dpdk() {
 		# Copy DPDK related dependencies
 		echo -e "Copying DPDK libraries dependencies..."
 
-		cp -fr dpdk/build/bin dpdk/aarch64-build-gcc/
-		cp -fr dpdk/build/include dpdk/aarch64-build-gcc/
-		cp -fr dpdk/build/share dpdk/aarch64-build-gcc/
+		for dir in bin include share; do
+			if [ -d "dpdk/build/$dir" ]; then
+				cp -fr "dpdk/build/$dir" dpdk/aarch64-build-gcc/
+			fi
+		done
 		cp -fr dpdk/build/lib/* dpdk/aarch64-build-gcc/lib/
 		cp $CROSS_COMPILE_DIR/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/lib/gcc/aarch64-none-linux-gnu/10.2.1/libcrypto.so.3 dpdk/aarch64-build-gcc/lib/
 		cp $CROSS_COMPILE_DIR/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/lib/gcc/aarch64-none-linux-gnu/10.2.1/libcrypto.so dpdk/aarch64-build-gcc/lib/
@@ -307,9 +322,18 @@ function cross_compile_spdk() {
 	# Build SPDK libraries and binaries
 	echo -e "Building SPDK libraries and binaries..."
 
-	CC=aarch64-none-linux-gnu-gcc CXX=aarch64-none-linux-gnu-g++ LD=aarch64-none-linux-gnu-ld CFLAGS+=-I$DPDK_DIR/aarch64-build-gcc/include ./configure --cross-prefix=aarch64-none-linux-gnu --without-vhost --with-dpdk=$DPDK_DIR/aarch64-build-gcc --target-arch=armv8-a
+	CC=aarch64-none-linux-gnu-gcc CXX=aarch64-none-linux-gnu-g++ LD=aarch64-none-linux-gnu-ld \
+		CFLAGS+=-I$DPDK_DIR/build/include \
+		./configure --cross-prefix=aarch64-none-linux-gnu --without-vhost \
+		--without-isal --with-dpdk=$DPDK_DIR/build --target-arch=armv8-a
 
-	make -j
+	make -C lib -j SKIP_DPDK_BUILD=1
+	make -C module -j SKIP_DPDK_BUILD=1
+	make -C app/nvmf_tgt -j SKIP_DPDK_BUILD=1
+
+	mkdir -p build/arm-runtime-lib
+	cp "$CROSS_COMPILE_DIR/openssl/build/lib/libssl.so.3" build/arm-runtime-lib/
+	cp "$CROSS_COMPILE_DIR/openssl/build/lib/libcrypto.so.3" build/arm-runtime-lib/
 }
 
 mkdir -p $CROSS_COMPILE_DIR

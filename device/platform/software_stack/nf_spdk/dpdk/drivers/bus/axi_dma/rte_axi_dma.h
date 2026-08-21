@@ -59,6 +59,7 @@ struct rte_axi_dma_desc {
 	uint32_t bd_phys_lsb;
 	uint32_t bd_phys_msb;
 	bool tx;
+	bool request_end;
 };
 
 struct rte_axi_dma_desc_ring {

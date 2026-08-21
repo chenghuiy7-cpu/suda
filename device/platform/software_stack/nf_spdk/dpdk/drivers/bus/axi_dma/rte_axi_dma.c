@@ -555,6 +555,7 @@ static int rte_axi_dma_add_buffer(struct rte_axi_dma_channel *ch,
     }
 
     tail->opaque = ctx;
+    tail->request_end = (i == iovcnt - 1);
 
     if (i == iovcnt - 1)
     {
@@ -678,14 +679,16 @@ void *rte_axi_dma_poll_complete(struct rte_axi_dma_channel *ch)
     // if (status != 2348810304) {
     // 	RTE_LOG(CRIT, EAL, "Status is %X, should be %X\n", status, 2348810304);
     // }
+    bool request_end = head->request_end;
+    void *opaque = head->opaque;
+
     dev_buf->head = head->next;
     
     ch->count--;
     uint32_t ctrl = ch->tx ? head->bd->tx.ctrl : head->bd->rx.ctrl;
-    if (((ch->tx && (ctrl & TXEOF)) || !ch->tx) && head->opaque)
+    if (opaque)
     {
-      // End of Frame
-      struct dummy_dma_io *io = head->opaque;
+      struct dummy_dma_io *io = opaque;
       io->end = rte_get_timer_cycles();
       io->status = status;
       io->transfered_length -= ((ctrl & STS_LEN) - status.transfered_bytes);
@@ -704,8 +707,20 @@ void *rte_axi_dma_poll_complete(struct rte_axi_dma_channel *ch)
         // ch->dev->s2mm->err, ch->dev->s2mm->ccr, ch->dev->s2mm->pktdrop,
         // ch->regs->rx.pktdrop_stat, ch->regs->rx.pktcount_stat);
       }
-      if(status.transfered_bytes==0) return NULL;
-      return head->opaque;
+      head->opaque = NULL;
+      head->request_end = false;
+
+      /*
+       * All descriptors from one submission share the same software IO.
+       * Segmented TX deliberately places EOF on every data descriptor, so
+       * EOF cannot identify the end of the software request.  Return the IO
+       * only after its final descriptor, just as multi-BD RX already does.
+       */
+      if (request_end)
+      {
+        io->status.transfered_bytes = io->transfered_length;
+        return opaque;
+      }
     }
 
     if (channel_empty(ch))
@@ -1019,6 +1034,7 @@ int rte_axi_dma_send_seg(struct rte_axi_dma_channel *ch,
     }
 
     tail->opaque = ctx;
+    tail->request_end = (i == iovcnt - 1 && !last_data);
     if (unlikely(i == iovcnt - 1 && !last_data))
     {
       {
@@ -1050,6 +1066,7 @@ int rte_axi_dma_send_seg(struct rte_axi_dma_channel *ch,
     tail_bd->tx.ctrl_sideband.tuser = 0xff;
     tail_bd->tx.status.completed = 0; // Not completed
     tail->opaque = ctx;
+    tail->request_end = true;
 
     rte_io_wmb();
     virt2phys_64((uintptr_t)ch->bd_chain.tail->bd, &ch->regs->tx.taildesc_lsb,

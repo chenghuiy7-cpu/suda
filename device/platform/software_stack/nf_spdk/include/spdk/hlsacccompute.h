@@ -505,7 +505,7 @@ int spdk_hlsacccompute_qpair_create(struct spdk_hlsacccompute_dev *dev);
 
 int spdk_hlsacccompute_poll_cq(struct spdk_hlsacccompute_dev *dev); 
 
-void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev);
+int spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev);
 
 struct spdk_hlsacccompute_request *spdk_hlsacccompute_create_request(struct spdk_hlsacccompute_dev *dev,struct spdk_hlsacccompute_program* program);
 

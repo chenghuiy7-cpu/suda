@@ -250,6 +250,7 @@ int spdk_axi_dma_rx_channel_recv(struct spdk_axi_dma_ch *ch, struct spdk_axi_dma
         io->iovs[i].paddr = spdk_vtophys(io->iovs[i].iov_base, &len);
         if (io->iovs[i].paddr == SPDK_VTOPHYS_ERROR || len != io->iovs[i].iov_len) {
             SPDK_ERRLOG("vtophys failed: %lX %lu\n", io->iovs[i].paddr, len);
+            spdk_simple_pool_put(&ch->io_pool, io);
             return -EFAULT;
         }
     }
@@ -257,6 +258,10 @@ int spdk_axi_dma_rx_channel_recv(struct spdk_axi_dma_ch *ch, struct spdk_axi_dma
     // uint64_t tick = spdk_get_ticks();
 
     int ret = spdk_env_axi_dma_rx_channel_recv(ch->env_ch, iovs, iovcnt, io);
+
+    if (ret != 0) {
+        spdk_simple_pool_put(&ch->io_pool, io);
+    }
 
     // poll_ticks[spdk_env_get_current_core()] += spdk_get_ticks() - tick;
 

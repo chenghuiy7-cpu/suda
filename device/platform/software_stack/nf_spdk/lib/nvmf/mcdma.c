@@ -50,6 +50,9 @@ SPDK_LOG_REGISTER_COMPONENT(nvmq);
 #define MCDMA_NVMF_PAD_SIZE (MCDMA_NVMF_RSP_SIZE - sizeof(union nvmf_c2h_msg))
 
 #define MCDMA_RX_BUF_SZ 64
+#define MCDMA_TASK_FINISH_BEAT_SIZE MCDMA_RX_BUF_SZ
+#define MCDMA_TASK_INPUT_FINISH_BEAT_SIZE 16
+#define MCDMA_COMPUTE_RX_BATCH_PAGES 48
 
 #define MEMORY_RANGE_SET_ENTRY_NUM 16
 #define CP SPDK_DEBUGLOG(nvmf, "Checkpoint\n");;
@@ -57,6 +60,37 @@ SPDK_LOG_REGISTER_COMPONENT(nvmq);
 const char *g_mcdma_dev = "b0000000.dma";
 
 uint8_t poll_group_cnt = 0;
+
+static int
+mcdma_compute_rx_batch_pages(void)
+{
+	static int batch_pages;
+	const char *value;
+	char *end = NULL;
+	long parsed;
+
+	if (spdk_likely(batch_pages != 0)) {
+		return batch_pages;
+	}
+
+	batch_pages = MCDMA_COMPUTE_RX_BATCH_PAGES;
+	value = getenv("SUDA_MCDMA_RX_BATCH_PAGES");
+	if (value != NULL && value[0] != '\0') {
+		parsed = strtol(value, &end, 10);
+		if (end != value && *end == '\0' && parsed >= 1 &&
+		    parsed <= MCDMA_COMPUTE_RX_BATCH_PAGES) {
+			batch_pages = (int)parsed;
+		} else {
+			SPDK_WARNLOG("Ignoring invalid SUDA_MCDMA_RX_BATCH_PAGES=%s; "
+				     "expected 1..%d\n",
+				     value, MCDMA_COMPUTE_RX_BATCH_PAGES);
+		}
+	}
+
+	SPDK_NOTICELOG("Compute RX batch size: %d page(s)\n", batch_pages);
+	return batch_pages;
+}
+
 enum spdk_nvmf_mcdma_request_state {
 	/* The request is not currently in use */
 	MCDMA_REQUEST_STATE_FREE = 0,
@@ -580,12 +614,32 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	  }
 	}
 	for (int i = 0; i < iovcnt; i++) {
+	  int offset = PAGE_SIZE * i;
+	  int chunk_size = size - offset;
+	  if (chunk_size > PAGE_SIZE) {
+		chunk_size = PAGE_SIZE;
+	  }
 	  axi_dma_info->iovs[i].iov_base =
-		  ob->iov_base + ob->cur_used + PAGE_SIZE * i;
-	  axi_dma_info->iovs[i].iov_len = PAGE_SIZE;
+		  ob->iov_base + ob->cur_used + offset;
+	  axi_dma_info->iovs[i].iov_len = chunk_size;
 	  axi_dma_info->iovs[i].paddr =
 		  spdk_vtophys(axi_dma_info->iovs[i].iov_base, NULL);
 	}
+	uint64_t tx_first_qword = 0;
+	if (ob->iov_base != 0 && size >= (int)sizeof(tx_first_qword)) {
+	  memcpy(&tx_first_qword, (void *)(uintptr_t)(ob->iov_base + ob->cur_used), sizeof(tx_first_qword));
+	}
+	SPDK_NOTICELOG("LWE_TX_SEND 提交输入流 req=%p request_id=%u channel=%d dest=0x%x size=%d ob_len=%zu cur_used=%zu iovcnt=%d last_data=%d first_qword=0x%llx\n",
+		ch->req,
+		ch->req->request_id,
+		ch->channel_id,
+		ch->dest_id,
+		size,
+		ob->iov_len,
+		ob->cur_used,
+		iovcnt,
+		last_data ? 1 : 0,
+		(unsigned long long)tx_first_qword);
 	SPDK_DEBUGLOG(hlsacc,"CHANNEL SEND IOVCNT%d\n",iovcnt);
 	axi_dma_info->iovcnt = iovcnt;
 	spdk_axi_dma_tx_channel_send_seg(axi_dma_info->ch, axi_dma_info->iovs, iovcnt,
@@ -723,13 +777,57 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	
 	while (io)
 	{
-	  if (io->status.transfered_bytes == 0 || ((unsigned char)(io->ctrl.tuser)>>4) == 0xf)
-	  {
-		// 收到了tuser=0xff的信号，表示数据完全处理完成
-		if (((!ch->is_tx) && ((unsigned char)(io->ctrl.tuser)>>4) == 0xf))
-		{
+	  SPDK_DEBUGLOG(hlsacc,"LWE_CH_CMPL %s完成 req=%p request_id=%u channel=%d bytes=%u tuser=0x%x tid=0x%x iovcnt_before=%d result_before=%llu is_last_before=%d used_iovcnt=%d\n",
+		  ch->is_tx ? "TX" : "RX",
+		  ch->req,
+		  ch->req->request_id,
+		  ch->channel_id,
+		  io->status.transfered_bytes,
+		  (unsigned int)io->ctrl.tuser,
+		  (unsigned int)io->ctrl.tid,
+		  axi_dma_info->iovcnt,
+		  ch->req->result,
+		  axi_dma_info->is_last ? 1 : 0,
+		  io->used_iovcnt);
+		  if (io->status.transfered_bytes == 0 || ((unsigned char)(io->ctrl.tuser)>>4) == 0xf)
+		  {
+			// 收到了tuser=0xff的信号，表示数据完全处理完成
+			if (((unsigned char)(io->ctrl.tuser)>>4) == 0xf)
+			{
+			  uint32_t finish_completion_bytes = io->status.transfered_bytes;
+			  uint32_t finish_beat_bytes = ch->is_tx ?
+				  MCDMA_TASK_INPUT_FINISH_BEAT_SIZE : MCDMA_TASK_FINISH_BEAT_SIZE;
+			  uint32_t payload_bytes = 0;
+			  if (finish_completion_bytes >= finish_beat_bytes) {
+				payload_bytes = finish_completion_bytes - finish_beat_bytes;
+			  } else if (finish_completion_bytes != 0) {
+				SPDK_ERRLOG(
+					"%s结束completion长度异常: bytes=%u，小于结束beat长度%u\n",
+					ch->is_tx ? "TX" : "RX",
+					finish_completion_bytes,
+					finish_beat_bytes);
+			  }
+			  /*
+			   * AXI DMA aggregates every descriptor in one software submission.
+			   * The final completion therefore contains payload plus SUDA's
+			   * TUSER=0xff marker: 16 bytes on TX and 64 bytes on RX.
+			   */
+			  transfered_length += payload_bytes;
+			  SPDK_NOTICELOG(
+				  "LWE_FINISH_ACCOUNT %s结束completion记账 req=%p request_id=%u bytes=%u payload_bytes=%u finish_bytes=%u result_before=%llu\n",
+				  ch->is_tx ? "TX" : "RX",
+				  ch->req,
+				  ch->req->request_id,
+				  finish_completion_bytes,
+				  payload_bytes,
+				  finish_beat_bytes,
+				  (unsigned long long)ch->req->result);
 		  SPDK_DEBUGLOG(hlsacc,"RECV REAL LAST SIGNAL\n");
-		  axi_dma_info->is_last = true;
+		  if (!ch->is_tx) {
+			axi_dma_info->is_last = true;
+		  } else {
+			axi_dma_info->iovcnt = 0;
+		  }
 		  last_io = io;
 		 
 		  spdk_axi_dma_io_free(io);	
@@ -738,7 +836,11 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	  }
 	  transfered_length += io->status.transfered_bytes;
 	  last_io = io;
-	  axi_dma_info->iovcnt--;
+		  if (io->iovcnt >= axi_dma_info->iovcnt) {
+			axi_dma_info->iovcnt = 0;
+		  } else {
+			axi_dma_info->iovcnt -= io->iovcnt;
+		  }
 	  io = spdk_axi_dma_poller_for_compute((((struct axi_dma_channel_info *)ch->channel_info))->ch);
 
 	  //这里axi_dma_io的分配需要重新设计和优化！！！
@@ -840,8 +942,8 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	}
 	int size = ob->iov_len - ob->cur_used;
 	int iovcnt = (size / PAGE_SIZE) + (size % PAGE_SIZE != 0);
-	int max_cnt = 64 - axi_dma_info->iovcnt;
-	max_cnt = 64;
+	/* One software completion now represents the whole multi-BD submission. */
+	int max_cnt = mcdma_compute_rx_batch_pages();
 	if (iovcnt > max_cnt) {
 	  iovcnt = max_cnt;
 	  // SPDK_ERRLOG("Failed To Use Channel, Send Data Size Too Big\n");
@@ -849,15 +951,33 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	}
 	if(iovcnt==0) return 0;
 	for (int i = 0; i < iovcnt; i++) {
+	  int chunk_size = size - PAGE_SIZE * i;
+	  if (chunk_size > PAGE_SIZE) {
+		chunk_size = PAGE_SIZE;
+	  }
 	  axi_dma_info->iovs[i].iov_base =
 		  ob->iov_base + ob->cur_used + PAGE_SIZE * i;
-	  axi_dma_info->iovs[i].iov_len = PAGE_SIZE;
+	  axi_dma_info->iovs[i].iov_len = chunk_size;
 	  axi_dma_info->iovs[i].paddr =
 		  spdk_vtophys(axi_dma_info->iovs[i].iov_base, NULL);
 	}
-	axi_dma_info->iovcnt = iovcnt;
-	spdk_axi_dma_rx_channel_recv(axi_dma_info->ch, axi_dma_info->iovs, iovcnt,
+	SPDK_DEBUGLOG(hlsacc,"LWE_RX_RECV_POST 准备接收输出流 req=%p request_id=%u channel=%d size_left=%d ob_len=%zu cur_used=%zu iovcnt=%d first_paddr=0x%llx first_len=%zu\n",
+		ch->req,
+		ch->req->request_id,
+		ch->channel_id,
+		size,
+		ob->iov_len,
+		ob->cur_used,
+		iovcnt,
+		(unsigned long long)axi_dma_info->iovs[0].paddr,
+		axi_dma_info->iovs[0].iov_len);
+	int ret = spdk_axi_dma_rx_channel_recv(axi_dma_info->ch, axi_dma_info->iovs, iovcnt,
 								 ch->channel_done, (void *)ch);
+	if (ret != 0) {
+	  axi_dma_info->iovcnt = 0;
+	  return ret;
+	}
+	axi_dma_info->iovcnt = iovcnt;
 	SPDK_DEBUGLOG(hlsacc,"CHANNEL RECV\n");
 	return 0;
   }
@@ -1013,19 +1133,57 @@ struct handc_ctx{
 
 static_assert(sizeof(struct handc_ctx)<4096);
 
+static const char *handc_fsm_name(int state)
+{
+	switch (state) {
+	case FETCH_PRP:
+		return "FETCH_PRP";
+	case END_FETCH_PRP:
+		return "END_FETCH_PRP";
+	case FETCH_DATA:
+		return "FETCH_DATA";
+	case END_FETCH_DATA:
+		return "END_FETCH_DATA";
+	case OPERATOR_SOURCE_RANGES:
+		return "OPERATOR_SOURCE_RANGES";
+	case NON_OP:
+		return "NON_OP";
+	default:
+		return "UNKNOWN";
+	}
+}
+
 void compute_handc_impl(void* ctx){
 	struct handc_ctx *hc = (struct handc_ctx*) ctx;
+	SPDK_NOTICELOG(
+		"HANDC_IMPL enter req=%p opc=0x%x fsm=%s cur_rx=%llu total_rx=%llu\n",
+		hc->mcdma_req,
+		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+		handc_fsm_name(hc->fsm_state),
+		hc->cur_rx_bytes,
+		hc->total_rx_bytes);
 	if(hc->fsm_state==FETCH_PRP){
 		hc->fsm_state = FETCH_DATA;
 	}else{
 		hc->fsm_state = END_FETCH_DATA;
 	}
+	SPDK_NOTICELOG(
+		"HANDC_IMPL request_process req=%p next_fsm=%s\n",
+		hc->mcdma_req,
+		handc_fsm_name(hc->fsm_state));
 	hc->mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTED;
 	nvmf_mcdma_request_process(hc->rtransport,hc->mcdma_req);
 	return;
 }
 void compute_handc_op_tx_impl(struct spdk_axi_dma_io *io, int status){
 	struct handc_ctx *hc = (struct handc_ctx*) io->ctx;
+	SPDK_NOTICELOG(
+		"HANDC_TX_CMPL req=%p opc=0x%x status=%d bytes=%u fsm=%s\n",
+		hc->mcdma_req,
+		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+		status,
+		io->status.transfered_bytes,
+		handc_fsm_name(hc->fsm_state));
 	spdk_axi_dma_io_free(io);
 	return;
 }
@@ -1034,6 +1192,15 @@ void compute_handc_op_rx_impl(struct spdk_axi_dma_io *io, int status){
 	
 	struct handc_ctx *hc = (struct handc_ctx*) io->ctx;
 	hc->cur_rx_bytes += io->status.transfered_bytes;
+	SPDK_NOTICELOG(
+		"HANDC_RX_CMPL req=%p opc=0x%x status=%d bytes=%u cur_rx=%llu total_rx=%llu fsm=%s\n",
+		hc->mcdma_req,
+		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+		status,
+		io->status.transfered_bytes,
+		hc->cur_rx_bytes,
+		hc->total_rx_bytes,
+		handc_fsm_name(hc->fsm_state));
 	SPDK_DEBUGLOG(nvmf,"CUR RX BYTES GET %d TOTAL BYTES%d\n",hc->cur_rx_bytes,hc->total_rx_bytes);
 	//if(hc->cur_rx_bytes>=hc->total_rx_bytes){
 	//Might Not So useful
@@ -1041,6 +1208,10 @@ void compute_handc_op_rx_impl(struct spdk_axi_dma_io *io, int status){
 	if(hc->cur_rx_bytes>=hc->total_rx_bytes){
 		spdk_axi_dma_io_free(io);
 		if(hc->impl_thread!=NULL){
+			SPDK_NOTICELOG(
+				"HANDC_RX_DONE req=%p opc=0x%x posting back to impl thread\n",
+				hc->mcdma_req,
+				hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0);
 			SPDK_DEBUGLOG(nvmf,"HC CURRXBYTES%d TOTALRXBYTES%d\n",hc->cur_rx_bytes,hc->total_rx_bytes);
 			if(hc->to_iovecs[0].iov_base!=NULL){
 				unsigned int* data = (unsigned int*)(hc->to_iovecs[0].iov_base);
@@ -1063,13 +1234,20 @@ void compute_handc_op(void* ctx){
 	ctrl.tuser = 0;
 	struct spdk_axi_dma_ch* ch;
 	int iovcnt;
+	SPDK_NOTICELOG(
+		"HANDC_OP start req=%p opc=0x%x fsm=%s from_size=%d to_size=%d\n",
+		hc->mcdma_req,
+		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+		handc_fsm_name(hc->fsm_state),
+		hc->from_size,
+		hc->to_size);
 	//RX RECV
 	ch = dev->compute_rx_channel;
 	iovcnt = hc->to_size;
 	struct spdk_axi_dma_io *io = spdk_simple_pool_get(&ch->io_pool);
     if (!io) {
         SPDK_ERRLOG("Failed to allocate spdk_axi_dma_io\n");
-        return -ENOMEM;
+        return;
     }
     io->ch = ch;
     io->iovs = hc->to_iovecs;
@@ -1083,12 +1261,28 @@ void compute_handc_op(void* ctx){
     for (int i = 0; i < iovcnt; i++) {
         uint64_t len = io->iovs[i].iov_len;
         io->transfered_length += len;
+		SPDK_NOTICELOG(
+			"HANDC_OP RX_IOV[%d] base=%p paddr=0x%llx len=%llu\n",
+			i,
+			io->iovs[i].iov_base,
+			(unsigned long long)io->iovs[i].paddr,
+			(unsigned long long)len);
     }
 	hc->total_rx_bytes = io->transfered_length;
 	hc->cur_rx_bytes = 0;
 
 
-    spdk_env_axi_dma_rx_channel_recv(ch->env_ch, hc->to_iovecs, iovcnt, io);
+    int ret = spdk_env_axi_dma_rx_channel_recv(ch->env_ch, hc->to_iovecs, iovcnt, io);
+	SPDK_NOTICELOG(
+		"HANDC_OP RX_SUBMIT req=%p ret=%d total_rx=%llu\n",
+		hc->mcdma_req,
+		ret,
+		hc->total_rx_bytes);
+	if (ret != 0) {
+		SPDK_ERRLOG("HANDC_OP RX submit failed ret=%d req=%p\n", ret, hc->mcdma_req);
+		spdk_axi_dma_io_free(io);
+		return;
+	}
 	iovcnt = hc->from_size;
 	//TX SEND
 	for(int i=0;i<iovcnt;i++)
@@ -1097,7 +1291,7 @@ void compute_handc_op(void* ctx){
 		io = spdk_simple_pool_get(&ch->io_pool);
 		if (!io) {
 			SPDK_ERRLOG("Failed to allocate spdk_axi_dma_io\n");
-			return -ENOMEM;
+			return;
 		}
 		io->ch = ch;
 		io->iovs = &(hc->from_iovecs[i]);
@@ -1108,7 +1302,23 @@ void compute_handc_op(void* ctx){
 		io->transfered_length = 0;
 		memcpy(&io->ctrl, &ctrl, sizeof(struct spdk_axi_dma_ctrl));
 		io->transfered_length = hc->from_iovecs[i].iov_len;
-		spdk_env_axi_dma_tx_channel_send(ch->env_ch, &(hc->from_iovecs[i]), 1, io);
+		SPDK_NOTICELOG(
+			"HANDC_OP TX_IOV[%d] base=%p paddr=0x%llx len=%llu\n",
+			i,
+			hc->from_iovecs[i].iov_base,
+			(unsigned long long)hc->from_iovecs[i].paddr,
+			(unsigned long long)hc->from_iovecs[i].iov_len);
+		ret = spdk_env_axi_dma_tx_channel_send(ch->env_ch, &(hc->from_iovecs[i]), 1, io);
+		SPDK_NOTICELOG(
+			"HANDC_OP TX_SUBMIT[%d] req=%p ret=%d\n",
+			i,
+			hc->mcdma_req,
+			ret);
+		if (ret != 0) {
+			SPDK_ERRLOG("HANDC_OP TX submit failed ret=%d req=%p idx=%d\n", ret, hc->mcdma_req, i);
+			spdk_axi_dma_io_free(io);
+			return;
+		}
 	}
 	return;
 }
@@ -1132,6 +1342,12 @@ void hlsacccompute_req_callback(struct spdk_hlsacccompute_request *request, void
 	struct spdk_nvmf_mcdma_request* mcdma_req = cb_arg;
 	mcdma_req->req.rsp->nvme_cpl.cdw0 = request->result;
 	mcdma_req->req.rsp->nvme_cpl.cdw1 = request->result >> 32;
+	SPDK_NOTICELOG(
+		"HLSACC_REQ_CB req=%p mcdma_req=%p request_id=%d result=%llu\n",
+		request,
+		mcdma_req,
+		request->request_id,
+		request->result);
 	SPDK_DEBUGLOG(nvmf,"GET RESULT%d request %llx id %d\n",request->result,request,request->request_id);
 	spdk_trace_record(TRACE_MCDMA_REQUEST_STATE_HLS_EXEC, 0, 0,
 		(uintptr_t)mcdma_req, "hlsacccompute_req_callback");
@@ -2810,6 +3026,19 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					continue;
 
 				}else if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_READ){
+					SPDK_NOTICELOG(
+						"SLM_READ enter req=%p cid=%u mem_nsid=0x%x mem_id=%u start=%llu len=%u prp1=0x%llx prp2=0x%llx lookup_ret=%d ns_vaddr=%p ns_paddr=%p\n",
+						mcdma_req,
+						mcdma_req->req.cmd->nvme_cmd.cid,
+						cmd->nsid,
+						cmd->nsid&(~SLM_MASK),
+						starting_bytes,
+						read_or_write_length,
+						(unsigned long long)cmd->dptr.prp.prp1,
+						(unsigned long long)cmd->dptr.prp.prp2,
+						ret,
+						ns_vaddr,
+						ns_paddr);
 					spdk_trace_record(TRACE_MCDMA_REQUEST_STATE_HLS_EXEC, 0, 0,
 						(uintptr_t)mcdma_req,"srfetpp");
 					//SPDK_DEBUGLOG(nvmf,"REQUEST%llx CTX%llx SGL BUF%llx\n",mcdma_req,ctx,mcdma_req->sgl_buf);
@@ -2861,6 +3090,17 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					}
 					ctx->mcdma_req = mcdma_req;
 					ctx->rtransport = rtransport;
+					SPDK_NOTICELOG(
+						"SLM_READ handc_submit req=%p fsm=%s from_size=%d to_size=%d from0=%p from0_paddr=0x%llx from0_len=%llu to0_paddr=0x%llx to0_len=%llu\n",
+						mcdma_req,
+						handc_fsm_name(ctx->fsm_state),
+						ctx->from_size,
+						ctx->to_size,
+						ctx->from_iovecs[0].iov_base,
+						(unsigned long long)ctx->from_iovecs[0].paddr,
+						(unsigned long long)ctx->from_iovecs[0].iov_len,
+						(unsigned long long)ctx->to_iovecs[0].paddr,
+						(unsigned long long)ctx->to_iovecs[0].iov_len);
 					
 					spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 					continue;
@@ -3021,26 +3261,35 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					if(request->acccontext[1]!=NULL){
 						SPDK_DEBUGLOG(nvmf,"WAITING FOR ACCCONTEXT %llx\n",request->acccontext[1]);	
 					}
-					if(need_init_num==1){	
-						ctx->fsm_state = FETCH_DATA;
-						ctx->to_size = 1;
-						ctx->from_size = 1;
-						ctx->from_iovecs[0].iov_base = NULL;
-						ctx->from_iovecs[0].paddr = cmd->dptr.prp.prp1;
-						ctx->from_iovecs[0].iov_len = 4096;
-						int i=0;
-						for(i=0;i<8;i++){
-							if(need_init_ctx[i]==1) break;
-						}
-				
-						
-						ctx->to_iovecs[0].iov_base = (unsigned long long)(request->acccontext[i])+4096;
-						ctx->to_iovecs[0].iov_len =  4096;
-						ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
-						//SPDK_NOTICELOG("VADDR%llx PADDR%llx\n",ctx->to_iovecs[0].iov_base,ctx->to_iovecs[0].paddr);
-						assert(cmd->dptr.prp.prp1!=NULL);
-						if(cmd->dptr.prp.prp1==NULL){
-							SPDK_ERRLOG("Failed to Fetch Block Context!\n");
+						if(need_init_num==1){
+							ctx->fsm_state = FETCH_DATA;
+							ctx->to_size = 1;
+							ctx->from_size = 1;
+							ctx->from_iovecs[0].iov_base = NULL;
+							ctx->from_iovecs[0].paddr = cmd->dptr.prp.prp1;
+							ctx->from_iovecs[0].iov_len = 4096;
+							int i=0;
+							for(i=0;i<8;i++){
+								if(need_init_ctx[i]==1) break;
+							}
+
+
+							ctx->to_iovecs[0].iov_base = (unsigned long long)(request->acccontext[i])+4096;
+							ctx->to_iovecs[0].iov_len =  4096;
+							ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
+							SPDK_NOTICELOG("LWE_CTX_FETCH 准备搬运context req=%p op_index=%d host_prp=0x%llx dst_vaddr=0x%llx dst_paddr=0x%llx len=%llu cparam1=0x%llx need_init_num=%u\n",
+								request,
+								i,
+								(unsigned long long)ctx->from_iovecs[0].paddr,
+								(unsigned long long)ctx->to_iovecs[0].iov_base,
+								(unsigned long long)ctx->to_iovecs[0].paddr,
+								(unsigned long long)ctx->to_iovecs[0].iov_len,
+								(unsigned long long)cparam1,
+								(unsigned int)need_init_num);
+							//SPDK_NOTICELOG("VADDR%llx PADDR%llx\n",ctx->to_iovecs[0].iov_base,ctx->to_iovecs[0].paddr);
+							assert(cmd->dptr.prp.prp1!=NULL);
+							if(cmd->dptr.prp.prp1==NULL){
+								SPDK_ERRLOG("Failed to Fetch Block Context!\n");
 
 						}else{
 							SPDK_DEBUGLOG(nvmf,"PRP ADDRESS%llx\n",cmd->dptr.prp.prp1);
@@ -3355,6 +3604,14 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					//First，Try to Get Prp Pages
 					//SPDK_DEBUGLOG(nvmf,"ENTER FETCH DATA\n");
 					if(ctx->fsm_state == FETCH_DATA){
+						SPDK_NOTICELOG(
+							"SLM_READ FETCH_DATA req=%p cid=%u mem_id=%u start=%llu len=%d ns_vaddr=%p\n",
+							mcdma_req,
+							mcdma_req->req.cmd->nvme_cmd.cid,
+							cmd->nsid&(~SLM_MASK),
+							starting_bytes,
+							read_or_write_length,
+							ns_vaddr);
 						spdk_trace_record(TRACE_MCDMA_REQUEST_STATE_HLS_EXEC, 0, 0,
 							(uintptr_t)mcdma_req,"srfetda");
 						
@@ -3385,9 +3642,22 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 							read_or_write_length -= incr_bytes;
 						}
 						SPDK_DEBUGLOG(nvmf,"GET FROM SIZE%d,TO SIZE%d\n",ctx->from_size,ctx->to_size);
+						SPDK_NOTICELOG(
+							"SLM_READ FETCH_DATA handc_submit req=%p from_size=%d to_size=%d from0=%p from0_paddr=0x%llx to0_paddr=0x%llx\n",
+							mcdma_req,
+							ctx->from_size,
+							ctx->to_size,
+							ctx->from_iovecs[0].iov_base,
+							(unsigned long long)ctx->from_iovecs[0].paddr,
+							(unsigned long long)ctx->to_iovecs[0].paddr);
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 						continue;
 					}else{
+						SPDK_NOTICELOG(
+							"SLM_READ END_FETCH_DATA req=%p cid=%u fsm=%s ready_to_complete\n",
+							mcdma_req,
+							mcdma_req->req.cmd->nvme_cmd.cid,
+							handc_fsm_name(ctx->fsm_state));
 						//SPDK_DEBUGLOG(nvmf,"END_FETCH_DATA REQUEST%llx CTX%llx\n",mcdma_req,ctx);
 					}
 				}else if(mcdma_req->req.cmd->nvme_cmd.opc==SPDK_NVME_OPC_SLM_COPY){
@@ -3662,14 +3932,29 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					//SPDK_NOTICELOG("END FETCH DATA EXECUTING REQUEST ADDRESS%llx\n",request);
 					ctx->fsm_state = NON_OP;
 					mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
-					mcdma_req->impl_thread = spdk_get_thread();
-					//DUMP CONTEXT
-					memcpy(request->acccontext[0]->context.static_data,(void*)((unsigned long long)(request->acccontext[0])+4096),2048);
-					unsigned int *da = (unsigned int*)(request->acccontext[0]->context.static_data);
-					//SPDK_NOTICELOG("CONTEXT DUMP%x %x %x %x\n",da[0],da[1],da[2],da[3]);
-					//usleep(10);
-					if(request->priority<120)//Preempt if priority is high
-						spdk_thread_send_msg(mdev->compute_thread,hlsacccompute_run_request_unpreempt,request);
+						mcdma_req->impl_thread = spdk_get_thread();
+						//DUMP CONTEXT
+						unsigned int *staged_da = (unsigned int *)((unsigned long long)(request->acccontext[0])+4096);
+						memcpy(request->acccontext[0]->context.static_data,(void*)((unsigned long long)(request->acccontext[0])+4096),2048);
+						unsigned int *da = (unsigned int*)(request->acccontext[0]->context.static_data);
+						SPDK_NOTICELOG("LWE_CTX_VERIFY context已搬入 req=%p accctx=%p context_phy=0x%llx staged_u32=[%u,%u,%u,%u,%u] static_u32=[%u,%u,%u,%u,%u]\n",
+							request,
+							request->acccontext[0],
+							(unsigned long long)request->acccontext[0]->context_phy,
+							staged_da[0],
+							staged_da[1],
+							staged_da[2],
+							staged_da[3],
+							staged_da[4],
+							da[0],
+							da[1],
+							da[2],
+							da[3],
+							da[4]);
+						//SPDK_NOTICELOG("CONTEXT DUMP%x %x %x %x\n",da[0],da[1],da[2],da[3]);
+						//usleep(10);
+						if(request->priority<120)//Preempt if priority is high
+							spdk_thread_send_msg(mdev->compute_thread,hlsacccompute_run_request_unpreempt,request);
 					else
 						spdk_thread_send_msg(mdev->compute_thread,hlsacccompute_run_request_preempt,request);
 					continue;
@@ -4840,4 +5125,3 @@ const struct spdk_nvmf_transport_ops spdk_nvmf_transport_mcdma = {
 };
 
 SPDK_NVMF_TRANSPORT_REGISTER(mcdma, &spdk_nvmf_transport_mcdma);
-

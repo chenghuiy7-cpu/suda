@@ -64,6 +64,10 @@ DPDK_LIB_LIST = rte_eal rte_mempool rte_ring rte_mbuf rte_bus_pci rte_pci rte_me
 DPDK_LIB_LIST += rte_timer rte_rcu rte_cryptodev rte_eventdev rte_ip_frag rte_sched rte_port rte_lpm rte_acl rte_hash rte_table
 DPDK_LIB_LIST += rte_telemetry rte_kvargs
 
+ifneq (, $(wildcard $(DPDK_LIB_DIR)/librte_kni.*))
+DPDK_LIB_LIST += rte_kni
+endif
+
 ifeq ($(OS),Linux)
 DPDK_LIB_LIST += rte_power rte_ethdev rte_net
 endif
