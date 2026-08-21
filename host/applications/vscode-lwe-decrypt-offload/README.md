@@ -30,6 +30,22 @@ QEMU/NVMQ 连接，配置不会通过更换 `BOOT.bin` 自动更新。
   --inspect-only
 ```
 
+## 直接验证上一阶段 FPGA 加密结果
+
+如果刚运行过 `vscode-lwe-encrypt-offload` 的 128B 示例，可直接解密其
+`LWEHLS01` dump，不依赖远端 HPU：
+
+```bash
+./vscode-lwe-decrypt-offload \
+  --input ../vscode-lwe-encrypt-offload/lwe_encrypt_fpga_ciphertexts_128b.bin \
+  --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
+  --output lwe_decrypt_fpga_result_128b.bin \
+  --benchmark 2>&1 | tee lwe_decrypt_fpga_result_128b.log
+```
+
+输入 dump 保存了加密阶段恢复出的明文参考值，因此程序会自动逐字节校验，
+不需要再传 `--expect-file`。
+
 ## 上板验证远端 HPU 的 1B 结果
 
 已知原始明文为 `59`，远端执行 `+1` 后应解密为 `60`：

@@ -158,3 +158,106 @@ SSD -> SLM -> FPGA encrypt -> Host memory -> TCP -> remote HPU
 ```
 
 密钥和远端 HPU 服务必须来自同一套 psi64 参数和 client key。
+
+## 10. 最小加解密测试命令
+
+以下命令在 QEMU guest 中执行，并假设 ARM `nvmf_tgt` 正常运行、NVMQ 已连接，
+当前上板镜像包含 `lwe_encrypt`（type ID 2）和 `lwe_decrypt`（type ID 3）。示例
+会覆盖 SSD LBA `65536` 和 `131072`，执行前必须确认它们属于可覆盖测试区且互不
+重叠。
+
+### 10.1 准备 128B 测试明文并写入 SSD
+
+数据生成程序按 4KB LBA 写入，因此先生成一页随机数据，其中前 128B 是本次
+加密输入：
+
+```bash
+export SUDA_VM_ROOT=/mnt/suda
+export INPUT_LBA=65536
+export OUTPUT_LBA=131072
+export LWE_KEY="$SUDA_VM_ROOT/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin"
+
+cd "$SUDA_VM_ROOT/host/applications/vscode-lwe-encrypt-data-gen"
+mkdir -p testdata
+dd if=/dev/urandom of=testdata/plaintext_u8_4k.bin \
+  bs=4096 count=1 status=none
+export FIRST_U8=$(od -An -tu1 -N1 testdata/plaintext_u8_4k.bin | xargs)
+echo "FIRST_U8=$FIRST_U8"
+
+./vscode-lwe-encrypt-data-gen \
+  --input testdata/plaintext_u8_4k.bin \
+  --ssd-nsid 1 \
+  --ssd-lba "$INPUT_LBA"
+```
+
+成功标志是 `u8 plaintext SSD write passed` 和 `readback_verified=yes`。
+
+### 10.2 单独测试 FPGA 加密算子
+
+```bash
+cd "$SUDA_VM_ROOT/host/applications/vscode-lwe-encrypt-offload"
+
+./vscode-lwe-encrypt-offload \
+  --ssd-nsid 1 \
+  --ssd-lba "$INPUT_LBA" \
+  --input-lbas 1 \
+  --plaintext-bytes 128 \
+  --expect "$FIRST_U8" \
+  --key "$LWE_KEY" \
+  --output lwe_encrypt_fpga_ciphertexts_128b.bin \
+  --benchmark 2>&1 | tee lwe_encrypt_128b.log
+```
+
+成功标志是 `lwe_encrypt FPGA execution passed`、`decrypted_count=128` 和
+`host_key_decrypt_checked=yes`。
+
+### 10.3 单独测试 FPGA 解密算子
+
+上一步生成的 `LWEHLS01` dump 可直接作为解密程序输入。程序会将其中的逻辑
+Big-LWE 重排为 HPU-native 物理布局后写入 input SLM：
+
+```bash
+cd "$SUDA_VM_ROOT/host/applications/vscode-lwe-decrypt-offload"
+
+./vscode-lwe-decrypt-offload \
+  --input ../vscode-lwe-encrypt-offload/lwe_encrypt_fpga_ciphertexts_128b.bin \
+  --key "$LWE_KEY" \
+  --output lwe_decrypt_fpga_result_128b.bin \
+  --benchmark 2>&1 | tee lwe_decrypt_128b.log
+```
+
+成功标志是 `lwe_decrypt FPGA execution passed`、`decrypted_count=128` 和
+`correctness_checked=yes`。
+
+### 10.4 测试 SSD 到远端 HPU 再回 SSD 的完整闭环
+
+先在 129 启动使用同一 ServerKey 的 `hpu_lwe_remote_server`，确认端口
+`19090` 正在监听，然后在 QEMU guest 执行：
+
+```bash
+cd "$SUDA_VM_ROOT/host/applications/vscode-lwe-full-pipeline"
+
+./vscode-lwe-full-pipeline \
+  --ssd-nsid 1 \
+  --ssd-lba "$INPUT_LBA" \
+  --input-lbas 1 \
+  --plaintext-bytes 128 \
+  --output-ssd-nsid 1 \
+  --output-ssd-lba "$OUTPUT_LBA" \
+  --expect "$FIRST_U8" \
+  --server 10.16.0.129 \
+  --server-port 19090 \
+  --scalar 1 \
+  --key "$LWE_KEY" \
+  --benchmark 2>&1 | tee lwe_full_pipeline_128b.log
+```
+
+这里 `--expect` 指加密前的首字节；程序会自行计算远端 `+1` 后的预期结果。
+成功标志包括：
+
+```text
+lwe full SSD-to-remote-HPU-to-SSD pipeline passed
+destination_ssd_readback_checked=yes
+fpga_decrypt_checked=yes
+remote_hpu_ciphertext_compute=passed
+```

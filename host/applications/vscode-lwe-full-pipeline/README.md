@@ -22,6 +22,9 @@ make clean && make -j
 下面读取 SSD `nsid=1,lba=65536` 的前 128B，远端执行 `+1`，解密后写入同一 SSD 的 `lba=131072`：
 
 ```bash
+export FIRST_U8=$(od -An -tu1 -N1 \
+  ../vscode-lwe-encrypt-data-gen/testdata/plaintext_u8_4k.bin | xargs)
+
 ./vscode-lwe-full-pipeline \
   --ssd-nsid 1 \
   --ssd-lba 65536 \
@@ -29,12 +32,17 @@ make clean && make -j
   --plaintext-bytes 128 \
   --output-ssd-nsid 1 \
   --output-ssd-lba 131072 \
+  --expect "$FIRST_U8" \
   --server 10.16.0.129 \
   --server-port 19090 \
   --scalar 1 \
   --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
   --benchmark
 ```
+
+`FIRST_U8` 是源 SSD 数据的第一个字节，通常在写入 SSD 前通过
+`od -An -tu1 -N1 plaintext_u8_4k.bin | xargs` 获得。这里 `--expect` 检查
+加密前输入；远端 `+1` 后的预期明文由程序自动计算。
 
 源和目标 LBA 范围不能重叠。目标写入按 4KB 补零，默认在返回成功前回读目标 LBA 并校验；`--skip-ssd-readback` 可关闭该检查。
 

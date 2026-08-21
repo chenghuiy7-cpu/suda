@@ -42,18 +42,35 @@ make
 
 ## Run
 
+The examples below assume the matching keyset has been installed under
+`/mnt/suda/device/operators/hls/lwe_encrypt/testdata`. The source LBA must
+already contain plaintext written by `vscode-lwe-encrypt-data-gen` or another
+verified NVMe writer.
+
 To encrypt the first byte at an SSD LBA:
 
 ```bash
-./vscode-lwe-encrypt-offload --ssd-nsid 1 --ssd-lba "$SSD_LBA"
+./vscode-lwe-encrypt-offload \
+  --ssd-nsid 1 \
+  --ssd-lba "$SSD_LBA" \
+  --plaintext-bytes 1 \
+  --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
+  --output lwe_encrypt_fpga_ciphertexts_1b.bin
 ```
 
 To encrypt 128 consecutive bytes, one 4KB input LBA is sufficient:
 
 ```bash
 ./vscode-lwe-encrypt-offload --ssd-nsid 1 --ssd-lba "$SSD_LBA" \
-  --plaintext-bytes 128
+  --input-lbas 1 \
+  --plaintext-bytes 128 \
+  --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
+  --output lwe_encrypt_fpga_ciphertexts_128b.bin \
+  --benchmark
 ```
+
+Expected success markers are `lwe_encrypt FPGA execution passed`,
+`decrypted_count=128`, and `host_key_decrypt_checked=yes`.
 
 Output SLM data is read in 128KB requests by default. The request size is
 configurable in 4KB units; use the legacy 4KB behavior when isolating a runtime
