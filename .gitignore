@@ -82,6 +82,7 @@ device/operators/hls/lwe_encrypt/compat/
 device/operators/hls/lwe_decrypt/compat/
 device/operators/hls/lwe_encrypt/testdata/*
 !device/operators/hls/lwe_encrypt/testdata/README.md
+!device/operators/hls/lwe_encrypt/testdata/install_validated_keyset.sh
 
 # API libraries
 host/api/liburing/examples/
