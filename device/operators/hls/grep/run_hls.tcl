@@ -10,7 +10,7 @@ set solution_name "solution1"
 
 # 设置共享头文件目录的路径
 set top_dir [file normalize [file join [file dirname [info script]] "../.."]]
-set shared_include_dir [file join $top_dir "../../../shared_components/hls"]
+set shared_include_dir [file join $top_dir "../shared_components/hls"]
 
 # 设置编译标志
 set compile_flags "-I${shared_include_dir} -DUSING_XILINX_STREAM"
