@@ -154,7 +154,8 @@ host/applications/vscode-lwe-full-pipeline
 
 ```text
 SSD -> SLM -> FPGA encrypt -> Host memory -> TCP -> remote HPU
-    -> Host memory -> SLM -> FPGA decrypt -> SSD
+    -> Host memory -> decrypt input SLM -> FPGA decrypt
+    -> decrypt output SLM -> NVMe Copy -> SSD
 ```
 
 密钥和远端 HPU 服务必须来自同一套 psi64 参数和 client key。
@@ -261,3 +262,8 @@ destination_ssd_readback_checked=yes
 fpga_decrypt_checked=yes
 remote_hpu_ciphertext_compute=passed
 ```
+
+默认模式会在 NVMe Copy 完成后从目标 SSD 回读明文到 Host，并做端到端正确性校验。
+若只测量 `decrypt output SLM -> SSD` 的直接数据路径，可增加
+`--skip-ssd-readback`；此时不会把解密明文回读到 Host，成功标志中的
+`destination_ssd_readback_checked` 和 `fpga_decrypt_checked` 均为 `no`。

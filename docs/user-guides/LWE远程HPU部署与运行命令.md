@@ -1,32 +1,77 @@
 # LWE 远程 HPU 部署与运行命令
 
-## 1. 适用范围
+## 1. 适用范围与源码边界
 
 本手册覆盖以下链路：132 保存唯一源码并准备部署文件，129 启动真实 V80 HPU 服务，
-132 将已有 `LWEHLS01` 密文发送到 129 执行 `ADDS +1`，接收结果后用本地 ClientKey
-解密验证。
+SUDA 将 HPU-native 密文发送到 129 执行 `ADDS +1`，接收结果后进入 FPGA 解密链路。
+
+远端 HPU 自研源码已经统一放入 SUDA：
+
+```text
+hpu/overlays/tfhe-rs/                                  # Rust 服务端覆盖层
+host/applications/vscode-lwe-encrypt-remote-offload/  # SUDA C++ 客户端
+host/applications/vscode-lwe-full-pipeline/           # 完整闭环客户端
+```
+
+`hpu/overlays/tfhe-rs` 不是完整 Cargo workspace。完整 TFHE-rs 基仓固定到
+`hpu/manifests/remote-hpu.env` 中的 revision，并在需要构建时生成到被 Git 忽略的
+`hpu/worktree/tfhe-rs`。以后只需提交和 push SUDA 仓库，不再提交顶层 `hpu/` 中的
+独立仓库。
 
 前置条件：
 
-- 132 已有 `/home/yangchenghui/hpu/tfhe-rs`、SUDA 密文和对应密钥；
+- 132 已有 SUDA 源码、匹配的 HPU 归档和密钥制品；
 - 129 已安装 Vivado、AMI/QDMA 驱动及 V80 HPU 运行环境；
-- 129 SSH 地址为 `10.16.0.129:2222`；
-- ClientKey 和 Big-LWE 私钥只保留在 132；129 只接收 `CompressedServerKey`。
+- ClientKey 和 Big-LWE 私钥只保留在 132；129 只接收 `CompressedServerKey`；
+- SSH 私钥、真实板卡序列号和密钥文件均放在 SUDA 仓库之外。
 
-## 2. 新用户：129 还没有 tfhe-rs 源码
-
-### 2.1 在 132 生成首次部署文件
+先在 132 设置本机变量：
 
 ```bash
-cd /home/yangchenghui/hpu/tfhe-rs
+export SUDA_ROOT=/path/to/suda
+export TFHE_RS_ROOT="$SUDA_ROOT/hpu/worktree/tfhe-rs"
+export HPU_ARCHIVE_SOURCE=/secure/path/psi64.hpu
+export SERVER_KEY_SOURCE=/secure/path/psi64_integer_compressed_server_key.bincode
+export SSH_KEY=/secure/path/to/id_ed25519
+export HPU_REMOTE_USER=your-user
+export HPU_REMOTE_HOST=10.16.0.129
+export HPU_REMOTE_SSH_PORT=2222
+
+source "$SUDA_ROOT/hpu/manifests/remote-hpu.env"
+export HPU_REMOTE_SERVER_KEY_SHA256="$HPU_SERVER_KEY_SHA256"
+```
+
+## 2. 在 132 准备可构建工作树
+
+```bash
+cd "$SUDA_ROOT"
+bash hpu/scripts/bootstrap_tfhe_rs.sh "$TFHE_RS_ROOT"
+bash hpu/scripts/verify_remote_hpu.sh
+```
+
+如果本机已有 TFHE-rs 镜像，可避免重新下载 Git/LFS 历史：
+
+```bash
+TFHE_RS_SOURCE=/path/to/local/tfhe-rs \
+  bash "$SUDA_ROOT/hpu/scripts/bootstrap_tfhe_rs.sh" "$TFHE_RS_ROOT"
+```
+
+工作树中的 overlay 改动是可再生成副本；应修改并提交
+`$SUDA_ROOT/hpu/overlays/tfhe-rs`，再用 `apply_tfhe_rs_overlay.sh --refresh` 刷新工作树。
+
+## 3. 新用户：129 还没有 TFHE-rs 源码
+
+### 3.1 在 132 生成首次部署文件
+
+```bash
+cd "$TFHE_RS_ROOT"
 
 SHORT_COMMIT=$(git rev-parse --short=12 HEAD)
 BASE_ARCHIVE="target/tfhe-rs-base-${SHORT_COMMIT}.tar.gz"
 
+# 基线源码和 SUDA 管理的 overlay 分开打包；git archive 不包含工作树改动。
 git archive --format=tar.gz --output="${BASE_ARCHIVE}" HEAD
-cp --reflink=auto \
-  backends/tfhe-hpu-backend/config_store/v80_archives/psi64.hpu \
-  target/psi64.hpu
+install -D -m 0644 "$HPU_ARCHIVE_SOURCE" target/psi64.hpu
 
 ./scripts/lwe_remote_hpu/package_server_129.sh
 
@@ -46,81 +91,88 @@ ls -lh \
   target/lwe_remote_hpu_bootstrap_SHA256SUMS
 ```
 
-### 2.2 在 132 复制到 129
+`package_server_129.sh` 会再次校验 ServerKey SHA-256。`psi64.hpu` 也必须与
+`hpu/manifests/remote-hpu.env` 中记录的大小和 SHA-256 一致。
+
+### 3.2 从 132 复制到 129
 
 ```bash
-cd /home/yangchenghui/hpu/tfhe-rs
-
+cd "$TFHE_RS_ROOT"
 BASE_ARCHIVE=$(awk '$2 ~ /^tfhe-rs-base-/ {print "target/" $2}' \
   target/lwe_remote_hpu_bootstrap_SHA256SUMS)
 
-scp -P 2222 \
-  -i /home/yangchenghui/id_rsa_ych_128 \
+scp -P "$HPU_REMOTE_SSH_PORT" -i "$SSH_KEY" \
   "${BASE_ARCHIVE}" \
   target/lwe_remote_hpu_server_129.tar.gz \
   target/psi64.hpu \
   target/lwe_remote_hpu_bootstrap_SHA256SUMS \
-  yangchenghui@10.16.0.129:/tmp/
+  "${HPU_REMOTE_USER}@${HPU_REMOTE_HOST}:/tmp/"
 ```
 
-### 2.3 在 129 建立源码树并校验
+### 3.3 在 129 建立源码树并校验
 
 ```bash
+export TFHE_RS_ROOT=/path/to/remote/tfhe-rs
+
 cd /tmp
 sha256sum -c lwe_remote_hpu_bootstrap_SHA256SUMS
-
 BASE_ARCHIVE=$(awk '$2 ~ /^tfhe-rs-base-/ {print $2}' \
   lwe_remote_hpu_bootstrap_SHA256SUMS)
 
-mkdir -p /home/yangchenghui/hpu/tfhe-rs
-tar -xzf "/tmp/${BASE_ARCHIVE}" \
-  -C /home/yangchenghui/hpu/tfhe-rs
-tar -xzf /tmp/lwe_remote_hpu_server_129.tar.gz \
-  -C /home/yangchenghui/hpu/tfhe-rs
+mkdir -p "$TFHE_RS_ROOT"
+tar -xzf "/tmp/${BASE_ARCHIVE}" -C "$TFHE_RS_ROOT"
+tar -xzf /tmp/lwe_remote_hpu_server_129.tar.gz -C "$TFHE_RS_ROOT"
 
-install -m 0644 /tmp/psi64.hpu \
-  /home/yangchenghui/hpu/tfhe-rs/backends/tfhe-hpu-backend/config_store/v80_archives/psi64.hpu
+install -D -m 0644 /tmp/psi64.hpu \
+  "$TFHE_RS_ROOT/backends/tfhe-hpu-backend/config_store/v80_archives/psi64.hpu"
 
-cd /home/yangchenghui/hpu/tfhe-rs
+cd "$TFHE_RS_ROOT"
 sha256sum -c SHA256SUMS
 ```
 
-## 3. 旧用户：129 已经跑通过
+## 4. 旧用户：129 已经跑通过
 
 如果旧服务仍在运行，先在 129 的服务终端按 `Ctrl+C`，再更新部署文件。
 
-### 3.1 在 132 重新生成并复制覆盖包
+在 132 生成并发送新的覆盖包：
 
 ```bash
-cd /home/yangchenghui/hpu/tfhe-rs
-
+cd "$TFHE_RS_ROOT"
 ./scripts/lwe_remote_hpu/package_server_129.sh
 
-scp -P 2222 \
-  -i /home/yangchenghui/id_rsa_ych_128 \
+scp -P "$HPU_REMOTE_SSH_PORT" -i "$SSH_KEY" \
   target/lwe_remote_hpu_server_129.tar.gz \
-  yangchenghui@10.16.0.129:/tmp/
+  "${HPU_REMOTE_USER}@${HPU_REMOTE_HOST}:/tmp/"
 ```
 
-### 3.2 在 129 更新覆盖文件
+在 129 更新：
 
 ```bash
-cd /home/yangchenghui/hpu/tfhe-rs
+export TFHE_RS_ROOT=/path/to/remote/tfhe-rs
+cd "$TFHE_RS_ROOT"
 tar -xzf /tmp/lwe_remote_hpu_server_129.tar.gz
 sha256sum -c SHA256SUMS
 ```
 
-旧用户不需要重新复制基础源码和 `psi64.hpu`。除非 132 明确更新了 HPU 归档，否则不要
-覆盖 129 上已经验证可用的 `psi64.hpu`。
+旧用户不需要重新复制基础源码和 `psi64.hpu`。除非明确更新了 HPU 归档，否则不要覆盖
+129 上已经验证可用的 `psi64.hpu`。
 
-## 4. 两类用户共同执行：在 129 启动服务
+## 5. 在 129 启动服务
 
-建议在 129 的 `tmux` 中运行：
+先把 SUDA 中的模板复制到仓库外，填写真实环境后安全传给 129：
 
 ```bash
-tmux new -s hpu-lwe-server
+cp "$SUDA_ROOT/hpu/config/hpu-server.env.example" /secure/path/hpu-server.env
+```
 
-cd /home/yangchenghui/hpu/tfhe-rs
+在 129 的 `tmux` 中执行：
+
+```bash
+export TFHE_RS_ROOT=/path/to/remote/tfhe-rs
+source /secure/path/hpu-server.env
+
+tmux new -s hpu-lwe-server
+cd "$TFHE_RS_ROOT"
 ./scripts/lwe_remote_hpu/start_server_129.sh \
   2>&1 | tee hpu_lwe_remote_server.log
 ```
@@ -134,87 +186,21 @@ client_key_loaded=no
 listen_addr=0.0.0.0:19090
 ```
 
-按 `Ctrl+B`、再按 `D` 可退出 tmux 视图而不停止服务。
+`start_server_129.sh` 会拒绝缺少 `force_reload="never"` 的配置、错误的 ServerKey
+校验值和不包含 no-reload 保护的二进制。
 
-## 5. 两类用户共同执行：在 132 测试
+## 6. 在 132 运行 SUDA 客户端
 
-### 5.1 构建客户端
-
-```bash
-cd /home/yangchenghui/hpu/tfhe-rs
-
-cargo build --release \
-  --no-default-features \
-  --features integer \
-  --example hpu_lwe_remote_client
-```
-
-### 5.2 测试 1B
+推荐直接使用 SUDA 已纳入 Git 的 C++ 客户端，不再依赖 TFHE-rs 中的 Rust 诊断客户端。
+先在 132 构建：
 
 ```bash
-./target/release/examples/hpu_lwe_remote_client \
-  --server 10.16.0.129:19090 \
-  --ciphertext-dump /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-offload/lwe_encrypt_fpga_ciphertexts.bin \
-  --client-key /home/yangchenghui/suda/device/operators/hls/lwe_encrypt/testdata/psi64_shortint_ks32_client_key.bincode \
-  --scalar 1 \
-  --output /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-offload/lwe_encrypt_remote_hpu_result_1b.bin
-```
-
-### 5.3 测试 128B
-
-```bash
-./target/release/examples/hpu_lwe_remote_client \
-  --server 10.16.0.129:19090 \
-  --ciphertext-dump /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-offload/lwe_encrypt_fpga_ciphertexts_128b.bin \
-  --client-key /home/yangchenghui/suda/device/operators/hls/lwe_encrypt/testdata/psi64_shortint_ks32_client_key.bincode \
-  --scalar 1 \
-  --output /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-offload/lwe_encrypt_remote_hpu_result_128b.bin
-```
-
-成功标志：
-
-```text
-local_client_key_decrypt_checked=yes
-remote_hpu_ciphertext_compute=passed
-```
-
-## 6. 停止服务
-
-回到 129 的服务 tmux：
-
-```bash
-tmux attach -t hpu-lwe-server
-```
-
-按 `Ctrl+C` 停止服务，然后确认端口释放：
-
-```bash
-ss -ltnp | grep 19090
-```
-
-没有输出即表示服务已关闭。
-
-## 7. 单程序内存直传模式
-
-前面的 Rust 客户端流程保留为回归基线。新的融合应用位于：
-
-```text
-/home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-remote-offload
-```
-
-它在一个 C++ 进程中完成 SSD 读取、SLM 管理、FPGA 加密、物理布局解包、TCP 发送、
-129 HPU 计算、结果接收和最终落盘。FPGA 中间密文只存在于 output SLM 与 132 Host
-内存，不生成 `lwe_encrypt_fpga_ciphertexts*.bin` 中间文件。
-
-在 132 构建：
-
-```bash
-cd /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-remote-offload
+cd "$SUDA_ROOT/host/applications/vscode-lwe-encrypt-remote-offload"
 make -j4
 make test
 ```
 
-先按第 4 节启动 129 服务，再进入 132 QEMU：
+启动 129 服务后，在 132 QEMU 中执行：
 
 ```bash
 cd /mnt/suda/host/applications/vscode-lwe-encrypt-remote-offload
@@ -232,11 +218,40 @@ cd /mnt/suda/host/applications/vscode-lwe-encrypt-remote-offload
 ```
 
 成功标志：
+
 ```text
 intermediate_ciphertext_dump=none
 host_big_lwe_key_decrypt_checked=yes
 remote_hpu_ciphertext_compute=passed
 ```
 
-旧的 `vscode-lwe-encrypt-offload` 和 Rust `hpu_lwe_remote_client` 均保留，可继续用两段式
-落盘流程做故障定位和结果对比。
+完整的 SSD→FPGA 加密→远端 HPU→FPGA 解密→SSD 闭环使用：
+
+```text
+host/applications/vscode-lwe-full-pipeline/
+```
+
+## 7. 停止服务
+
+回到 129 的服务 tmux：
+
+```bash
+tmux attach -t hpu-lwe-server
+```
+
+按 `Ctrl+C` 停止服务，然后确认端口释放：
+
+```bash
+ss -ltnp | grep 19090
+```
+
+没有输出即表示服务已关闭。
+
+## 8. 安全与制品规则
+
+- 实验网 TCP 原型没有认证、加密和防重放；正式部署应增加 mTLS 和请求签名。
+- 不要提交 ClientKey、ServerKey、Big-LWE 私钥、SSH 私钥、真实板卡序列号或密文 dump。
+- `psi64.hpu` 是必需的部署制品，但不是普通源码；只在外部制品库保存，并按 manifest
+  校验。
+- no-reload 服务只允许复用已装载且匹配的固件。硬件不匹配时应退出，由管理员在维护
+  窗口单独装载，不允许网络服务自动卸载驱动或重编程板卡。

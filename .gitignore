@@ -25,6 +25,32 @@ autom4te.cache/
 # Local research state and recoverable machine artifacts
 .codex
 backups/
+
+# Remote HPU source overlay: keep only reviewable source in Git. The pinned
+# TFHE-rs worktree, private keys, firmware and deployment bundles are rebuilt
+# or installed from the laboratory artifact store.
+/hpu/worktree/
+/hpu/artifacts/
+/hpu/runtime/
+/hpu/secrets/
+/hpu/**/target/
+/hpu/**/build*/
+/hpu/**/keys/
+/hpu/**/*.env
+!/hpu/**/*.env.example
+!/hpu/manifests/remote-hpu.env
+/hpu/**/*.bincode
+/hpu/**/*.hpu
+/hpu/**/*.pdi
+/hpu/**/*.xsa
+/hpu/**/*.dcp
+/hpu/**/*.bit
+/hpu/**/*.xclbin
+/hpu/**/*.elf
+/hpu/**/*.ko
+/hpu/**/*.jou
+/hpu/**/*.tar.gz
+/hpu/**/*.deb
 device/platform/software_stack/cross_compiling/
 device/platform/software_stack/nf_spdk/include/spdk/config.h
 device/platform/software_stack/nf_spdk/isa-l/.libs/
@@ -118,6 +144,7 @@ host/applications/vscode-lwe-encrypt-offload/vscode-lwe-encrypt-offload
 host/applications/vscode-lwe-encrypt-remote-offload/test_protocol
 host/applications/vscode-lwe-encrypt-remote-offload/vscode-lwe-encrypt-remote-offload
 host/applications/vscode-lwe-full-pipeline/vscode-lwe-full-pipeline
+host/applications/vscode-tfhe-mul/vscode-tfhe-mul
 host/applications/vscode-lwe-*/testdata/
 host/applications/vscode-lwe-*/*.csv
 host/applications/vscode-lwe-encrypt-offload/*_summary.md
