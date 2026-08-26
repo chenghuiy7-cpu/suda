@@ -712,9 +712,9 @@ void *rte_axi_dma_poll_complete(struct rte_axi_dma_channel *ch)
 
       /*
        * All descriptors from one submission share the same software IO.
-       * Segmented TX deliberately places EOF on every data descriptor, so
-       * EOF cannot identify the end of the software request.  Return the IO
-       * only after its final descriptor, just as multi-BD RX already does.
+       * A multi-BD TX has SOF on its first descriptor and EOF on its final
+       * descriptor. Return the IO only after that final descriptor, just as
+       * multi-BD RX already does.
        */
       if (request_end)
       {

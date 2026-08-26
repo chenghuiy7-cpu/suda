@@ -38,9 +38,11 @@ constexpr uint32_t kNoiseModeZero = 2;
 constexpr uint32_t kOutputLayoutHpuNative = 1;
 constexpr uint32_t kDefaultPlaintextBytes = 1;
 constexpr uint32_t kMaxCopyLbasPerRange = 32;
+constexpr uint32_t kMaxSlmToSsdCopyRanges = 64;
 constexpr size_t kDefaultSlmReadChunkBytes = 128 * 1024;
 constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kSlmWriteChunkBytes = kLbaSize;
+constexpr size_t kDefaultSlmWriteChunkBytes = kLbaSize;
+constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024;
 constexpr int kSlmReadEintrMaxRetries = 16;
 constexpr size_t kLogicalWordsPerCiphertext = kMaskDimension + 1;
 constexpr size_t kOutputDonePacketBytes = kAxisBytes;
@@ -93,10 +95,12 @@ struct Options {
     uint32_t io_timeout_secs = 300;
     size_t max_response_bytes = kDefaultMaxResponseBytes;
     size_t slm_read_chunk_bytes = kDefaultSlmReadChunkBytes;
+    size_t slm_write_chunk_bytes = kDefaultSlmWriteChunkBytes;
     uint64_t remote_operation =
         lwe_remote::kOperationAddScalarU8HpuNativeRoundTrip;
     bool benchmark = false;
     bool skip_ssd_readback = false;
+    bool verify_decrypt_slm_write = false;
 };
 
 void print_usage(const char* argv0)
@@ -121,6 +125,7 @@ void print_usage(const char* argv0)
         "  --remote-operation adds|echo remote operation (default: adds)\n"
         "                      echo measures same-size TCP/protocol cost without HPU\n"
         "  --slm-read-chunk-bytes N 4096..131072, 4KB aligned (default: 131072)\n"
+        "  --slm-write-chunk-bytes N 4096..131072, 4KB aligned (default: 4096)\n"
         "  --connect-timeout-ms N TCP connect timeout (default: 10000)\n"
         "  --io-timeout-secs N TCP send/receive timeout (default: 300)\n"
         "  --max-response-bytes N response allocation limit (default: 512MiB)\n"
@@ -134,6 +139,7 @@ void print_usage(const char* argv0)
         "  --nonce N          per-run PRNG nonce\n"
         "  --zero-noise       generate ciphertexts with exactly zero noise\n"
         "  --benchmark        print client/server and both FPGA stage timings\n"
+        "  --verify-decrypt-slm-write read back and compare the decrypt input SLM\n"
         "  --skip-ssd-readback skip final destination SSD readback check\n"
         "  --help             show this message\n",
         argv0);
@@ -172,6 +178,10 @@ bool parse_options(int argc, char** argv, Options* options)
         }
         if (strcmp(arg, "--skip-ssd-readback") == 0) {
             options->skip_ssd_readback = true;
+            continue;
+        }
+        if (strcmp(arg, "--verify-decrypt-slm-write") == 0) {
+            options->verify_decrypt_slm_write = true;
             continue;
         }
         if (i + 1 >= argc) {
@@ -321,6 +331,13 @@ bool parse_options(int argc, char** argv, Options* options)
                 return false;
             }
             options->slm_read_chunk_bytes = static_cast<size_t>(value);
+        } else if (strcmp(arg, "--slm-write-chunk-bytes") == 0) {
+            if (!parse_u64(text, &value) || value < kLbaSize ||
+                value > kMaxSlmWriteChunkBytes || value % kLbaSize != 0) {
+                fprintf(stderr, "Invalid SLM write chunk size: %s\n", text);
+                return false;
+            }
+            options->slm_write_chunk_bytes = static_cast<size_t>(value);
         } else {
             fprintf(stderr, "Unknown option: %s\n", arg);
             return false;
@@ -396,6 +413,12 @@ bool parse_options(int argc, char** argv, Options* options)
     }
     if (options->encrypt_program_id == options->decrypt_program_id) {
         fprintf(stderr, "Encrypt and decrypt program ids must be different\n");
+        return false;
+    }
+    if (options->skip_ssd_readback && options->plaintext_output_path != nullptr) {
+        fprintf(
+            stderr,
+            "--plaintext-output requires destination SSD readback; remove --skip-ssd-readback\n");
         return false;
     }
     return true;
@@ -650,11 +673,12 @@ int write_slm_in_chunks(
     int io_fd,
     unsigned int mem_id,
     const void* input,
-    size_t bytes)
+    size_t bytes,
+    size_t chunk_bytes)
 {
     const uint8_t* data = static_cast<const uint8_t*>(input);
     for (size_t offset = 0; offset < bytes;) {
-        const size_t chunk = std::min(kSlmWriteChunkBytes, bytes - offset);
+        const size_t chunk = std::min(chunk_bytes, bytes - offset);
         int retries = 0;
         while (true) {
             errno = 0;
@@ -830,11 +854,12 @@ const char* operation_name(uint64_t operation)
 
 struct DecryptTimings {
     double slm_create_ms = 0.0;
+    double slm_zero_ms = 0.0;
     double host_to_slm_ms = 0.0;
+    double slm_write_verify_ms = 0.0;
     double program_setup_ms = 0.0;
     double fpga_execute_ms = 0.0;
-    double slm_to_host_ms = 0.0;
-    double ssd_write_ms = 0.0;
+    double slm_to_ssd_ms = 0.0;
     double ssd_readback_ms = 0.0;
     double cleanup_ms = 0.0;
 };
@@ -900,6 +925,76 @@ int transfer_ssd_blocks(
     return 0;
 }
 
+int copy_slm_to_ssd(
+    int io_fd,
+    uint32_t source_mem_id,
+    uint32_t destination_nsid,
+    uint64_t destination_lba,
+    size_t bytes)
+{
+    if (bytes == 0 || bytes % kLbaSize != 0) {
+        fprintf(stderr, "SLM-to-SSD copy size must be non-zero and 4KB aligned\n");
+        return -EINVAL;
+    }
+
+    const size_t total_lbas = bytes / kLbaSize;
+    const size_t range_count =
+        (total_lbas + kMaxCopyLbasPerRange - 1) / kMaxCopyLbasPerRange;
+    if (range_count == 0 || range_count > kMaxSlmToSsdCopyRanges) {
+        fprintf(
+            stderr,
+            "SLM-to-SSD copy needs %zu ranges; runtime limit is %u\n",
+            range_count,
+            kMaxSlmToSsdCopyRanges);
+        return -E2BIG;
+    }
+
+    void* descriptor_page = nullptr;
+    if (posix_memalign(&descriptor_page, kLbaSize, kLbaSize) != 0) {
+        fprintf(stderr, "Unable to allocate SLM-to-SSD copy descriptors\n");
+        return -ENOMEM;
+    }
+    memset(descriptor_page, 0, kLbaSize);
+    auto* ranges = static_cast<struct nvme_mc_source_range*>(descriptor_page);
+
+    size_t lba_offset = 0;
+    for (size_t i = 0; i < range_count; ++i) {
+        const size_t lbas = std::min<size_t>(
+            kMaxCopyLbasPerRange,
+            total_lbas - lba_offset);
+        ranges[i].snsid = source_mem_id;
+        ranges[i].saddr = lba_offset * kLbaSize;
+        ranges[i].nbyte = static_cast<uint32_t>(lbas * kLbaSize);
+        lba_offset += lbas;
+    }
+
+    struct nvme_copy_args args = {};
+    args.args_size = sizeof(args);
+    args.fd = io_fd;
+    args.nsid = destination_nsid;
+    args.sdlba = destination_lba;
+    args.nr = static_cast<uint16_t>(range_count);
+    args.format = 4;
+    args.copy = reinterpret_cast<struct nvme_copy_range*>(ranges);
+    const int ret = nvme_copy(&args);
+    if (ret != 0) {
+        fprintf(
+            stderr,
+            "nvme_copy(SLM->SSD) failed: ret=%d errno=%d (%s) "
+            "slm_id=%u dst_nsid=%u dst_lba=%llu bytes=%zu ranges=%zu\n",
+            ret,
+            errno,
+            strerror(errno),
+            source_mem_id,
+            destination_nsid,
+            static_cast<unsigned long long>(destination_lba),
+            bytes,
+            range_count);
+    }
+    free(descriptor_page);
+    return ret;
+}
+
 bool run_decrypt_and_store(
     const Options& options,
     const std::vector<uint8_t>& key,
@@ -926,23 +1021,27 @@ bool run_decrypt_and_store(
     }
 
     void* input_buffer = nullptr;
-    void* output_buffer = nullptr;
     void* context_page = nullptr;
     void* readback_buffer = nullptr;
+    void* slm_write_verify_buffer = nullptr;
     if (posix_memalign(&input_buffer, kLbaSize, native_bytes) != 0 ||
-        posix_memalign(&output_buffer, kLbaSize, output_slm_bytes) != 0 ||
         posix_memalign(&context_page, kLbaSize, kLbaSize) != 0 ||
+        (options.verify_decrypt_slm_write &&
+         posix_memalign(
+             &slm_write_verify_buffer,
+             kLbaSize,
+             native_bytes) != 0) ||
         (!options.skip_ssd_readback &&
          posix_memalign(&readback_buffer, kLbaSize, ssd_bytes) != 0)) {
         fprintf(stderr, "Unable to allocate aligned decrypt buffers\n");
         free(input_buffer);
-        free(output_buffer);
         free(context_page);
         free(readback_buffer);
+        free(slm_write_verify_buffer);
         return false;
     }
     memcpy(input_buffer, native_words.data(), native_bytes);
-    memset(output_buffer, 0, output_slm_bytes);
+    plaintext->clear();
     if (readback_buffer != nullptr) {
         memset(readback_buffer, 0, ssd_bytes);
     }
@@ -962,9 +1061,9 @@ bool run_decrypt_and_store(
             close(io_fd);
         }
         free(input_buffer);
-        free(output_buffer);
         free(context_page);
         free(readback_buffer);
+        free(slm_write_verify_buffer);
         return false;
     }
 
@@ -1005,15 +1104,98 @@ bool run_decrypt_and_store(
         timings->slm_create_ms = elapsed_ms(stage_start, Clock::now());
 
         stage_start = Clock::now();
+        fprintf(stderr, "[lwe_full] zeroing decrypt output SLM\n");
+        ret = nvme_slm_fill(
+            io_fd,
+            output_mem_id,
+            0,
+            static_cast<int>(output_slm_bytes));
+        if (ret != 0) {
+            fprintf(stderr, "nvme_slm_fill(decrypt output) failed: %d\n", ret);
+            break;
+        }
+        timings->slm_zero_ms = elapsed_ms(stage_start, Clock::now());
+
+        stage_start = Clock::now();
         fprintf(
             stderr,
-            "[lwe_full] writing remote HPU result to decrypt SLM in %zu-byte chunks\n",
-            kSlmWriteChunkBytes);
-        ret = write_slm_in_chunks(io_fd, input_mem_id, input_buffer, native_bytes);
+            "[lwe_full] writing remote HPU result to decrypt SLM "
+            "chunk_bytes=%zu requests=%zu\n",
+            options.slm_write_chunk_bytes,
+            (native_bytes + options.slm_write_chunk_bytes - 1) /
+                options.slm_write_chunk_bytes);
+        ret = write_slm_in_chunks(
+            io_fd,
+            input_mem_id,
+            input_buffer,
+            native_bytes,
+            options.slm_write_chunk_bytes);
         if (ret != 0) {
             break;
         }
         timings->host_to_slm_ms = elapsed_ms(stage_start, Clock::now());
+
+        if (options.verify_decrypt_slm_write) {
+            size_t failed_offset = 0;
+            size_t failed_length = 0;
+            int failed_errno = 0;
+
+            stage_start = Clock::now();
+            fprintf(
+                stderr,
+                "[lwe_full] verifying decrypt input SLM by full readback "
+                "chunk_bytes=%zu\n",
+                options.slm_read_chunk_bytes);
+            ret = read_slm_in_chunks(
+                io_fd,
+                input_mem_id,
+                0,
+                native_bytes,
+                slm_write_verify_buffer,
+                options.slm_read_chunk_bytes,
+                false,
+                &failed_offset,
+                &failed_length,
+                &failed_errno);
+            if (ret != 0) {
+                fprintf(
+                    stderr,
+                    "decrypt input SLM readback failed: offset=%zu length=%zu "
+                    "errno=%d (%s)\n",
+                    failed_offset,
+                    failed_length,
+                    failed_errno,
+                    strerror(failed_errno));
+                break;
+            }
+            if (memcmp(input_buffer, slm_write_verify_buffer, native_bytes) != 0) {
+                const auto* expected = static_cast<const uint8_t*>(input_buffer);
+                const auto* actual =
+                    static_cast<const uint8_t*>(slm_write_verify_buffer);
+                size_t mismatch = 0;
+                while (mismatch < native_bytes &&
+                       expected[mismatch] == actual[mismatch]) {
+                    ++mismatch;
+                }
+                fprintf(
+                    stderr,
+                    "decrypt input SLM verification failed at byte %zu: "
+                    "expected=0x%02x actual=0x%02x\n",
+                    mismatch,
+                    expected[mismatch],
+                    actual[mismatch]);
+                ret = -EIO;
+                break;
+            }
+            timings->slm_write_verify_ms =
+                elapsed_ms(stage_start, Clock::now());
+            fprintf(
+                stderr,
+                "[lwe_full] decrypt input SLM full readback verification passed "
+                "bytes=%zu elapsed_ms=%.3f\n",
+                native_bytes,
+                timings->slm_write_verify_ms);
+        }
 
         stage_start = Clock::now();
         ranges[0].payload.mnsid = input_mem_id;
@@ -1102,60 +1284,25 @@ bool run_decrypt_and_store(
         }
 
         stage_start = Clock::now();
-        fprintf(stderr, "[lwe_full] reading decrypted u8 data from output SLM\n");
-        size_t failed_offset = 0;
-        size_t failed_length = 0;
-        int failed_errno = 0;
-        ret = read_slm_in_chunks(
-            io_fd,
-            output_mem_id,
-            0,
-            output_slm_bytes,
-            output_buffer,
-            kDefaultSlmReadChunkBytes,
-            false,
-            &failed_offset,
-            &failed_length,
-            &failed_errno);
-        if (ret != 0) {
-            fprintf(
-                stderr,
-                "nvme_slm_read(decrypt output) failed: offset=%zu length=%zu errno=%d (%s)\n",
-                failed_offset,
-                failed_length,
-                failed_errno,
-                strerror(failed_errno));
-            break;
-        }
-        timings->slm_to_host_ms = elapsed_ms(stage_start, Clock::now());
-        plaintext->assign(
-            static_cast<uint8_t*>(output_buffer),
-            static_cast<uint8_t*>(output_buffer) + options.plaintext_bytes);
-
-        stage_start = Clock::now();
         fprintf(
             stderr,
-            "[lwe_full] writing decrypted plaintext to SSD nsid=%u lba=%llu\n",
+            "[lwe_full] copying decrypt output SLM directly to SSD nsid=%u lba=%llu\n",
             options.output_storage_nsid,
             static_cast<unsigned long long>(options.output_ssd_lba));
-        memset(
-            static_cast<uint8_t*>(output_buffer) + options.plaintext_bytes,
-            0,
-            ssd_bytes - options.plaintext_bytes);
-        ret = transfer_ssd_blocks(
+        ret = copy_slm_to_ssd(
             io_fd,
+            output_mem_id,
             options.output_storage_nsid,
             options.output_ssd_lba,
-            output_buffer,
-            ssd_bytes,
-            true);
+            ssd_bytes);
         if (ret != 0) {
             break;
         }
-        timings->ssd_write_ms = elapsed_ms(stage_start, Clock::now());
+        timings->slm_to_ssd_ms = elapsed_ms(stage_start, Clock::now());
 
         if (!options.skip_ssd_readback) {
             stage_start = Clock::now();
+            fprintf(stderr, "[lwe_full] reading destination SSD for optional verification\n");
             ret = transfer_ssd_blocks(
                 io_fd,
                 options.output_storage_nsid,
@@ -1166,10 +1313,22 @@ bool run_decrypt_and_store(
             if (ret != 0) {
                 break;
             }
-            if (memcmp(output_buffer, readback_buffer, ssd_bytes) != 0) {
-                fprintf(stderr, "Destination SSD readback verification failed\n");
+            const auto* readback = static_cast<const uint8_t*>(readback_buffer);
+            for (size_t i = options.plaintext_bytes; i < ssd_bytes; ++i) {
+                if (readback[i] != 0) {
+                    fprintf(
+                        stderr,
+                        "Destination SSD padding is not zero at byte %zu: 0x%02x\n",
+                        i,
+                        readback[i]);
+                    ret = -EIO;
+                    break;
+                }
+            }
+            if (ret != 0) {
                 break;
             }
+            plaintext->assign(readback, readback + options.plaintext_bytes);
             timings->ssd_readback_ms = elapsed_ms(stage_start, Clock::now());
         }
         success = true;
@@ -1207,9 +1366,9 @@ bool run_decrypt_and_store(
     close(admin_fd);
     timings->cleanup_ms = elapsed_ms(stage_start, Clock::now());
     free(input_buffer);
-    free(output_buffer);
     free(context_page);
     free(readback_buffer);
+    free(slm_write_verify_buffer);
 
     if (success) {
         *result_bytes_out = result_bytes;
@@ -1674,19 +1833,25 @@ int main(int argc, char** argv)
         timings.one_shot_e2e_ms = elapsed_ms(one_shot_start, result_ready);
 
         stage_start = Clock::now();
-        if (remote_decrypted != expected_remote) {
-            size_t mismatch = 0;
-            while (mismatch < expected_remote.size() &&
-                   remote_decrypted[mismatch] == expected_remote[mismatch]) {
-                ++mismatch;
+        if (!options.skip_ssd_readback) {
+            if (remote_decrypted != expected_remote) {
+                size_t mismatch = 0;
+                while (mismatch < expected_remote.size() &&
+                       remote_decrypted[mismatch] == expected_remote[mismatch]) {
+                    ++mismatch;
+                }
+                fprintf(
+                    stderr,
+                    "End-to-end plaintext mismatch at byte %zu: got=%u expected=%u\n",
+                    mismatch,
+                    mismatch < remote_decrypted.size()
+                        ? remote_decrypted[mismatch]
+                        : 0,
+                    mismatch < expected_remote.size()
+                        ? expected_remote[mismatch]
+                        : 0);
+                goto cleanup;
             }
-            fprintf(
-                stderr,
-                "End-to-end plaintext mismatch at byte %zu: got=%u expected=%u\n",
-                mismatch,
-                remote_decrypted[mismatch],
-                expected_remote[mismatch]);
-            goto cleanup;
         }
         timings.host_result_verify_ms = elapsed_ms(stage_start, Clock::now());
 
@@ -1707,20 +1872,24 @@ int main(int argc, char** argv)
         if (options.remote_operation != lwe_remote::kOperationEchoU8) {
             printf("remote HPU ciphertext compute passed\n");
         }
-        printf("decrypted_count=%zu\n", remote_decrypted.size());
-        printf("decrypted_first_u8=0x%02x (%u)\n",
-               remote_decrypted[0],
-               remote_decrypted[0]);
-        printf("decrypted_prefix=");
-        for (size_t i = 0; i < remote_decrypted.size() && i < 16; ++i) {
-            printf("%02x", remote_decrypted[i]);
+        if (!options.skip_ssd_readback) {
+            printf("decrypted_count=%zu\n", remote_decrypted.size());
+            printf("decrypted_first_u8=0x%02x (%u)\n",
+                   remote_decrypted[0],
+                   remote_decrypted[0]);
+            printf("decrypted_prefix=");
+            for (size_t i = 0; i < remote_decrypted.size() && i < 16; ++i) {
+                printf("%02x", remote_decrypted[i]);
+            }
+            if (remote_decrypted.size() > 16) {
+                printf("...");
+            }
+            printf("\n");
+        } else {
+            printf("decrypted_host_readback=skipped\n");
         }
-        if (remote_decrypted.size() > 16) {
-            printf("...");
-        }
-        printf("\n");
         printf(
-            "data_path=SSD(nsid=%u,lba=%llu,lbas=%u)->SLM->FPGA_encrypt->Host_memory->TCP->remote_HPU->Host_memory->SLM->FPGA_decrypt->SSD(nsid=%u,lba=%llu)\n",
+            "data_path=SSD(nsid=%u,lba=%llu,lbas=%u)->SLM->FPGA_encrypt->Host_memory->TCP->remote_HPU->Host_memory->decrypt_input_SLM->FPGA_decrypt->decrypt_output_SLM->NVMe_Copy->SSD(nsid=%u,lba=%llu)\n",
             options.storage_nsid,
             static_cast<unsigned long long>(options.ssd_lba),
             options.input_lbas,
@@ -1730,6 +1899,13 @@ int main(int argc, char** argv)
                input_bytes,
                compute_input_bytes);
         printf("compute_input_range_bytes=%zu\n", compute_input_range_bytes);
+        printf(
+            "slm_transfer_config read_chunk_bytes=%zu write_chunk_bytes=%zu "
+            "write_requests=%zu\n",
+            options.slm_read_chunk_bytes,
+            options.slm_write_chunk_bytes,
+            (cipher_physical_bytes + options.slm_write_chunk_bytes - 1) /
+                options.slm_write_chunk_bytes);
         printf("encrypt_operator_type_id=%u encrypt_program_id=%u encrypt_rsid=%u\n",
                options.encrypt_operator_type_id,
                options.encrypt_program_id,
@@ -1784,17 +1960,23 @@ int main(int argc, char** argv)
             rpc_result.server_total_ms);
         printf("result_ciphertext_bytes=%zu\n",
                rpc_result.ciphertext_words.size() * sizeof(uint64_t));
-        printf("decrypt_exec_result=%u output_plaintext_bytes=%zu\n",
+        printf("decrypt_exec_result=%u output_plaintext_bytes=%u host_readback_bytes=%zu\n",
                decrypt_result_bytes,
+               options.plaintext_bytes,
                remote_decrypted.size());
         printf("intermediate_ciphertext_dump=none\n");
-        printf("plaintext_host_copy=%s\n",
+        printf("plaintext_output_file=%s\n",
                options.plaintext_output_path == nullptr
                    ? "none"
                    : options.plaintext_output_path);
+        printf("destination_ssd_write_path=decrypt_output_SLM->NVMe_Copy->SSD\n");
         printf("destination_ssd_readback_checked=%s\n",
                options.skip_ssd_readback ? "no" : "yes");
-        printf("fpga_decrypt_checked=yes\n");
+        printf("plaintext_entered_host_after_decrypt=%s\n",
+               options.skip_ssd_readback ? "no" : "yes-readback-only");
+        printf("fpga_decrypt_completed=yes\n");
+        printf("fpga_decrypt_checked=%s\n",
+               options.skip_ssd_readback ? "no" : "yes");
         printf("remote_ciphertext_operation=passed\n");
         if (options.remote_operation != lwe_remote::kOperationEchoU8) {
             printf("remote_hpu_ciphertext_compute=passed\n");
@@ -1821,22 +2003,24 @@ int main(int argc, char** argv)
                 timings.one_shot_e2e_ms,
                 timings.process_ms);
             printf(
-                "decrypt_stage_ms slm_create=%.3f host_to_slm=%.3f "
-                "program_setup=%.3f fpga_execute=%.3f slm_to_host=%.3f "
-                "ssd_write=%.3f ssd_readback=%.3f cleanup=%.3f\n",
+                "decrypt_stage_ms slm_create=%.3f slm_zero=%.3f host_to_slm=%.3f "
+                "slm_write_verify=%.3f "
+                "program_setup=%.3f fpga_execute=%.3f slm_to_ssd=%.3f "
+                "ssd_readback=%.3f cleanup=%.3f\n",
                 decrypt_timings.slm_create_ms,
+                decrypt_timings.slm_zero_ms,
                 decrypt_timings.host_to_slm_ms,
+                decrypt_timings.slm_write_verify_ms,
                 decrypt_timings.program_setup_ms,
                 decrypt_timings.fpga_execute_ms,
-                decrypt_timings.slm_to_host_ms,
-                decrypt_timings.ssd_write_ms,
+                decrypt_timings.slm_to_ssd_ms,
                 decrypt_timings.ssd_readback_ms,
                 decrypt_timings.cleanup_ms);
             printf(
-                "BENCH_FULL_PIPELINE_CSV_V1,%u,%u,%llu,"
+                "BENCH_FULL_PIPELINE_CSV_V2,%u,%u,%llu,"
                 "%.6f,%.6f,%.6f,%.6f,%.6f,"
                 "%.6f,%.6f,%.6f,%.6f,"
-                "%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
+                "%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
                 options.plaintext_bytes,
                 options.input_lbas,
                 static_cast<unsigned long long>(rpc_result.request_id),
@@ -1850,12 +2034,13 @@ int main(int argc, char** argv)
                 rpc_result.server_hpu_wait_sync_ms,
                 rpc_result.server_hpu_output_convert_ms,
                 decrypt_timings.slm_create_ms,
+                decrypt_timings.slm_zero_ms,
                 decrypt_timings.host_to_slm_ms,
                 decrypt_timings.program_setup_ms,
                 decrypt_timings.fpga_execute_ms,
-                decrypt_timings.slm_to_host_ms,
-                decrypt_timings.ssd_write_ms,
+                decrypt_timings.slm_to_ssd_ms,
                 decrypt_timings.ssd_readback_ms,
+                decrypt_timings.cleanup_ms,
                 timings.online_e2e_ms);
             printf(
                 "BENCH_REMOTE_PIPELINE_CSV,%s,%u,%u,%zu,%llu,"

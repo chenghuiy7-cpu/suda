@@ -16,7 +16,8 @@ git clone -b nest git@10.30.19.43:yangchenghui/suda.git "$HOME/suda"
 
 ```text
 SSD -> SLM -> FPGA LWE encrypt -> Host memory -> TCP -> remote HPU
-    -> Host memory -> SLM -> FPGA LWE decrypt -> SSD
+    -> Host memory -> decrypt input SLM -> FPGA LWE decrypt
+    -> decrypt output SLM -> NVMe Copy -> SSD
 ```
 
 该分支的源码准备、匹配密钥安装、算子构建、QEMU/NVMQ 初始化和可直接执行的

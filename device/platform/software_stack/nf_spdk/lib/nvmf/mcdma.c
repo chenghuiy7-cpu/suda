@@ -763,6 +763,45 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
   
 	return 0;
   }
+
+  static int
+  mcdma_clear_rx_finish_beat(struct spdk_axi_dma_io *io,
+				    uint32_t completion_bytes,
+				    uint32_t finish_bytes)
+  {
+	uint64_t offset;
+	uint32_t remaining;
+
+	if (io == NULL || io->iovs == NULL || io->iovcnt <= 0 ||
+	    finish_bytes == 0 || completion_bytes < finish_bytes) {
+	  return -EINVAL;
+	}
+
+	offset = completion_bytes - finish_bytes;
+	remaining = finish_bytes;
+	for (int i = 0; i < io->iovcnt && remaining > 0; ++i) {
+	  uint64_t iov_len = io->iovs[i].iov_len;
+	  uint32_t clear_len;
+
+	  if (offset >= iov_len) {
+		offset -= iov_len;
+		continue;
+	  }
+	  if (io->iovs[i].iov_base == NULL) {
+		return -EFAULT;
+	  }
+
+	  clear_len = remaining;
+	  if (clear_len > iov_len - offset) {
+		clear_len = iov_len - offset;
+	  }
+	  memset((uint8_t *)io->iovs[i].iov_base + offset, 0, clear_len);
+	  remaining -= clear_len;
+	  offset = 0;
+	}
+
+	return remaining == 0 ? 0 : -ERANGE;
+  }
   
   int tx_rx_channel_poller(void *ctx)
   {
@@ -806,6 +845,27 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 					ch->is_tx ? "TX" : "RX",
 					finish_completion_bytes,
 					finish_beat_bytes);
+			  }
+			  if (!ch->is_tx && finish_completion_bytes >= finish_beat_bytes) {
+				int clear_rc = mcdma_clear_rx_finish_beat(
+					io, finish_completion_bytes, finish_beat_bytes);
+
+				if (clear_rc == 0) {
+				  SPDK_NOTICELOG(
+					  "MCDMA_FINISH_STRIP RX结束包已从输出SLM清零 req=%p request_id=%u payload_offset=%u bytes=%u\n",
+					  ch->req,
+					  ch->req->request_id,
+					  payload_bytes,
+					  finish_beat_bytes);
+				} else {
+				  SPDK_ERRLOG(
+					  "MCDMA_FINISH_STRIP RX结束包清零失败 req=%p request_id=%u completion_bytes=%u finish_bytes=%u rc=%d\n",
+					  ch->req,
+					  ch->req->request_id,
+					  finish_completion_bytes,
+					  finish_beat_bytes,
+					  clear_rc);
+				}
 			  }
 			  /*
 			   * AXI DMA aggregates every descriptor in one software submission.
@@ -1105,11 +1165,14 @@ release_channel:
 
 /**
  * Context Used To Operate Data Between Host and Device
- * Max To Handle 0.5GB File
+ * Each IOV describes at most one PAGE_SIZE host/SLM page.
  */
+#define HANDC_IOVEC_CAPACITY 64
+#define HANDC_MAX_TRANSFER_BYTES (HANDC_IOVEC_CAPACITY * PAGE_SIZE)
+
 struct handc_ctx{
-	struct spdk_axi_dma_iovec from_iovecs[64];
-	struct spdk_axi_dma_iovec to_iovecs[64];
+	struct spdk_axi_dma_iovec from_iovecs[HANDC_IOVEC_CAPACITY];
+	struct spdk_axi_dma_iovec to_iovecs[HANDC_IOVEC_CAPACITY];
 	int from_size;							//4B
 	int to_size;							//4B
 	struct spdk_nvmf_mcdma_device* device;  //8B
@@ -1128,6 +1191,12 @@ struct handc_ctx{
 	unsigned long long prp_buf;
 	unsigned long long total_rx_bytes;
 	unsigned long long cur_rx_bytes;
+	unsigned long long total_tx_bytes;
+	unsigned long long cur_tx_bytes;
+	bool rx_done;
+	bool tx_done;
+	bool completion_posted;
+	int dma_error;
 	void* hls_request;
 };
 
@@ -1162,6 +1231,22 @@ void compute_handc_impl(void* ctx){
 		handc_fsm_name(hc->fsm_state),
 		hc->cur_rx_bytes,
 		hc->total_rx_bytes);
+	if(hc->dma_error != 0){
+		SPDK_ERRLOG(
+			"HANDC_IMPL DMA搬运失败 req=%p opc=0x%x error=%d tx=%llu/%llu rx=%llu/%llu\n",
+			hc->mcdma_req,
+			hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+			hc->dma_error,
+			hc->cur_tx_bytes,
+			hc->total_tx_bytes,
+			hc->cur_rx_bytes,
+			hc->total_rx_bytes);
+		hc->fsm_state = NON_OP;
+		hc->mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INTERNAL_DEVICE_ERROR;
+		hc->mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+		nvmf_mcdma_request_process(hc->rtransport,hc->mcdma_req);
+		return;
+	}
 	if(hc->fsm_state==FETCH_PRP){
 		hc->fsm_state = FETCH_DATA;
 	}else{
@@ -1175,54 +1260,114 @@ void compute_handc_impl(void* ctx){
 	nvmf_mcdma_request_process(hc->rtransport,hc->mcdma_req);
 	return;
 }
+
+static bool
+compute_handc_io_failed(const struct spdk_axi_dma_io *io, int status)
+{
+	return status != 0 || io->status.int_err || io->status.slv_err ||
+	       io->status.dec_err;
+}
+
+static void
+compute_handc_try_complete(struct handc_ctx *hc)
+{
+	if(hc->completion_posted || !hc->tx_done || !hc->rx_done){
+		return;
+	}
+
+	hc->completion_posted = true;
+	SPDK_NOTICELOG(
+		"HANDC_DMA_DONE TX/RX均已完成 req=%p opc=0x%x tx=%llu/%llu rx=%llu/%llu error=%d，返回请求线程\n",
+		hc->mcdma_req,
+		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
+		hc->cur_tx_bytes,
+		hc->total_tx_bytes,
+		hc->cur_rx_bytes,
+		hc->total_rx_bytes,
+		hc->dma_error);
+
+	if(hc->impl_thread != NULL){
+		int rc = spdk_thread_send_msg(hc->impl_thread,compute_handc_impl,hc);
+
+		if(rc != 0){
+			SPDK_ERRLOG(
+				"HANDC_DMA_DONE 返回请求线程失败 req=%p rc=%d\n",
+				hc->mcdma_req, rc);
+		}
+	}else{
+		SPDK_ERRLOG("HANDC_DMA_DONE 请求线程未定义 req=%p\n", hc->mcdma_req);
+	}
+}
+
+static void
+compute_handc_fail_before_submit(struct handc_ctx *hc, int error)
+{
+	hc->cur_tx_bytes = 0;
+	hc->cur_rx_bytes = 0;
+	hc->tx_done = true;
+	hc->rx_done = true;
+	hc->completion_posted = false;
+	hc->dma_error = error != 0 ? error : -EIO;
+	compute_handc_try_complete(hc);
+}
+
 void compute_handc_op_tx_impl(struct spdk_axi_dma_io *io, int status){
 	struct handc_ctx *hc = (struct handc_ctx*) io->ctx;
+	uint32_t bytes = io->status.transfered_bytes;
+
+	hc->cur_tx_bytes += bytes;
+	hc->tx_done = true;
+	if(compute_handc_io_failed(io, status) ||
+	   hc->cur_tx_bytes != hc->total_tx_bytes){
+		hc->dma_error = status != 0 ? status : -EIO;
+	}
 	SPDK_NOTICELOG(
-		"HANDC_TX_CMPL req=%p opc=0x%x status=%d bytes=%u fsm=%s\n",
+		"HANDC_TX_CMPL multi-BD发送完成 req=%p opc=0x%x status=%d bytes=%u total=%llu iovcnt=%d error=%d fsm=%s\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
 		status,
-		io->status.transfered_bytes,
+		bytes,
+		hc->total_tx_bytes,
+		io->iovcnt,
+		hc->dma_error,
 		handc_fsm_name(hc->fsm_state));
 	spdk_axi_dma_io_free(io);
+	compute_handc_try_complete(hc);
 	return;
 }
 
 void compute_handc_op_rx_impl(struct spdk_axi_dma_io *io, int status){
 	
 	struct handc_ctx *hc = (struct handc_ctx*) io->ctx;
-	hc->cur_rx_bytes += io->status.transfered_bytes;
+	uint32_t bytes = io->status.transfered_bytes;
+
+	hc->cur_rx_bytes += bytes;
+	hc->rx_done = true;
+	if(compute_handc_io_failed(io, status) ||
+	   hc->cur_rx_bytes != hc->total_rx_bytes){
+		hc->dma_error = status != 0 ? status : -EIO;
+	}
 	SPDK_NOTICELOG(
-		"HANDC_RX_CMPL req=%p opc=0x%x status=%d bytes=%u cur_rx=%llu total_rx=%llu fsm=%s\n",
+		"HANDC_RX_CMPL multi-BD接收完成 req=%p opc=0x%x status=%d bytes=%u cur_rx=%llu total_rx=%llu iovcnt=%d error=%d fsm=%s\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
 		status,
-		io->status.transfered_bytes,
+		bytes,
 		hc->cur_rx_bytes,
 		hc->total_rx_bytes,
+		io->iovcnt,
+		hc->dma_error,
 		handc_fsm_name(hc->fsm_state));
 	SPDK_DEBUGLOG(nvmf,"CUR RX BYTES GET %d TOTAL BYTES%d\n",hc->cur_rx_bytes,hc->total_rx_bytes);
-	//if(hc->cur_rx_bytes>=hc->total_rx_bytes){
-	//Might Not So useful
-	//SPDK_NOTICELOG("TRANSFERED BYTES%d\n",io->status.transfered_bytes);
-	if(hc->cur_rx_bytes>=hc->total_rx_bytes){
-		spdk_axi_dma_io_free(io);
-		if(hc->impl_thread!=NULL){
-			SPDK_NOTICELOG(
-				"HANDC_RX_DONE req=%p opc=0x%x posting back to impl thread\n",
-				hc->mcdma_req,
-				hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0);
-			SPDK_DEBUGLOG(nvmf,"HC CURRXBYTES%d TOTALRXBYTES%d\n",hc->cur_rx_bytes,hc->total_rx_bytes);
-			if(hc->to_iovecs[0].iov_base!=NULL){
-				unsigned int* data = (unsigned int*)(hc->to_iovecs[0].iov_base);
-				SPDK_DEBUGLOG(nvmf,"DATA DUMP %lx %lx %lx %lx\n",data[0],data[1],data[2],data[3]);
-			}
-			spdk_thread_send_msg(hc->impl_thread,compute_handc_impl,hc);
-		}else{
-			SPDK_ERRLOG("UNDEFINED OPERATION!\n");
-		}
+	if(hc->to_iovecs[0].iov_base!=NULL){
+		SPDK_DEBUGLOG(nvmf,"DATA DUMP %x %x %x %x\n",
+			((unsigned int *)hc->to_iovecs[0].iov_base)[0],
+			((unsigned int *)hc->to_iovecs[0].iov_base)[1],
+			((unsigned int *)hc->to_iovecs[0].iov_base)[2],
+			((unsigned int *)hc->to_iovecs[0].iov_base)[3]);
 	}
-	
+	spdk_axi_dma_io_free(io);
+	compute_handc_try_complete(hc);
 	return;
 }
 void compute_handc_op(void* ctx){
@@ -1232,8 +1377,14 @@ void compute_handc_op(void* ctx){
 	ctrl.tdest = dev->compute_tx_channel->id;
 	ctrl.tid = dev->compute_tx_channel->id;
 	ctrl.tuser = 0;
-	struct spdk_axi_dma_ch* ch;
-	int iovcnt;
+	ctrl.rsvd = 0;
+	struct spdk_axi_dma_ch* rx_ch = dev->compute_rx_channel;
+	struct spdk_axi_dma_ch* tx_ch = dev->compute_tx_channel;
+	struct spdk_axi_dma_io *rx_io;
+	struct spdk_axi_dma_io *tx_io;
+	unsigned long long total_rx_bytes = 0;
+	unsigned long long total_tx_bytes = 0;
+	int ret;
 	SPDK_NOTICELOG(
 		"HANDC_OP start req=%p opc=0x%x fsm=%s from_size=%d to_size=%d\n",
 		hc->mcdma_req,
@@ -1241,84 +1392,115 @@ void compute_handc_op(void* ctx){
 		handc_fsm_name(hc->fsm_state),
 		hc->from_size,
 		hc->to_size);
-	//RX RECV
-	ch = dev->compute_rx_channel;
-	iovcnt = hc->to_size;
-	struct spdk_axi_dma_io *io = spdk_simple_pool_get(&ch->io_pool);
-    if (!io) {
-        SPDK_ERRLOG("Failed to allocate spdk_axi_dma_io\n");
-        return;
-    }
-    io->ch = ch;
-    io->iovs = hc->to_iovecs;
-    io->iovcnt = iovcnt;
-    io->cb = compute_handc_op_rx_impl;
-    io->ctx = ctx;
-    io->transfered_length = 0;
-	
-	
-	SPDK_DEBUGLOG(nvmf,"RX IOVCNT%d\n",iovcnt);
-    for (int i = 0; i < iovcnt; i++) {
-        uint64_t len = io->iovs[i].iov_len;
-        io->transfered_length += len;
-		SPDK_NOTICELOG(
-			"HANDC_OP RX_IOV[%d] base=%p paddr=0x%llx len=%llu\n",
-			i,
-			io->iovs[i].iov_base,
-			(unsigned long long)io->iovs[i].paddr,
-			(unsigned long long)len);
-    }
-	hc->total_rx_bytes = io->transfered_length;
-	hc->cur_rx_bytes = 0;
+	if(hc->from_size <= 0 || hc->from_size > HANDC_IOVEC_CAPACITY ||
+	   hc->to_size <= 0 || hc->to_size > HANDC_IOVEC_CAPACITY){
+		hc->total_tx_bytes = 0;
+		hc->total_rx_bytes = 0;
+		SPDK_ERRLOG(
+			"HANDC_OP 非法IOV数量 req=%p from_size=%d to_size=%d capacity=%d\n",
+			hc->mcdma_req, hc->from_size, hc->to_size,
+			HANDC_IOVEC_CAPACITY);
+		compute_handc_fail_before_submit(hc, -EINVAL);
+		return;
+	}
 
-
-    int ret = spdk_env_axi_dma_rx_channel_recv(ch->env_ch, hc->to_iovecs, iovcnt, io);
+	for(int i = 0; i < hc->to_size; ++i){
+		total_rx_bytes += hc->to_iovecs[i].iov_len;
+	}
+	for(int i = 0; i < hc->from_size; ++i){
+		total_tx_bytes += hc->from_iovecs[i].iov_len;
+	}
+	hc->total_rx_bytes = total_rx_bytes;
+	hc->total_tx_bytes = total_tx_bytes;
+	if(total_rx_bytes == 0 || total_tx_bytes == 0 ||
+	   total_rx_bytes != total_tx_bytes){
+		SPDK_ERRLOG(
+			"HANDC_OP TX/RX长度不一致 req=%p tx=%llu rx=%llu\n",
+			hc->mcdma_req, total_tx_bytes, total_rx_bytes);
+		compute_handc_fail_before_submit(hc, -EINVAL);
+		return;
+	}
 	SPDK_NOTICELOG(
-		"HANDC_OP RX_SUBMIT req=%p ret=%d total_rx=%llu\n",
+		"HANDC_IOV_SUMMARY 保留4KB IOV并准备multi-BD事务 req=%p tx_iovcnt=%d rx_iovcnt=%d bytes=%llu tx_first=0x%llx tx_last=0x%llx rx_first=0x%llx rx_last=0x%llx\n",
+		hc->mcdma_req,
+		hc->from_size,
+		hc->to_size,
+		total_tx_bytes,
+		(unsigned long long)hc->from_iovecs[0].paddr,
+		(unsigned long long)hc->from_iovecs[hc->from_size - 1].paddr,
+		(unsigned long long)hc->to_iovecs[0].paddr,
+		(unsigned long long)hc->to_iovecs[hc->to_size - 1].paddr);
+
+	hc->cur_rx_bytes = 0;
+	hc->cur_tx_bytes = 0;
+	hc->rx_done = false;
+	hc->tx_done = false;
+	hc->completion_posted = false;
+	hc->dma_error = 0;
+
+	/* 先准备好两侧软件IO，避免RX已提交后才发现TX IO资源不足。 */
+	rx_io = spdk_simple_pool_get(&rx_ch->io_pool);
+	tx_io = spdk_simple_pool_get(&tx_ch->io_pool);
+	if(rx_io == NULL || tx_io == NULL){
+		SPDK_ERRLOG(
+			"HANDC_OP 分配multi-BD IO失败 req=%p rx_io=%p tx_io=%p\n",
+			hc->mcdma_req, rx_io, tx_io);
+		if(rx_io != NULL){
+			spdk_axi_dma_io_free(rx_io);
+		}
+		if(tx_io != NULL){
+			spdk_axi_dma_io_free(tx_io);
+		}
+		compute_handc_fail_before_submit(hc, -ENOMEM);
+		return;
+	}
+
+	rx_io->ch = rx_ch;
+	rx_io->iovs = hc->to_iovecs;
+	rx_io->iovcnt = hc->to_size;
+	rx_io->cb = compute_handc_op_rx_impl;
+	rx_io->ctx = ctx;
+	rx_io->transfered_length = total_rx_bytes;
+
+	tx_io->ch = tx_ch;
+	tx_io->iovs = hc->from_iovecs;
+	tx_io->iovcnt = hc->from_size;
+	tx_io->cb = compute_handc_op_tx_impl;
+	tx_io->ctx = ctx;
+	tx_io->transfered_length = total_tx_bytes;
+	memcpy(&tx_io->ctrl, &ctrl, sizeof(struct spdk_axi_dma_ctrl));
+
+	/* 先挂接目标RX BD，再启动源TX，防止AXI Stream在无接收缓冲时丢失。 */
+	ret = spdk_env_axi_dma_rx_channel_recv(
+		rx_ch->env_ch, hc->to_iovecs, hc->to_size, rx_io);
+	SPDK_NOTICELOG(
+		"HANDC_OP RX_MULTI_BD_SUBMIT req=%p ret=%d iovcnt=%d total_rx=%llu\n",
 		hc->mcdma_req,
 		ret,
+		hc->to_size,
 		hc->total_rx_bytes);
 	if (ret != 0) {
 		SPDK_ERRLOG("HANDC_OP RX submit failed ret=%d req=%p\n", ret, hc->mcdma_req);
-		spdk_axi_dma_io_free(io);
+		spdk_axi_dma_io_free(rx_io);
+		spdk_axi_dma_io_free(tx_io);
+		compute_handc_fail_before_submit(hc, ret);
 		return;
 	}
-	iovcnt = hc->from_size;
-	//TX SEND
-	for(int i=0;i<iovcnt;i++)
-	{
-		ch = dev->compute_tx_channel;
-		io = spdk_simple_pool_get(&ch->io_pool);
-		if (!io) {
-			SPDK_ERRLOG("Failed to allocate spdk_axi_dma_io\n");
-			return;
-		}
-		io->ch = ch;
-		io->iovs = &(hc->from_iovecs[i]);
-		
-		io->iovcnt = 1;
-		io->cb = compute_handc_op_tx_impl;
-		io->ctx = ctx;
-		io->transfered_length = 0;
-		memcpy(&io->ctrl, &ctrl, sizeof(struct spdk_axi_dma_ctrl));
-		io->transfered_length = hc->from_iovecs[i].iov_len;
-		SPDK_NOTICELOG(
-			"HANDC_OP TX_IOV[%d] base=%p paddr=0x%llx len=%llu\n",
-			i,
-			hc->from_iovecs[i].iov_base,
-			(unsigned long long)hc->from_iovecs[i].paddr,
-			(unsigned long long)hc->from_iovecs[i].iov_len);
-		ret = spdk_env_axi_dma_tx_channel_send(ch->env_ch, &(hc->from_iovecs[i]), 1, io);
-		SPDK_NOTICELOG(
-			"HANDC_OP TX_SUBMIT[%d] req=%p ret=%d\n",
-			i,
-			hc->mcdma_req,
-			ret);
-		if (ret != 0) {
-			SPDK_ERRLOG("HANDC_OP TX submit failed ret=%d req=%p idx=%d\n", ret, hc->mcdma_req, i);
-			spdk_axi_dma_io_free(io);
-			return;
-		}
+
+	ret = spdk_env_axi_dma_tx_channel_send(
+		tx_ch->env_ch, hc->from_iovecs, hc->from_size, tx_io);
+	SPDK_NOTICELOG(
+		"HANDC_OP TX_MULTI_BD_SUBMIT req=%p ret=%d iovcnt=%d total_tx=%llu packet_count=1\n",
+		hc->mcdma_req,
+		ret,
+		hc->from_size,
+		hc->total_tx_bytes);
+	if (ret != 0) {
+		SPDK_ERRLOG(
+			"HANDC_OP TX multi-BD submit failed ret=%d req=%p，RX已挂接需重启runtime恢复\n",
+			ret, hc->mcdma_req);
+		spdk_axi_dma_io_free(tx_io);
+		return;
 	}
 	return;
 }
@@ -2608,6 +2790,81 @@ static inline uint64_t mem_handle_to_physaddr(struct spdk_nvmf_mcdma_request *re
 	}
 }
 
+static int
+mcdma_prepare_slm_to_ssd_write(struct spdk_nvme_cmd *write_cmd,
+			      const struct spdk_nvme_mc_source_range *range,
+			      uint32_t destination_nsid,
+			      uint64_t destination_lba,
+			      struct spdk_hlsacccompute_dev *dev,
+			      void *prp_buf)
+{
+	void *source_vaddr = NULL;
+	void *source_paddr = NULL;
+	uint64_t *prp_list = prp_buf;
+	uint8_t *source;
+	uint64_t phys;
+	size_t page_count;
+	size_t page;
+	int ret;
+
+	if (write_cmd == NULL || range == NULL || dev == NULL || prp_buf == NULL ||
+	    destination_nsid == 0 || range->nbyte == 0 ||
+	    (range->nbyte % PAGE_SIZE) != 0 || (range->saddr % PAGE_SIZE) != 0) {
+		return -EINVAL;
+	}
+
+	page_count = range->nbyte / PAGE_SIZE;
+	if (page_count > 1 + PAGE_SIZE / sizeof(*prp_list)) {
+		return -E2BIG;
+	}
+
+	ret = spdk_hlsacccompute_devmem_lookup(dev, range->snsid & (~SLM_MASK),
+					       &source_vaddr, &source_paddr);
+	if (ret < 0 || source_vaddr == NULL) {
+		return -ENOENT;
+	}
+	(void)source_paddr;
+	source = (uint8_t *)source_vaddr + range->saddr;
+
+	memset(write_cmd, 0, sizeof(*write_cmd));
+	write_cmd->opc = SPDK_NVME_OPC_WRITE;
+	write_cmd->nsid = destination_nsid;
+	write_cmd->cdw10 = (uint32_t)destination_lba;
+	write_cmd->cdw11 = (uint32_t)(destination_lba >> 32);
+	write_cmd->cdw12 = (uint32_t)(page_count - 1);
+	write_cmd->fuse = SPDK_NVME_CMD_FUSE_NONE;
+
+	phys = spdk_vtophys(source, NULL);
+	if (phys == SPDK_VTOPHYS_ERROR) {
+		return -EFAULT;
+	}
+	write_cmd->dptr.prp.prp1 = phys;
+
+	if (page_count == 2) {
+		phys = spdk_vtophys(source + PAGE_SIZE, NULL);
+		if (phys == SPDK_VTOPHYS_ERROR) {
+			return -EFAULT;
+		}
+		write_cmd->dptr.prp.prp2 = phys;
+	} else if (page_count > 2) {
+		memset(prp_list, 0, PAGE_SIZE);
+		for (page = 1; page < page_count; ++page) {
+			phys = spdk_vtophys(source + page * PAGE_SIZE, NULL);
+			if (phys == SPDK_VTOPHYS_ERROR) {
+				return -EFAULT;
+			}
+			prp_list[page - 1] = phys;
+		}
+		phys = spdk_vtophys(prp_buf, NULL);
+		if (phys == SPDK_VTOPHYS_ERROR) {
+			return -EFAULT;
+		}
+		write_cmd->dptr.prp.prp2 = phys;
+	}
+
+	return 0;
+}
+
 bool
 nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 			  struct spdk_nvmf_mcdma_request *mcdma_req)
@@ -2968,10 +3225,33 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 				//struct spdk_nvmf_ns *ns = _nvmf_subsystem_get_ns(ctrlr->subsys, 1);
 				//TODO Dynamic set more block size in the future
 				unsigned int bsize = PAGE_SIZE;//= spdk_bdev_get_block_size(ns->bdev);
-				void* ns_vaddr,*ns_paddr;
+				void* ns_vaddr = NULL,*ns_paddr = NULL;
 				int ret = spdk_hlsacccompute_devmem_lookup(dev,cmd->nsid&(~SLM_MASK),&(ns_vaddr),&(ns_paddr));
 				SPDK_DEBUGLOG(nvmf,"VADDR %llx,PADDR%llx,starting_bytes%llx\n",ns_vaddr,ns_paddr,starting_bytes);
 				struct  handc_ctx* ctx = (struct handc_ctx*) mcdma_req->data_buf;
+				if((cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+				    cmd->opc == SPDK_NVME_OPC_SLM_WRITE) &&
+				   (ret != 0 || ns_vaddr == NULL)){
+					SPDK_ERRLOG(
+						"SLM_IO_VALIDATE SLM查找失败 req=%p opc=0x%x mem_id=%u lookup_ret=%d vaddr=%p\n",
+						mcdma_req, cmd->opc, cmd->nsid&(~SLM_MASK), ret, ns_vaddr);
+					mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+					mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+					continue;
+				}
+				if((cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+				    cmd->opc == SPDK_NVME_OPC_SLM_WRITE) &&
+				   (read_or_write_length == 0 ||
+				    read_or_write_length > HANDC_MAX_TRANSFER_BYTES)){
+					SPDK_ERRLOG(
+						"SLM_IO_VALIDATE 拒绝非法搬运长度 req=%p opc=0x%x len=%u max=%u iov_capacity=%u\n",
+						mcdma_req, cmd->opc, read_or_write_length,
+						(unsigned int)HANDC_MAX_TRANSFER_BYTES,
+						(unsigned int)HANDC_IOVEC_CAPACITY);
+					mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+					mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+					continue;
+				}
 				//SPDK_DEBUGLOG(nvmf,"READ OR WRITE LENGTH%d\n",read_or_write_length);
 				ctx->impl_thread = spdk_get_thread();
 				if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE){
@@ -3142,6 +3422,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 				((uint8_t)(mcdma_req->req.cmd->nvme_cmd.cdw12 >> 8)==0x4)
 			)){
 				unsigned char nr = mcdma_req->req.cmd->nvme_cmd.cdw12 + 1;
+				uint32_t descriptor_bytes = sizeof(struct spdk_nvme_mc_source_range) * nr;
 				struct spdk_nvme_cmd* cmd = &(mcdma_req->req.cmd->nvme_cmd);
 				struct  handc_ctx* ctx = (struct handc_ctx*) mcdma_req->data_buf;
 				ctx->impl_thread = spdk_get_thread();
@@ -3153,10 +3434,17 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 				ctx->from_iovecs[0].paddr = cmd->dptr.prp.prp1;
 				ctx->to_iovecs[0].iov_base = mcdma_req->sgl_buf;
 				ctx->to_iovecs[0].paddr = spdk_vtophys(mcdma_req->sgl_buf,NULL);
-				ctx->from_iovecs[0].iov_len = 32*nr;
-				ctx->to_iovecs[0].iov_len = PAGE_SIZE;	
+				ctx->from_iovecs[0].iov_len = descriptor_bytes;
+				ctx->to_iovecs[0].iov_len = descriptor_bytes;
 				ctx->mcdma_req = mcdma_req;
 				ctx->rtransport = rtransport;
+				SPDK_NOTICELOG(
+					"SLM_TO_SSD_DESC_FETCH 准备搬运range描述符 req=%p ranges=%u bytes=%u host_prp=0x%llx dst_paddr=0x%llx\n",
+					mcdma_req,
+					nr,
+					descriptor_bytes,
+					(unsigned long long)ctx->from_iovecs[0].paddr,
+					(unsigned long long)ctx->to_iovecs[0].paddr);
 				spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 				continue;
 			}else if((!nvmf_qpair_is_admin_queue(mcdma_req->req.qpair))&&mcdma_req->req.cmd->nvme_cmd.nsid==2&&
@@ -3555,10 +3843,20 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 				//Does not support multiple stroage namespace!!!!!!
 				//struct spdk_nvmf_ns *ns = _nvmf_subsystem_get_ns(ctrlr->subsys, 1);
 				//TODO Set More bsize in the future！
-				unsigned int bsize = PAGE_SIZE;//spdk_bdev_get_block_size(ns->bdev);
-				void* ns_vaddr,*ns_paddr;
+				void* ns_vaddr = NULL,*ns_paddr = NULL;
 				int ret = spdk_hlsacccompute_devmem_lookup(dev,cmd->nsid&(~SLM_MASK),&(ns_vaddr),&(ns_paddr));
 				struct  handc_ctx* ctx = (struct handc_ctx*) mcdma_req->data_buf;
+				if((cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+				    cmd->opc == SPDK_NVME_OPC_SLM_WRITE) &&
+				   (ret != 0 || ns_vaddr == NULL)){
+					SPDK_ERRLOG(
+						"SLM_IO_VALIDATE PRP展开阶段SLM查找失败 req=%p opc=0x%x mem_id=%u lookup_ret=%d vaddr=%p\n",
+						mcdma_req, cmd->opc, cmd->nsid&(~SLM_MASK), ret, ns_vaddr);
+					mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+					ctx->fsm_state = NON_OP;
+					mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+					continue;
+				}
 				if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE){
 					//If Need To Fetch Data
 					if(ctx->fsm_state == FETCH_DATA){
@@ -3577,7 +3875,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
 						starting_bytes += PAGE_SIZE;
 						read_or_write_length -= PAGE_SIZE;
-						for(int i=1;i<=128&&(read_or_write_length>0);i++){
+						for(int i=1;i<HANDC_IOVEC_CAPACITY&&(read_or_write_length>0);i++){
 							++(ctx->from_size);
 							++(ctx->to_size);
 							ctx->from_iovecs[i].iov_base = NULL;
@@ -3590,6 +3888,19 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 							ctx->to_iovecs[i].paddr = spdk_vtophys(ctx->to_iovecs[i].iov_base,NULL);
 							read_or_write_length -= incr_bytes;
 						}
+						if(read_or_write_length != 0){
+							SPDK_ERRLOG(
+								"SLM_WRITE_IOV_BUILD PRP展开后仍有剩余数据 req=%p remaining=%d iovcnt=%d max_bytes=%u\n",
+								mcdma_req, read_or_write_length, ctx->from_size,
+								(unsigned int)HANDC_MAX_TRANSFER_BYTES);
+							mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+							ctx->fsm_state = NON_OP;
+							mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+							continue;
+						}
+						SPDK_NOTICELOG(
+							"SLM_WRITE_IOV_BUILD PRP展开完成 req=%p iovcnt=%d bytes=%u\n",
+							mcdma_req, ctx->from_size, cmd->cdw12);
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 						continue;
 					}else if(ctx->fsm_state==END_FETCH_DATA){
@@ -3628,7 +3939,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						ctx->from_iovecs[0].paddr = spdk_vtophys(ctx->from_iovecs[0].iov_base,NULL);
 						read_or_write_length -= PAGE_SIZE;
 						starting_bytes += PAGE_SIZE;
-						for(int i=1;i<64&&(read_or_write_length>0);i++){
+						for(int i=1;i<HANDC_IOVEC_CAPACITY&&(read_or_write_length>0);i++){
 							ctx->from_size++;
 							ctx->to_size++;
 							ctx->to_iovecs[i].iov_base = NULL;
@@ -3640,6 +3951,16 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 							starting_bytes += incr_bytes;
 							ctx->from_iovecs[i].paddr = spdk_vtophys(ctx->from_iovecs[i].iov_base,NULL);
 							read_or_write_length -= incr_bytes;
+						}
+						if(read_or_write_length != 0){
+							SPDK_ERRLOG(
+								"SLM_READ_IOV_BUILD PRP展开后仍有剩余数据 req=%p remaining=%d iovcnt=%d max_bytes=%u\n",
+								mcdma_req, read_or_write_length, ctx->from_size,
+								(unsigned int)HANDC_MAX_TRANSFER_BYTES);
+							mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+							ctx->fsm_state = NON_OP;
+							mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+							continue;
 						}
 						SPDK_DEBUGLOG(nvmf,"GET FROM SIZE%d,TO SIZE%d\n",ctx->from_size,ctx->to_size);
 						SPDK_NOTICELOG(
@@ -3775,98 +4096,117 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					}
 					continue;
 				}
-			}else if(mcdma_req->req.cmd->nvme_cmd.opc==SPDK_NVME_OPC_COPY&&
-				((uint8_t)(mcdma_req->req.cmd->nvme_cmd.cdw12 >> 8)==0x4)){
+			}else if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_COPY &&
+				((uint8_t)(mcdma_req->req.cmd->nvme_cmd.cdw12 >> 8) == 0x4)){
 				struct spdk_nvme_cmd cmd = mcdma_req->req.cmd->nvme_cmd;
-				uint64_t sdlba = cmd.cdw10 | (cmd.cdw11 << 32);
-				uint8_t nr = cmd.cdw12+1;
-				struct  handc_ctx* ctx = (struct handc_ctx*) mcdma_req->data_buf;
-				//Simple Copy
-				struct spdk_nvme_kernel* kernel = mcdma_req->req.kernel;
-				if(kernel==NULL){
-					mcdma_req->req.kernel = spdk_simple_pool_get(mcdma_req->req.qpair->kernel_inner_buf_pool);
-					kernel = mcdma_req->req.kernel;
-				}
-				char* begin_address = ((char*)kernel)+1024;
-				for(int k=0;k<nr;k++){
-					//Reallocate Space
-					kernel->cmds[k] = (struct spdk_nvme_cmd*)(begin_address+k*(sizeof(struct spdk_nvme_cmd)));
-				}
-				struct spdk_nvme_mc_source_range* mc_range = mcdma_req->sgl_buf;
+				uint64_t sdlba = (uint64_t)cmd.cdw10 | ((uint64_t)cmd.cdw11 << 32);
+				uint16_t nr = (cmd.cdw12 & 0xff) + 1;
+				struct handc_ctx *ctx = (struct handc_ctx *)mcdma_req->data_buf;
+				struct spdk_nvme_kernel *kernel = mcdma_req->req.kernel;
+				struct spdk_nvme_mc_source_range *mc_range =
+					(struct spdk_nvme_mc_source_range *)(void *)mcdma_req->sgl_buf;
+				struct spdk_hlsacccompute_dev *dev = &(mcdma_req->qpair->device->compute);
+				void *prp_buf = (void *)(uintptr_t)ctx->prp_buf;
+				int copy_rc;
+
 				if(ctx->fsm_state == END_FETCH_DATA){
-					if(nr > 64){
-						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_RESERVATION_CONFLICT;
+					struct spdk_nvme_cmd *commands;
+
+					if(nr == 0 || nr > SPDK_NVME_KERNEL_MAX_COMMANDS || mc_range == NULL){
+						SPDK_ERRLOG("SLM_TO_SSD_COPY 非法range数量: %u\n", nr);
+						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
 						continue;
 					}
-					mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
-					//IF YOU HAS KERNEL YOU WILL MEET BUGS!!!
-					ctx->fsm_state = OPERATOR_SOURCE_RANGES;
+					kernel = calloc(1, sizeof(*kernel));
+					commands = calloc(nr, sizeof(*commands));
+					prp_buf = spdk_simple_pool_get(mcdma_req->req.qpair->kernel_inner_buf_pool);
+					if(kernel == NULL || commands == NULL || prp_buf == NULL){
+						SPDK_ERRLOG("SLM_TO_SSD_COPY 内存分配失败\n");
+						free(commands);
+						free(kernel);
+						if(prp_buf != NULL){
+							spdk_simple_pool_put(mcdma_req->req.qpair->kernel_inner_buf_pool, prp_buf);
+						}
+						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INTERNAL_DEVICE_ERROR;
+						continue;
+					}
+
+					mcdma_req->req.kernel = kernel;
+					for(uint16_t k = 0; k < nr; ++k){
+						kernel->cmds[k] = &commands[k];
+					}
 					kernel->num_add_to_que = 0;
 					kernel->num_finished = 0;
-					kernel->num_cmds = 0;
-					void* paddr_buf = spdk_simple_pool_get(mcdma_req->req.qpair->kernel_inner_buf_pool);
-					void* ns_vaddr,*ns_paddr; 
-				    unsigned long long starting_bytes = sdlba;
-					for(int k=0;k<nr;k++){
-						assert(kernel!=NULL);
-						kernel->cmds[k]->opc = SPDK_NVME_OPC_WRITE;
-						kernel->cmds[k]->nsid = 1;
-						kernel->cmds[k]->cdw10 = cmd.cdw10;//slba
-						kernel->cmds[k]->cdw11 = cmd.cdw11;//slba
-						//Need To Change to Block size in the future
-						kernel->cmds[k]->cdw12 = (mc_range[k].nbyte/PAGE_SIZE)-1;
-						kernel->cmds[k]->dptr.prp.prp2 = spdk_vtophys(paddr_buf,NULL);
-					}
 					kernel->num_cmds = nr;
-					struct spdk_hlsacccompute_dev* dev = &(mcdma_req->qpair->device->compute);
-					spdk_hlsacccompute_devmem_lookup(dev,(mc_range[0].snsid)&(~SLM_MASK),&ns_vaddr,&ns_paddr);
-					ns_vaddr += mc_range[0].saddr;
-					kernel->cmds[0]->dptr.prp.prp1 = spdk_vtophys(ns_vaddr,NULL);
-					//Need To Get Real Block Size!!!!!
-					ctx->cur_bytes = sdlba + (mc_range[0].nbyte);
-					
-					if(mc_range[0].nbyte>PAGE_SIZE){
-						for(int k=0;k<(mc_range[0].nbyte/PAGE_SIZE);k++){
-							((unsigned long long*)paddr_buf)[k] = spdk_vtophys(ns_vaddr+mc_range[0].saddr+PAGE_SIZE*(1+k),NULL);
+					ctx->prp_buf = (uintptr_t)prp_buf;
+
+					copy_rc = mcdma_prepare_slm_to_ssd_write(kernel->cmds[0], &mc_range[0],
+										 cmd.nsid, sdlba, dev, prp_buf);
+					if(copy_rc != 0){
+						SPDK_ERRLOG("SLM_TO_SSD_COPY range 0准备失败: %d\n", copy_rc);
+						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+						spdk_simple_pool_put(mcdma_req->req.qpair->kernel_inner_buf_pool, prp_buf);
+						ctx->prp_buf = 0;
+						free(commands);
+						for(uint16_t k = 0; k < nr; ++k){
+							kernel->cmds[k] = NULL;
 						}
+						continue;
 					}
-					ctx->prp_buf = paddr_buf;
-					
+
+					ctx->cur_bytes = sdlba + mc_range[0].nbyte / PAGE_SIZE;
+					ctx->fsm_state = OPERATOR_SOURCE_RANGES;
+					mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
+					SPDK_NOTICELOG("SLM_TO_SSD_COPY 开始: dst_nsid=%u dst_lba=%llu ranges=%u first_slm=%u first_bytes=%u\n",
+						       cmd.nsid, (unsigned long long)sdlba, nr,
+						       mc_range[0].snsid, mc_range[0].nbyte);
 					spdk_nvmf_request_exec(&(mcdma_req->req));
 					continue;
 				}else if(ctx->fsm_state == OPERATOR_SOURCE_RANGES){
-					kernel->num_finished++;
-					int sel = kernel->num_finished;
-					if((kernel->num_finished)<(kernel->num_cmds)){
-						mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
-						void* ns_vaddr,*ns_paddr;
-						struct spdk_hlsacccompute_dev* dev = &(mcdma_req->qpair->device->compute);
-						spdk_hlsacccompute_devmem_lookup(dev,(mc_range[0].snsid)&(~SLM_MASK),&ns_vaddr,&ns_paddr);
-						//SPDK_ERRLOG("CUrrent Doesnot SUpport too much source ranges!\n");
-						kernel->cmds[sel]->dptr.prp.prp1 = spdk_vtophys(ns_vaddr+mc_range[sel].saddr,NULL);
-						kernel->cmds[sel]->cdw10 = ctx->cur_bytes;
-						kernel->cmds[sel]->cdw11 = (ctx->cur_bytes>>32);
-						void* paddr_buf = ctx->prp_buf;
-						if(mc_range[sel].nbyte>PAGE_SIZE){
-							for(int k=0;k<(mc_range[sel].nbyte/PAGE_SIZE);k++){
-								((unsigned long long*)paddr_buf)[k] = spdk_vtophys(ns_vaddr+mc_range[sel].saddr+PAGE_SIZE*(1+k),NULL);
-							}
-						}
-						ctx->cur_bytes += (mc_range[sel].nbyte);
-						spdk_nvmf_request_exec(&(mcdma_req->req));
-						continue;
-					}else{
-						if(ctx->prp_buf!=NULL){
-							spdk_simple_pool_put(mcdma_req->req.qpair->kernel_inner_buf_pool,ctx->prp_buf);
-							ctx->prp_buf = NULL;
-						}
-						if(mcdma_req->req.kernel!=NULL){
-							spdk_simple_pool_put(mcdma_req->req.qpair->kernel_inner_buf_pool,mcdma_req->req.kernel);
-							mcdma_req->req.kernel = NULL;
-						}
+					uint16_t sel;
+
+					if(kernel == NULL || kernel->num_cmds == 0){
+						SPDK_ERRLOG("SLM_TO_SSD_COPY 缺少内部WRITE命令\n");
+						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INTERNAL_DEVICE_ERROR;
 						continue;
 					}
-				
+
+					kernel->num_finished++;
+					sel = kernel->num_finished;
+					if(mcdma_req->req.rsp->nvme_cpl.status.sc != SPDK_NVME_SC_SUCCESS){
+						SPDK_ERRLOG("SLM_TO_SSD_COPY 内部WRITE失败: finished=%u/%u status=%u\n",
+							    kernel->num_finished, kernel->num_cmds,
+							    mcdma_req->req.rsp->nvme_cpl.status.sc);
+					}else if(sel < kernel->num_cmds){
+						copy_rc = mcdma_prepare_slm_to_ssd_write(kernel->cmds[sel], &mc_range[sel],
+										 cmd.nsid, ctx->cur_bytes, dev, prp_buf);
+						if(copy_rc == 0){
+							ctx->cur_bytes += mc_range[sel].nbyte / PAGE_SIZE;
+							mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
+							spdk_nvmf_request_exec(&(mcdma_req->req));
+							continue;
+						}
+						SPDK_ERRLOG("SLM_TO_SSD_COPY range %u准备失败: %d\n", sel, copy_rc);
+						mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+					}
+
+					SPDK_NOTICELOG("SLM_TO_SSD_COPY 完成: dst_nsid=%u next_lba=%llu finished=%u/%u status=%u\n",
+						       cmd.nsid, (unsigned long long)ctx->cur_bytes,
+						       kernel->num_finished, kernel->num_cmds,
+						       mcdma_req->req.rsp->nvme_cpl.status.sc);
+					if(ctx->prp_buf != 0){
+						spdk_simple_pool_put(mcdma_req->req.qpair->kernel_inner_buf_pool,
+								     (void *)(uintptr_t)ctx->prp_buf);
+						ctx->prp_buf = 0;
+					}
+					if(kernel->cmds[0] != NULL){
+						free(kernel->cmds[0]);
+						for(uint16_t k = 0; k < kernel->num_cmds; ++k){
+							kernel->cmds[k] = NULL;
+						}
+					}
+					ctx->fsm_state = NON_OP;
+					continue;
 				}
 			}else if((!nvmf_qpair_is_admin_queue(mcdma_req->req.qpair))&&mcdma_req->req.cmd->nvme_cmd.nsid==2&&
 			mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_PROGRAM_EXECUTE){
