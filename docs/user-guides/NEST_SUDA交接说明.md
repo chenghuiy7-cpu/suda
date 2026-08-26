@@ -232,7 +232,7 @@ cd "$SUDA_VM_ROOT/host/applications/vscode-lwe-decrypt-offload"
 
 ### 10.4 测试 SSD 到远端 HPU 再回 SSD 的完整闭环
 
-先在 129 启动使用同一 ServerKey 的 `hpu_lwe_remote_server`，确认端口
+先在 129 启动使用同一 ServerKey 的 `suda-remote-hpu-server`，确认端口
 `19090` 正在监听，然后在 QEMU guest 执行：
 
 ```bash

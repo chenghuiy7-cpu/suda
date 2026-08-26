@@ -5,3 +5,7 @@
 [submodule "host/kernel/source"]
 	path = host/kernel/source
 	url = https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable-rc.git
+[submodule "hpu/tfhe-rs"]
+	path = hpu/tfhe-rs
+	url = https://github.com/zama-ai/tfhe-rs.git
+	branch = main

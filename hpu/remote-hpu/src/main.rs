@@ -1,4 +1,5 @@
-//! TCP service that executes scalar addition over SUDA-generated ciphertexts on a real HPU.
+//! SUDA-owned TCP service that executes scalar addition over ciphertexts on an
+//! unmodified upstream TFHE-rs HPU backend.
 
 use clap::Parser;
 use std::fs;
@@ -11,9 +12,7 @@ use tfhe::integer::CompressedServerKey;
 use tfhe::shortint::parameters::{KeySwitch32PBSParameters, ShortintParameterSet};
 use tfhe_hpu_backend::prelude::*;
 
-#[path = "lwe_remote/bridge.rs"]
 mod bridge;
-#[path = "lwe_remote/protocol.rs"]
 mod protocol;
 
 use protocol::{
@@ -66,7 +65,7 @@ fn main() -> ExitCode {
 fn run(args: Args) -> Result<(), String> {
     let device_open_start = Instant::now();
     let config_path = args.config.expand();
-    require_reload_disabled(&config_path)?;
+    require_upstream_reload_policy(&config_path)?;
     let hpu_device = HpuDevice::from_config(&config_path);
     let params = ShortintParameterSet::new_ks32_pbs_param_set(KeySwitch32PBSParameters::from(
         hpu_device.params(),
@@ -122,7 +121,7 @@ fn run(args: Args) -> Result<(), String> {
     Ok(())
 }
 
-fn require_reload_disabled(config_path: &str) -> Result<(), String> {
+fn require_upstream_reload_policy(config_path: &str) -> Result<(), String> {
     let config = HpuConfig::from_toml(config_path);
     let FFIMode::V80 { force_reload, .. } = &config.fpga.ffi else {
         return Err(format!(
@@ -133,14 +132,13 @@ fn require_reload_disabled(config_path: &str) -> Result<(), String> {
         .as_ref()
         .map(ShellString::expand)
         .unwrap_or_else(|| "false".to_string());
-    if policy != "never" {
+    if policy != "false" {
         return Err(format!(
-            "unsafe V80 reload policy {policy:?} in {config_path}; \
-             use a dedicated config with force_reload=\"never\". \
-             This server must never unload AMI/QDMA or remove PCIe functions automatically"
+            "unsupported V80 reload policy {policy:?} in {config_path}; \
+             an unmodified TFHE-rs checkout expects force_reload=\"false\""
         ));
     }
-    println!("hardware_reload_policy=never");
+    println!("hardware_reload_policy=upstream-validate-and-recover");
     Ok(())
 }
 
@@ -305,23 +303,15 @@ fn process_request(
 
     let decode_start = Instant::now();
     let native_roundtrip = request.operation == OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP;
-    let native_inputs = if request.operation == OP_ADD_SCALAR_U8_HPU_NATIVE || native_roundtrip {
-        Some(bridge::hpu_native_words_to_lwe_ciphertexts(
+    let inputs = if request.operation == OP_ADD_SCALAR_U8 {
+        bridge::words_to_radix_ciphertexts(&request.metadata, &request.ciphertext_words, params)?
+    } else {
+        bridge::hpu_native_words_to_radix_ciphertexts(
             &request.metadata,
             &request.ciphertext_words,
             hpu_device.params(),
-        )?)
-    } else {
-        None
-    };
-    let cpu_inputs = if request.operation == OP_ADD_SCALAR_U8 {
-        Some(bridge::words_to_radix_ciphertexts(
-            &request.metadata,
-            &request.ciphertext_words,
             params,
-        )?)
-    } else {
-        None
+        )?
     };
     timing.request_decode = decode_start.elapsed();
     println!(
@@ -336,71 +326,34 @@ fn process_request(
     // time. Holding the complete batch before dispatch makes a large request
     // vulnerable to pool allocation stalls and delays the first HPU command.
     let mut cpu_outputs = Vec::with_capacity(request.metadata.item_count);
-    let mut native_outputs = Vec::with_capacity(request.metadata.item_count);
-    if let Some(cpu_inputs) = cpu_inputs {
-        for (item_index, cpu_input) in cpu_inputs.into_iter().enumerate() {
-            let prepare_start = Instant::now();
-            let hpu_input = HpuRadixCiphertext::from_radix_ciphertext(&cpu_input, hpu_device);
-            timing.hpu_prepare += prepare_start.elapsed();
+    for (item_index, input) in inputs.into_iter().enumerate() {
+        let prepare_start = Instant::now();
+        let hpu_input = HpuRadixCiphertext::from_radix_ciphertext(&input, hpu_device);
+        timing.hpu_prepare += prepare_start.elapsed();
 
-            let enqueue_start = Instant::now();
-            let hpu_output = &hpu_input + u128::from(scalar);
-            timing.hpu_enqueue += enqueue_start.elapsed();
+        let enqueue_start = Instant::now();
+        let hpu_output = &hpu_input + u128::from(scalar);
+        timing.hpu_enqueue += enqueue_start.elapsed();
 
-            let wait_start = Instant::now();
-            hpu_output.wait();
-            timing.hpu_wait_sync += wait_start.elapsed();
+        // HPU commands are asynchronous. wait() includes command completion
+        // and the backend's device-to-host synchronization.
+        let wait_start = Instant::now();
+        hpu_output.wait();
+        timing.hpu_wait_sync += wait_start.elapsed();
 
-            let output_start = Instant::now();
-            cpu_outputs.push(hpu_output.to_radix_ciphertext());
-            timing.hpu_output_convert += output_start.elapsed();
-            drop(hpu_output);
-            drop(hpu_input);
+        let output_start = Instant::now();
+        cpu_outputs.push(hpu_output.to_radix_ciphertext());
+        timing.hpu_output_convert += output_start.elapsed();
+        drop(hpu_output);
+        drop(hpu_input);
 
-            if (item_index + 1) % 16 == 0 || item_index + 1 == request.metadata.item_count {
-                println!(
-                    "hpu_progress request_id={} completed={}/{}",
-                    request.request_id,
-                    item_index + 1,
-                    request.metadata.item_count,
-                );
-            }
-        }
-    }
-    if let Some(native_inputs) = native_inputs {
-        for (item_index, native_input) in native_inputs.into_iter().enumerate() {
-            let prepare_start = Instant::now();
-            let hpu_input = HpuRadixCiphertext::from_hpu_lwe_ciphertexts(native_input, hpu_device);
-            timing.hpu_prepare += prepare_start.elapsed();
-
-            let enqueue_start = Instant::now();
-            let hpu_output = &hpu_input + u128::from(scalar);
-            timing.hpu_enqueue += enqueue_start.elapsed();
-
-            // HPU commands are asynchronous. wait() includes command completion
-            // and the backend's device-to-host synchronization.
-            let wait_start = Instant::now();
-            hpu_output.wait();
-            timing.hpu_wait_sync += wait_start.elapsed();
-
-            let output_start = Instant::now();
-            if native_roundtrip {
-                native_outputs.push(hpu_output.to_hpu_lwe_ciphertexts());
-            } else {
-                cpu_outputs.push(hpu_output.to_radix_ciphertext());
-            }
-            timing.hpu_output_convert += output_start.elapsed();
-            drop(hpu_output);
-            drop(hpu_input);
-
-            if (item_index + 1) % 16 == 0 || item_index + 1 == request.metadata.item_count {
-                println!(
-                    "hpu_progress request_id={} completed={}/{}",
-                    request.request_id,
-                    item_index + 1,
-                    request.metadata.item_count,
-                );
-            }
+        if (item_index + 1) % 16 == 0 || item_index + 1 == request.metadata.item_count {
+            println!(
+                "hpu_progress request_id={} completed={}/{}",
+                request.request_id,
+                item_index + 1,
+                request.metadata.item_count,
+            );
         }
     }
 
@@ -409,7 +362,11 @@ fn process_request(
     let result_words = if native_roundtrip {
         response_metadata.ciphertext_word_count =
             response_metadata.expected_hpu_native_word_count()?;
-        bridge::hpu_lwe_ciphertexts_to_native_words(&response_metadata, native_outputs)?
+        bridge::radix_ciphertexts_to_hpu_native_words(
+            &response_metadata,
+            &cpu_outputs,
+            hpu_device.params(),
+        )?
     } else {
         response_metadata.ciphertext_word_count = response_metadata.expected_cpu_word_count()?;
         bridge::radix_ciphertexts_to_words(&cpu_outputs)

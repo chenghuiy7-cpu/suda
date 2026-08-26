@@ -204,17 +204,18 @@ result[i] == plaintext[i] + scalar mod 256
 
 ## 4. 129 远端服务器模块
 
-### 4.1 `hpu_lwe_remote_server`
+### 4.1 `suda-remote-hpu-server`
 
 该 Rust 服务监听 `0.0.0.0:19090`，接收 132 的密文请求，调用真实 V80 HPU，再返回
 结果密文：
 
 ```text
-hpu/tfhe-rs/tfhe/examples/hpu/lwe_remote_server.rs
+hpu/remote-hpu/src/main.rs
 ```
 
-服务启动时会初始化 HPU、加载 compressed server key，并确保硬件 reload policy 为
-`never`，避免服务启动时重载板卡导致服务器失联。
+服务启动时会初始化 HPU 并加载 compressed server key。未修改的上游 backend 使用
+`force_reload=false`：硬件有效时复用，检查失败时可能恢复性重载，因此启动前必须由
+管理员确认板卡和驱动状态。
 
 ### 4.2 协议解析与 metadata 校验
 

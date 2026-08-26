@@ -26,10 +26,8 @@ autom4te.cache/
 .codex
 backups/
 
-# Remote HPU source overlay: keep only reviewable source in Git. The pinned
-# TFHE-rs worktree, private keys, firmware and deployment bundles are rebuilt
-# or installed from the laboratory artifact store.
-/hpu/worktree/
+# Remote HPU integration: TFHE-rs is a tracked submodule; private keys,
+# firmware and deployment bundles are installed from the artifact store.
 /hpu/artifacts/
 /hpu/runtime/
 /hpu/secrets/

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::protocol::BatchMetadata;
-use tfhe::core_crypto::prelude::LweCiphertextOwned;
+use tfhe::core_crypto::prelude::{CreateFrom, LweCiphertextOwned};
 use tfhe::integer::{IntegerCiphertext, RadixCiphertext};
 use tfhe::shortint::ciphertext::{Degree, NoiseLevel};
 use tfhe::shortint::parameters::ShortintParameterSet;
@@ -167,6 +167,41 @@ pub fn hpu_native_words_to_lwe_ciphertexts(
     Ok(items)
 }
 
+/// Convert the FPGA/HPU-native wire layout into ordinary TFHE radix
+/// ciphertexts using only public upstream conversion APIs.
+///
+/// Keeping this bridge in SUDA avoids adding native constructors to the
+/// upstream `HpuRadixCiphertext` type. `from_radix_ciphertext` performs the
+/// inverse conversion immediately before the HPU command is enqueued.
+pub fn hpu_native_words_to_radix_ciphertexts(
+    metadata: &BatchMetadata,
+    ciphertext_words: &[u64],
+    hpu_params: &HpuParameters,
+    shortint_params: &ShortintParameterSet,
+) -> Result<Vec<RadixCiphertext>, String> {
+    validate_metadata(metadata, shortint_params)?;
+    let native_items = hpu_native_words_to_lwe_ciphertexts(metadata, ciphertext_words, hpu_params)?;
+    let mut radix_ciphertexts = Vec::with_capacity(native_items.len());
+    for native_blocks in native_items {
+        let blocks = native_blocks
+            .into_iter()
+            .map(|native_block| {
+                let cpu_lwe = LweCiphertextOwned::from(native_block.as_view());
+                Ciphertext::new(
+                    cpu_lwe,
+                    Degree::new(shortint_params.message_modulus().0 - 1),
+                    NoiseLevel::NOMINAL,
+                    shortint_params.message_modulus(),
+                    shortint_params.carry_modulus(),
+                    shortint_params.atomic_pattern(),
+                )
+            })
+            .collect::<Vec<_>>();
+        radix_ciphertexts.push(RadixCiphertext::from(blocks));
+    }
+    Ok(radix_ciphertexts)
+}
+
 pub fn hpu_lwe_ciphertexts_to_native_words(
     metadata: &BatchMetadata,
     ciphertexts: Vec<Vec<HpuLweCiphertextOwned<u64>>>,
@@ -215,6 +250,28 @@ pub fn hpu_lwe_ciphertexts_to_native_words(
     Ok(words)
 }
 
+/// Convert ordinary TFHE radix ciphertexts back into the padded native wire
+/// layout without requiring an upstream `HpuRadixCiphertext` export method.
+pub fn radix_ciphertexts_to_hpu_native_words(
+    metadata: &BatchMetadata,
+    ciphertexts: &[RadixCiphertext],
+    hpu_params: &HpuParameters,
+) -> Result<Vec<u64>, String> {
+    let native_items = ciphertexts
+        .iter()
+        .map(|ciphertext| {
+            ciphertext
+                .blocks()
+                .iter()
+                .map(|block| {
+                    HpuLweCiphertextOwned::create_from(block.ct.as_view(), hpu_params.clone())
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    hpu_lwe_ciphertexts_to_native_words(metadata, native_items)
+}
+
 pub fn radix_ciphertexts_to_words(ciphertexts: &[RadixCiphertext]) -> Vec<u64> {
     let word_count = ciphertexts
         .iter()
@@ -238,11 +295,12 @@ pub fn radix_ciphertexts_to_words(ciphertexts: &[RadixCiphertext]) -> Vec<u64> {
 mod tests {
     use super::*;
     use tfhe::core_crypto::prelude::{CiphertextModulus, CreateFrom, LweCiphertextOwned};
+    use tfhe::shortint::parameters::KeySwitch32PBSParameters;
 
     #[test]
     fn native_slot_import_matches_tfhe_cpu_conversion() {
         let config = format!(
-            "{}/../mockups/tfhe-hpu-mockup/params/tuniform_64b_pfail128_psi64.toml",
+            "{}/../tfhe-rs/mockups/tfhe-hpu-mockup/params/tuniform_64b_pfail128_psi64.toml",
             env!("CARGO_MANIFEST_DIR")
         );
         let params = HpuParameters::from_toml(&config);
@@ -281,5 +339,18 @@ mod tests {
         assert_eq!(imported[0], vec![expected; 4]);
         let exported = hpu_lwe_ciphertexts_to_native_words(&metadata, imported).unwrap();
         assert_eq!(exported, native_words);
+
+        let shortint_params =
+            ShortintParameterSet::new_ks32_pbs_param_set(KeySwitch32PBSParameters::from(&params));
+        let radix = hpu_native_words_to_radix_ciphertexts(
+            &metadata,
+            &native_words,
+            &params,
+            &shortint_params,
+        )
+        .unwrap();
+        let public_api_roundtrip =
+            radix_ciphertexts_to_hpu_native_words(&metadata, &radix, &params).unwrap();
+        assert_eq!(public_api_roundtrip, native_words);
     }
 }
