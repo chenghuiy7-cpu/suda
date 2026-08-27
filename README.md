@@ -21,17 +21,6 @@ SSD -> SLM -> FPGA LWE encrypt -> Host memory -> TCP -> remote HPU
     -> decrypt output SLM -> NVMe Copy -> SSD
 ```
 
-该分支的源码准备、匹配密钥安装、算子构建、QEMU/NVMQ 初始化和可直接执行的
-加解密命令见：
-
-- [`docs/user-guides/NEST_SUDA交接说明.md`](docs/user-guides/NEST_SUDA交接说明.md)
-- [`docs/user-guides/LWE远程HPU部署与运行命令.md`](docs/user-guides/LWE远程HPU部署与运行命令.md)
-- [`host/applications/vscode-lwe-encrypt-offload/README.md`](host/applications/vscode-lwe-encrypt-offload/README.md)
-- [`host/applications/vscode-lwe-decrypt-offload/README.md`](host/applications/vscode-lwe-decrypt-offload/README.md)
-- [`host/applications/vscode-lwe-full-pipeline/README.md`](host/applications/vscode-lwe-full-pipeline/README.md)
-
-当前 FPGA 随机数和噪声实现仍是研究原型，不能用于生产密码系统。
-
 ## 可计算存储是什么？
 
 可计算存储设备（Computational Storage Device, CSD）是一类将算力设备（如CPU或FPGA）部署在存储设备内部或者附近的新型设备。
@@ -300,6 +289,100 @@ sudo poweroff
 
 
 ## SUDA使用
+首先需要在插有hpu的云服务器上初始化远端的hpu服务
+//CSD x86 shell 
+cd suda
+bash hpu/scripts/prepare_tfhe_rs_submodule.sh
+bash hpu/scripts/verify_remote_hpu.sh
+确认以下私有制品已在自己的 SUDA 目录：
+ls -lh \
+  /home/user/suda/hpu/artifacts/private/psi64.hpu \
+  /home/user/suda/hpu/keys/psi64/psi64_big_lwe_secret_key.bin \
+  /home/user/suda/hpu/keys/psi64/psi64_shortint_ks32_client_key.bincode \
+  /home/user/suda/hpu/keys/psi64/psi64_integer_compressed_server_key.bincode
+
+重新生成密钥(第一次复现不建议执行)
+cd /home/user/suda
+bash hpu/scripts/generate_psi64_keyset.sh
+
+安装匹配密钥：
+cd /home/user/suda
+bash hpu/scripts/install_psi64_keyset.sh
+
+构建远端服务并生成部署包：
+rustup toolchain install 1.91.1
+
+cd /home/user/suda
+unset CARGO_TARGET_DIR
+
+bash hpu/scripts/package_remote_server.sh \
+  2>&1 | tee hpu/package_remote_server.log
+
+ls -lh hpu/artifacts/suda-remote-hpu-server.tar.gz
+sha256sum hpu/artifacts/suda-remote-hpu-server.tar.gz
+构建结果位于：/home/user/suda/hpu/remote-hpu/target/
+部署包位于：/home/user/suda/hpu/artifacts/suda-remote-hpu-server.tar.gz
+
+然后将部署包从132发送到129
+scp -P 2222 \
+  -i /home/user/.ssh/key \
+  /home/user/suda/hpu/artifacts/suda-remote-hpu-server.tar.gz \
+  user@10.16.0.129:/home/user/
+
+登录远端hpu所在的服务器上
+mkdir -p /home/user/suda-remote-hpu
+
+tar -xzf /home/user/suda-remote-hpu-server.tar.gz \
+  -C /home/user/suda-remote-hpu
+
+cd /home/user/suda-remote-hpu
+sha256sum -c SHA256SUMS
+全部显示 OK 才继续。
+
+在129安装AMI驱动文件
+sudo install -D -m 0644 \
+  /home/yangchenghui/hpu/zama_aved/sw/AMI/driver/ami.ko \
+  /home/user/suda-remote-hpu/runtime/ami-driver/ami.ko
+
+在129上创建机器配置
+mkdir -p /home/user/.config/suda
+
+cp /home/user/suda-remote-hpu/config/hpu-server-bundle.env.example \
+  /home/user/.config/suda/hpu-server.env
+
+nano /home/user/.config/suda/hpu-server.env
+将文件内容修改为：
+export SUDA_HPU_ROOT=/home/user/suda-remote-hpu
+export HPU_REMOTE_RUNTIME_ROOT=/home/user/suda-remote-hpu/runtime
+
+export XILINX_VIVADO=/opt/Xilinx_2025.1/Vivado/2025.1/Vivado
+export HPU_CONFIG=v80
+export V80_PCIE_DEV=ac
+export V80_SERIAL_NUMBER=XFL1PVNOSKJ0
+
+export HPU_BACKEND_DIR=/home/user/suda-remote-hpu/runtime/tfhe-hpu-backend
+export HPU_REMOTE_CONFIG=/home/user/suda-remote-hpu/runtime/tfhe-hpu-backend/config_store/v80/hpu_config.toml
+export HPU_REMOTE_SERVER_KEY=/home/user/suda-remote-hpu/runtime/psi64_integer_compressed_server_key.bincode
+export HPU_REMOTE_SERVER_BINARY=/home/user/suda-remote-hpu/bin/suda-remote-hpu-server
+export AMI_PATH=/home/user/suda-remote-hpu/runtime/ami-driver
+
+export HPU_REMOTE_BIND=0.0.0.0:19090
+export RUST_LOG=info
+然后source /home/user/.config/suda/hpu-server.env
+
+最后启动前预检：
+HPU_REMOTE_PREFLIGHT_ONLY=1 \
+  /home/user/suda-remote-hpu/scripts/start_remote_server.sh
+成功标志：remote_server_preflight=passed
+
+以上完成后，正式启动TCP服务
+source /home/user/.config/suda/hpu-server.env
+
+/home/user/suda-remote-hpu/scripts/start_remote_server.sh \
+  2>&1 | tee /home/user/suda-remote-hpu/suda-remote-hpu-server.log
+出现以下下日志表示启动成功：
+hpu_device_ready=yes
+listen_addr=0.0.0.0:19090
 
 在配置完成环境后，即可以使用SUDA了。首先从SoC-FPGA CSD上启动软件栈，也就是登录到板卡的ARM核上，在ARM核上操作：
 ```shell
@@ -322,6 +405,28 @@ cat nvmq0_opts > /dev/nvmq-fabrics # fabric connect & identify
 ssh -p8999 developer@localhost  #登录刚才启动的虚拟机
 fio tests/single_write.fio # 或者其他测试程序，例如计算
 ```
+
+然后可以进行CSD加解密和hpu的通信
+cd /mnt/suda/host/applications/vscode-lwe-full-pipeline
+sudo -s
+
+./vscode-lwe-full-pipeline \
+  --ssd-nsid 1 \
+  --ssd-lba 65536 \
+  --input-lbas 1 \
+  --plaintext-bytes 128 \
+  --output-ssd-nsid 1 \
+  --output-ssd-lba 131072 \
+  --expect 59 \
+  --server 10.16.0.129 \
+  --server-port 19090 \
+  --scalar 1 \
+  --slm-read-chunk-bytes 131072 \
+  --slm-write-chunk-bytes 131072 \
+  --verify-decrypt-slm-write \
+  --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
+  --benchmark \
+  2>&1 | tee lwe_full_pipeline_handc_multibd_verify.log
 
 测试通过代表SoC-FPGA CSD已经可以被虚拟机访问，接下来，可以尝试运行一个简单的SUDA示例应用。
 ```shell
