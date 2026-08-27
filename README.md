@@ -291,25 +291,33 @@ sudo poweroff
 ## SUDA使用
 首先需要在插有hpu的云服务器上初始化远端的hpu服务
 //CSD x86 shell 
+```shell
 cd suda
 bash hpu/scripts/prepare_tfhe_rs_submodule.sh
 bash hpu/scripts/verify_remote_hpu.sh
+```
 确认以下私有制品已在自己的 SUDA 目录：
+```shell
 ls -lh \
   /home/user/suda/hpu/artifacts/private/psi64.hpu \
   /home/user/suda/hpu/keys/psi64/psi64_big_lwe_secret_key.bin \
   /home/user/suda/hpu/keys/psi64/psi64_shortint_ks32_client_key.bincode \
   /home/user/suda/hpu/keys/psi64/psi64_integer_compressed_server_key.bincode
-
+```
 重新生成密钥(第一次复现不建议执行)
+```shell
 cd /home/user/suda
 bash hpu/scripts/generate_psi64_keyset.sh
+```
 
 安装匹配密钥：
+```shell
 cd /home/user/suda
 bash hpu/scripts/install_psi64_keyset.sh
+```
 
 构建远端服务并生成部署包：
+```shell
 rustup toolchain install 1.91.1
 
 cd /home/user/suda
@@ -320,16 +328,20 @@ bash hpu/scripts/package_remote_server.sh \
 
 ls -lh hpu/artifacts/suda-remote-hpu-server.tar.gz
 sha256sum hpu/artifacts/suda-remote-hpu-server.tar.gz
+```
 构建结果位于：/home/user/suda/hpu/remote-hpu/target/
 部署包位于：/home/user/suda/hpu/artifacts/suda-remote-hpu-server.tar.gz
 
 然后将部署包从132发送到129
+```shell
 scp -P 2222 \
   -i /home/user/.ssh/key \
   /home/user/suda/hpu/artifacts/suda-remote-hpu-server.tar.gz \
   user@10.16.0.129:/home/user/
+```
 
 登录远端hpu所在的服务器上
+```shell
 mkdir -p /home/user/suda-remote-hpu
 
 tar -xzf /home/user/suda-remote-hpu-server.tar.gz \
@@ -337,14 +349,18 @@ tar -xzf /home/user/suda-remote-hpu-server.tar.gz \
 
 cd /home/user/suda-remote-hpu
 sha256sum -c SHA256SUMS
+```
 全部显示 OK 才继续。
 
 在129安装AMI驱动文件
+```shell
 sudo install -D -m 0644 \
   /home/yangchenghui/hpu/zama_aved/sw/AMI/driver/ami.ko \
   /home/user/suda-remote-hpu/runtime/ami-driver/ami.ko
+```
 
 在129上创建机器配置
+```shell
 mkdir -p /home/user/.config/suda
 
 cp /home/user/suda-remote-hpu/config/hpu-server-bundle.env.example \
@@ -368,18 +384,26 @@ export AMI_PATH=/home/user/suda-remote-hpu/runtime/ami-driver
 
 export HPU_REMOTE_BIND=0.0.0.0:19090
 export RUST_LOG=info
-然后source /home/user/.config/suda/hpu-server.env
+```
+然后
+```shell
+source /home/user/.config/suda/hpu-server.env
+```
 
 最后启动前预检：
+```shell
 HPU_REMOTE_PREFLIGHT_ONLY=1 \
   /home/user/suda-remote-hpu/scripts/start_remote_server.sh
+```
 成功标志：remote_server_preflight=passed
 
 以上完成后，正式启动TCP服务
+```shell
 source /home/user/.config/suda/hpu-server.env
 
 /home/user/suda-remote-hpu/scripts/start_remote_server.sh \
   2>&1 | tee /home/user/suda-remote-hpu/suda-remote-hpu-server.log
+```
 出现以下下日志表示启动成功：
 hpu_device_ready=yes
 listen_addr=0.0.0.0:19090
