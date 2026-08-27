@@ -5,30 +5,11 @@
 ## 什么是SUDA？
 SUDA是基于具有通用处理器核的片上系统（SoC）以及可编程逻辑门阵列（FPGA）的，具有统一编程模型（流式编程模型+内存搬运的编程模型）的可计算存储设备架构。
 
-## NEST LWE 加解密扩展
-
-`nest` 分支在 SUDA 上增加了 psi64/V80 HPU-native LWE 加密、解密算子，
-以及下面的完整实验通路：
-
-```bash
-git clone -b nest git@10.30.19.43:yangchenghui/suda.git "$HOME/suda"
-```
-
 ```text
 SSD -> SLM -> FPGA LWE encrypt -> Host memory -> TCP -> remote HPU
     -> Host memory -> decrypt input SLM -> FPGA LWE decrypt
     -> decrypt output SLM -> NVMe Copy -> SSD
 ```
-
-该分支的源码准备、匹配密钥安装、算子构建、QEMU/NVMQ 初始化和可直接执行的
-加解密命令见：
-
-- [`docs/user-guides/NEST_SUDA交接说明.md`](docs/user-guides/NEST_SUDA交接说明.md)
-- [`host/applications/vscode-lwe-encrypt-offload/README.md`](host/applications/vscode-lwe-encrypt-offload/README.md)
-- [`host/applications/vscode-lwe-decrypt-offload/README.md`](host/applications/vscode-lwe-decrypt-offload/README.md)
-- [`host/applications/vscode-lwe-full-pipeline/README.md`](host/applications/vscode-lwe-full-pipeline/README.md)
-
-当前 FPGA 随机数和噪声实现仍是研究原型，不能用于生产密码系统。
 
 ## 可计算存储是什么？
 
@@ -138,7 +119,7 @@ SUDA原型目前使用[Fidus Sidewinder-100板卡](https://fidus.com/sidewinder/
 
 在部署完硬件后，需要克隆SUDA项目并分别配置本文硬件和软件。
 ```shell
-git clone git@10.30.19.43:nf-csd/suda.git
+git clone https://github.com/chenghuiy7-cpu/suda.git
 git submodule update --init -recursive
 ```
 ### 设备环境配置
@@ -171,9 +152,9 @@ make -C work_farm PRJ=shell:virt_one_drive FPGA_BD=$TARGET_BOARD WITH_BIT=y IO_C
 
 
 
-然后，使用NFS或者拷贝的方式，将软件栈提供给板卡（板卡IP假设为10.156.153.120）：
+然后，使用NFS或者拷贝的方式，将软件栈提供给板卡（板卡IP假设为10.128.157.204）：
 ```shell
-scp -r device/platform/software_stack/ root@10.156.153.120:~/software_stack/
+scp -r device/platform/software_stack/ root@10.128.157.204:~/software_stack/
 ```
 
 software_stack中config.json描述了FPGA当前已经部署算子的配置信息（不包括动态可重构的算子）,默认的比特流中包含了两个算子，一个是名字为add的伪算子，另一个是名为encrypt的Blowfish加解密算子。算子主要的参数为`operator_type_id`和`slot_id`，相同的`operator_type_id`负责实现相同的功能，`slot_id`是唯一的，标记部署在FPGA的不同算子。如果FPGA算子包含多个数据流接口(channel)，数据流会根据`slot_id`和`channel_id`路由。
@@ -234,7 +215,7 @@ void spdk_hlsacccompute_init_opconfig(struct spdk_hlsacccompute_dev *dev)
 
 ```shell
 ./configure 
-make
+make -j4 
 ```
 在编译成功后，代表设备侧已经配置完成。
 
@@ -264,7 +245,7 @@ GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt intel_iommu=on pcie_acs_overri
 sudo update-grub
 sudo reboot
 ```
-在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址（假设当前为3b:00.0）：
+在以上步骤全部结束后，编辑`/host/qemu/run_qemu.sh`，SoC-FPGA CSD通过vfio直通给虚拟机，因此需要在qemu的启动参数上指定CSD的PCIe地址（假设当前为86:00.0）：
 ```shell
 ./qemu/build/qemu-system-x86_64 \
     -name "qdma-test-0",debug-threads=on \
@@ -279,14 +260,14 @@ sudo reboot
     -netdev user,id=net0,hostfwd=tcp::$SSHPORT-:22 \
     -device virtio-net-pci,netdev=net0 \
     -device pcie-root-port,id=pcie.1,addr=08.0,slot=1 \
-    -device vfio-pci,host=3b:00.0,bus=pcie.1 \ ------>修改PCIe地址
+    -device vfio-pci,host=86:00.0,bus=pcie.1 \ ------>修改PCIe地址
     -fsdev local,id=fs1,path="../../.",security_model=none \
     -device virtio-9p-pci,fsdev=fs1,mount_tag=suda \
     -monitor unix:./qmp-sock,server,nowait \
     -serial stdio 
 ```
 
-接下来，修改`/host/qemu/bind_vfio.sh`，并且修改需要绑定vfio的PCIe地址，然后运行脚本`sudo source bind_vfio.sh`。绑定vfio之后，启动qemu虚拟机`sudo bash run_nvmq.sh -f`，启动之后，可以使用ssh通过`run_nvmq.sh`中的`SSHPORT`端口访问虚拟机，虚拟机将SUDA目录挂载到了`/mnt/suda/`，进入`/mnt/suda/host`编译虚拟机需要的内核模块、SUDA应用和依赖库：
+接下来，修改`/host/qemu/bind_vfio.sh`，并且修改需要绑定vfio的PCIe地址，然后运行脚本`sudo bash bind_vfio.sh`。绑定vfio之后，启动qemu虚拟机`sudo bash run_qemu.sh -f`，启动之后，可以使用ssh通过`run_qemu.sh`中的`SSHPORT`端口访问虚拟机，虚拟机将SUDA目录挂载到了`/mnt/suda/`，进入`/mnt/suda/host`编译虚拟机需要的内核模块、SUDA应用和依赖库：
 
 ```shell
 cd /mnt/suda/host
@@ -308,13 +289,16 @@ bash run_nvmq.sh
 ```
 在等待SoC-FPGA CSD软件栈初始化完成后（一般等待5s），然后不要退出ARM核上运行的进程，回到主机，在主机端启动虚拟机：
 ```shell
-sudo bash run_nvmq.sh -f
-ssh -p8999 developer@localhost
+sudo bash run_qemu.sh -f
 #在虚拟机中
 cd /mnt/suda/host/drivers/nvmq
 sudo su
 bash init_nvmq.sh
 cat nvmq0_opts > /dev/nvmq-fabrics # fabric connect & identify
+
+
+#然后开启另一个终端
+ssh -p8999 developer@localhost  #登录刚才启动的虚拟机
 fio tests/single_write.fio # 或者其他测试程序，例如计算
 ```
 
