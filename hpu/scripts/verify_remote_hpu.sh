@@ -10,11 +10,17 @@ status=0
 
 required_files=(
     README.md
+    keygen/Cargo.toml
+    keygen/src/main.rs
     remote-hpu/Cargo.toml
     remote-hpu/src/main.rs
     remote-hpu/src/bridge.rs
     remote-hpu/src/protocol.rs
+    config/hpu-server-bundle.env.example
     scripts/package_remote_server.sh
+    scripts/generate_psi64_keyset.sh
+    scripts/install_psi64_keyset.sh
+    scripts/prepare_remote_runtime.sh
     scripts/prepare_tfhe_rs_submodule.sh
     scripts/start_remote_server.sh
     scripts/v80-pcie-perms.sh

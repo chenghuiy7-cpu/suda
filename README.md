@@ -5,11 +5,32 @@
 ## 什么是SUDA？
 SUDA是基于具有通用处理器核的片上系统（SoC）以及可编程逻辑门阵列（FPGA）的，具有统一编程模型（流式编程模型+内存搬运的编程模型）的可计算存储设备架构。
 
+## NEST LWE 加解密扩展
+
+GitHub `main` 分支在 SUDA 上增加了 psi64/V80 HPU-native LWE 加密、解密算子，
+以及下面的完整实验通路：
+
+```bash
+git clone --recurse-submodules -b main \
+  https://github.com/chenghuiy7-cpu/suda.git "$HOME/suda"
+```
+
 ```text
 SSD -> SLM -> FPGA LWE encrypt -> Host memory -> TCP -> remote HPU
     -> Host memory -> decrypt input SLM -> FPGA LWE decrypt
     -> decrypt output SLM -> NVMe Copy -> SSD
 ```
+
+该分支的源码准备、匹配密钥安装、算子构建、QEMU/NVMQ 初始化和可直接执行的
+加解密命令见：
+
+- [`docs/user-guides/NEST_SUDA交接说明.md`](docs/user-guides/NEST_SUDA交接说明.md)
+- [`docs/user-guides/LWE远程HPU部署与运行命令.md`](docs/user-guides/LWE远程HPU部署与运行命令.md)
+- [`host/applications/vscode-lwe-encrypt-offload/README.md`](host/applications/vscode-lwe-encrypt-offload/README.md)
+- [`host/applications/vscode-lwe-decrypt-offload/README.md`](host/applications/vscode-lwe-decrypt-offload/README.md)
+- [`host/applications/vscode-lwe-full-pipeline/README.md`](host/applications/vscode-lwe-full-pipeline/README.md)
+
+当前 FPGA 随机数和噪声实现仍是研究原型，不能用于生产密码系统。
 
 ## 可计算存储是什么？
 

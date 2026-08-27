@@ -18,13 +18,17 @@ host/applications/vscode-lwe-full-pipeline/
 ```text
 hpu/
 ├── tfhe-rs/                    # 未修改的上游 Git 子模块
+├── keygen/                     # SUDA 独立 psi64 匹配密钥生成器
 ├── remote-hpu/                 # SUDA 独立 Rust 服务端 crate
 │   ├── Cargo.toml
 │   └── src/{main,protocol,bridge}.rs
 ├── config/hpu-server.env.example
 ├── manifests/remote-hpu.env
 └── scripts/
+    ├── prepare_remote_runtime.sh
     ├── prepare_tfhe_rs_submodule.sh
+    ├── generate_psi64_keyset.sh
+    ├── install_psi64_keyset.sh
     ├── package_remote_server.sh
     ├── start_remote_server.sh
     ├── v80-pcie-perms.sh
@@ -69,6 +73,16 @@ HPU-native 请求先在 `remote-hpu/src/bridge.rs` 中通过上游公开转换 A
 返回 native 布局时执行逆转换。因此不再需要给上游类型添加
 `from_hpu_lwe_ciphertexts` 或 `to_hpu_lwe_ciphertexts` 方法。
 
+匹配密钥也由 SUDA 独立 crate 生成，不再向 TFHE-rs 子模块添加 example：
+
+```bash
+bash hpu/scripts/generate_psi64_keyset.sh
+bash hpu/scripts/install_psi64_keyset.sh
+```
+
+默认生成目录为 `hpu/keys/psi64`，该目录被 Git 忽略。安装脚本把同一套 keyset 同步到
+FPGA Host 应用使用的 `device/operators/hls/lwe_encrypt/testdata`，避免手工复制后混用。
+
 ## V80 启动边界
 
 验证基线的上游 TFHE-rs 使用 `force_reload="false"`：当前硬件状态有效时直接复用；
@@ -76,26 +90,38 @@ HPU-native 请求先在 `remote-hpu/src/bridge.rs` 中通过上游公开转换 A
 `force_reload="never"` 已删除，因为它会修改上游源码。启动前应先确认 V80、AMI、
 QDMA 和真实 `psi64.hpu` 状态，脚本也会明确打印这一风险。
 
-真实 `psi64.hpu` 是实验室制品，不应覆盖或提交到子模块。可以让
-`HPU_BACKEND_DIR` 指向已安装并含真实制品的 runtime tree；编译仍使用干净子模块。
+真实 `psi64.hpu` 是实验室制品，不应覆盖或提交到子模块。132 上由
+`package_remote_server.sh` 把校验通过的真实制品、ServerKey、上游配置和已编译
+服务端收入最小运行包。129 不需要 SUDA 或 TFHE-rs 源码树。
 
 ## 运行与打包
 
-复制环境模板到仓库外并填写本机参数：
+在 132 的完整 SUDA checkout 中准备私有制品：
 
 ```bash
-cp hpu/config/hpu-server.env.example /secure/path/hpu-server.env
-source /secure/path/hpu-server.env
-bash hpu/scripts/start_remote_server.sh
+mkdir -p hpu/artifacts/private
+# 将实验室发放的 psi64.hpu 放入上面的目录；ServerKey 从 hpu/keys/psi64 读取。
+bash hpu/scripts/verify_remote_hpu.sh
 ```
 
-生成部署包：
+在 132 构建自包含运行包：
 
 ```bash
-export SERVER_KEY_SOURCE=/secure/path/psi64_integer_compressed_server_key.bincode
-export HPU_REMOTE_SERVER_KEY_SHA256=<sha256>
+export CARGO_TARGET_DIR=/data/$USER/cargo-targets/suda-remote-hpu
 bash hpu/scripts/package_remote_server.sh
 ```
+
+将 `hpu/artifacts/suda-remote-hpu-server.tar.gz` 用 `scp` 发到 129。129 只需解压、填写
+`config/hpu-server-bundle.env.example` 中的机器参数，然后运行：
+
+```bash
+source "$HOME/.config/suda/hpu-server.env"
+HPU_REMOTE_PREFLIGHT_ONLY=1 \
+  "$SUDA_HPU_ROOT/scripts/start_remote_server.sh"
+"$SUDA_HPU_ROOT/scripts/start_remote_server.sh"
+```
+
+完整命令见 `docs/user-guides/LWE远程HPU部署与运行命令.md`。
 
 ## 不进入 Git 的内容
 

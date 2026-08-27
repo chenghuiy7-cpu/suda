@@ -20,7 +20,8 @@ host/applications/vscode-lwe-full-pipeline/
 gitlink 时必须重新验证 V80 固件、AMI/QDMA、ServerKey 和完整流水线。
 
 ClientKey、Big-LWE 私钥只保留在 132；129 只接收 `CompressedServerKey`。SSH 私钥、
-真实板卡序列号、密钥和 `psi64.hpu` 均放在 Git 仓库外。
+真实板卡序列号、密钥和 `psi64.hpu` 均不纳入 Git；后两项可安装到被忽略的
+`suda/hpu/runtime/`。
 
 ## 2. 在 132 准备和验证源码
 
@@ -48,98 +49,149 @@ cargo +1.91.1 build --release --manifest-path hpu/remote-hpu/Cargo.toml
 
 这些命令只通过 path dependency 读取子模块，不会修改其中源码。
 
-## 3. 在 132 生成部署包
+## 3. 在 132 构建最小远端运行包
 
-准备仓库外的 ServerKey 并设置其预期摘要：
+129 是 HPU 服务的部署机，**不 clone SUDA，也不编译 Rust 源码**。唯一源码工作树在
+132。由 132 完成子模块校验、release 编译和制品打包，再通过 `scp` 向 129 发布。
+
+打包前，132 应已有下列两个被 Git 忽略的私有制品：
+
+```text
+hpu/artifacts/private/psi64.hpu
+hpu/keys/psi64/psi64_integer_compressed_server_key.bincode
+```
+
+执行：
 
 ```bash
-export SUDA_ROOT=/path/to/suda
-export SERVER_KEY_SOURCE=/secure/path/psi64_integer_compressed_server_key.bincode
-
-source "$SUDA_ROOT/hpu/manifests/remote-hpu.env"
-export HPU_REMOTE_SERVER_KEY_SHA256="$HPU_SERVER_KEY_SHA256"
+export SUDA_ROOT="$HOME/suda"
+export CARGO_TARGET_DIR="/data/$USER/cargo-targets/suda-remote-hpu"
 
 cd "$SUDA_ROOT"
+bash hpu/scripts/prepare_tfhe_rs_submodule.sh
+bash hpu/scripts/verify_remote_hpu.sh
 bash hpu/scripts/package_remote_server.sh
+
+ls -lh hpu/artifacts/suda-remote-hpu-server.tar.gz
+sha256sum hpu/artifacts/suda-remote-hpu-server.tar.gz
 ```
 
-默认产物是 `hpu/artifacts/suda-remote-hpu-server.tar.gz`。脚本会拒绝版本不符或有本地
-修改的 TFHE-rs 子模块，校验 ServerKey，构建 release 二进制，并生成包内
-`SHA256SUMS`。部署包不包含 ClientKey、Big-LWE 私钥和 `psi64.hpu`。
+打包脚本会校验 `psi64.hpu` 和 ServerKey 的大小及 SHA-256，并拒绝从有本地改动的
+TFHE-rs 子模块构建。包含以下内容：
 
-复制到 129：
+```text
+bin/suda-remote-hpu-server                 # 已编译的服务端
+runtime/psi64_integer_compressed_server_key.bincode
+runtime/tfhe-hpu-backend/config_store/     # V80 配置和真实 psi64.hpu
+scripts/start_remote_server.sh
+config/hpu-server-bundle.env.example
+manifests/remote-hpu.env
+SHA256SUMS
+```
+
+ClientKey 和 Big-LWE 私钥不会进入运行包，只保留在 132。
+
+## 4. 从 132 发布到 129
+
+以已验证的 SSH 端口和密钥为例：
 
 ```bash
-export SSH_KEY=/secure/path/to/id_ed25519
-export HPU_REMOTE_USER=your-user
-export HPU_REMOTE_HOST=10.16.0.129
-export HPU_REMOTE_SSH_PORT=2222
+export REMOTE_USER=your-user
+export REMOTE_HOST=10.16.0.129
+export REMOTE_PORT=2222
+export REMOTE_KEY=/secure/path/to/id_ed25519
 
-scp -P "$HPU_REMOTE_SSH_PORT" -i "$SSH_KEY" \
+ssh -p "$REMOTE_PORT" -i "$REMOTE_KEY" \
+  "$REMOTE_USER@$REMOTE_HOST" \
+  'mkdir -p "$HOME/suda-remote-hpu-incoming"'
+
+scp -P "$REMOTE_PORT" -i "$REMOTE_KEY" \
   "$SUDA_ROOT/hpu/artifacts/suda-remote-hpu-server.tar.gz" \
-  "${HPU_REMOTE_USER}@${HPU_REMOTE_HOST}:/tmp/"
+  "$REMOTE_USER@$REMOTE_HOST:suda-remote-hpu-incoming/"
 ```
 
-## 4. 在 129 安装
-
-129 需要一个未修改、位于相同 gitlink 的 TFHE-rs checkout，以及包含已经验证的真实
-`psi64.hpu` 的 HPU runtime。可以 clone SUDA 子模块，也可以使用管理员预装的同版本
-TFHE-rs/runtime tree；不要在 checkout 中应用 SUDA 补丁。
-
-解压并校验服务包：
+如果 132 上已有与 129 当前驱动匹配的 `ami.ko`，可在打包时一并收录：
 
 ```bash
-export HPU_INSTALL=/opt/suda-remote-hpu
-mkdir -p "$HPU_INSTALL"
-tar -xzf /tmp/suda-remote-hpu-server.tar.gz -C "$HPU_INSTALL"
-cd "$HPU_INSTALL"
+AMI_MODULE_SOURCE=/secure/path/ami.ko \
+  bash hpu/scripts/package_remote_server.sh
+```
+
+没有时不影响打包；129 可复用本机已验证的 AMI 模块。
+
+## 5. 在 129 解压并启动服务
+
+在 129 上解压到独立运行目录：
+
+```bash
+archive="$HOME/suda-remote-hpu-incoming/suda-remote-hpu-server.tar.gz"
+deploy="$HOME/suda-remote-hpu"
+
+if [[ -d "$deploy" ]]; then
+  mv "$deploy" "${deploy}.backup.$(date +%Y%m%d-%H%M%S)"
+fi
+mkdir -p "$deploy"
+tar -xzf "$archive" -C "$deploy"
+
+cd "$deploy"
 sha256sum -c SHA256SUMS
 ```
 
-如果 129 能访问 GitHub，可准备同版本子模块：
+如果包内没有 `runtime/ami-driver/ami.ko`，把 129 上已验证的模块复制进最小运行目录：
 
 ```bash
-git clone https://github.com/zama-ai/tfhe-rs.git /opt/tfhe-rs
-git -C /opt/tfhe-rs checkout --detach \
-  e8ab4484545a9f6512f42d2b75509855093e8597
-test -z "$(git -C /opt/tfhe-rs status --porcelain)"
+install -D -m 0644 \
+  /path/to/validated/ami.ko \
+  "$deploy/runtime/ami-driver/ami.ko"
 ```
 
-真实 `psi64.hpu` 应由实验室制品库安装到 runtime tree，并按
-`hpu/manifests/remote-hpu.env` 的大小和 SHA-256 校验。不要用仓库内的占位文件覆盖
-已经验证可用的制品。
+这是一次性迁移；启动后不再依赖旧的 `~/hpu/tfhe-rs` 源码树。
 
-## 5. 在 129 启动服务
-
-从模板创建仓库外环境文件，填写真实设备参数：
+创建机器专用环境文件：
 
 ```bash
-cp "$HPU_INSTALL/config/hpu-server.env.example" /secure/path/hpu-server.env
+mkdir -p "$HOME/.config/suda"
+cp "$deploy/config/hpu-server-bundle.env.example" \
+  "$HOME/.config/suda/hpu-server.env"
 ```
 
-至少应设置：
+编辑 `~/.config/suda/hpu-server.env`，填入 129 实际的 Vivado 路径、PCIe bus ID 和板卡
+序列号。下列值中的占位符必须在预检前替换：
 
 ```bash
-export SUDA_HPU_ROOT="$HPU_INSTALL"
-export TFHE_RS_ROOT=/opt/tfhe-rs
-export HPU_BACKEND_DIR=/path/to/validated/tfhe-hpu-backend-runtime
-export HPU_REMOTE_CONFIG="$HPU_BACKEND_DIR/config_store/v80/hpu_config.toml"
-export HPU_REMOTE_SERVER_KEY="$HPU_INSTALL/runtime/psi64_integer_compressed_server_key.bincode"
-export HPU_REMOTE_SERVER_KEY_SHA256=<verified-sha256>
-export XILINX_VIVADO=/path/to/Vivado
+export SUDA_HPU_ROOT="$HOME/suda-remote-hpu"
+export HPU_REMOTE_RUNTIME_ROOT="$SUDA_HPU_ROOT/runtime"
+export XILINX_VIVADO=/opt/Xilinx_2025.1/Vivado/2025.1/Vivado
 export HPU_CONFIG=v80
 export V80_PCIE_DEV=xx
 export V80_SERIAL_NUMBER=REPLACE_ME
-export AMI_PATH=/path/to/installed/ami-driver
+export HPU_BACKEND_DIR="$HPU_REMOTE_RUNTIME_ROOT/tfhe-hpu-backend"
+export HPU_REMOTE_CONFIG="$HPU_BACKEND_DIR/config_store/v80/hpu_config.toml"
+export HPU_REMOTE_SERVER_KEY="$HPU_REMOTE_RUNTIME_ROOT/psi64_integer_compressed_server_key.bincode"
+export HPU_REMOTE_SERVER_BINARY="$SUDA_HPU_ROOT/bin/suda-remote-hpu-server"
+export AMI_PATH="$HPU_REMOTE_RUNTIME_ROOT/ami-driver"
+export HPU_REMOTE_BIND=0.0.0.0:19090
+export RUST_LOG=info
 ```
+
+不访问板卡，先校验包内路径、ServerKey 和真实 `psi64.hpu`：
+
+```bash
+source "$HOME/.config/suda/hpu-server.env"
+HPU_REMOTE_PREFLIGHT_ONLY=1 \
+  "$SUDA_HPU_ROOT/scripts/start_remote_server.sh"
+```
+
+成功标志为 `remote_server_preflight=passed`。
 
 在 129 的 `tmux` 中启动：
 
 ```bash
 tmux new -s hpu-lwe-server
-source /secure/path/hpu-server.env
-bash "$HPU_INSTALL/scripts/start_remote_server.sh" \
-  2>&1 | tee "$HPU_INSTALL/suda-remote-hpu-server.log"
+
+source "$HOME/.config/suda/hpu-server.env"
+"$SUDA_HPU_ROOT/scripts/start_remote_server.sh" \
+  2>&1 | tee "$SUDA_HPU_ROOT/suda-remote-hpu-server.log"
 ```
 
 成功标志包括：
@@ -161,6 +213,9 @@ V80、AMI/QDMA、PDI/HIS/UUID 状态；需要严格禁止自动 reload 时，应
 ```bash
 ss -ltnp | grep 19090
 ```
+
+该流程的唯一源码入口是 132 上的 SUDA checkout。129 只保留可删除、可替换的运行包，
+不需要 Git、Rust、Cargo 或 TFHE-rs 子模块。
 
 ## 6. 在 132 运行 SUDA 客户端
 
@@ -199,6 +254,44 @@ remote_hpu_ciphertext_compute=passed
 
 ```text
 host/applications/vscode-lwe-full-pipeline/
+```
+
+先在 132 Host checkout 中构建：
+
+```bash
+cd "$SUDA_ROOT/host/applications/vscode-lwe-full-pipeline"
+make clean && make -j
+```
+
+确认 ARM `nvmf_tgt`、QEMU NVMQ 和 129 服务均已启动后，在 132 QEMU guest 中执行：
+
+```bash
+cd /mnt/suda/host/applications/vscode-lwe-full-pipeline
+
+./vscode-lwe-full-pipeline \
+  --ssd-nsid 1 \
+  --ssd-lba 65536 \
+  --input-lbas 1 \
+  --plaintext-bytes 128 \
+  --output-ssd-nsid 1 \
+  --output-ssd-lba 131072 \
+  --expect 171 \
+  --server 10.16.0.129 \
+  --server-port 19090 \
+  --scalar 1 \
+  --slm-read-chunk-bytes 131072 \
+  --slm-write-chunk-bytes 131072 \
+  --key /mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin \
+  --benchmark \
+  2>&1 | tee lwe_full_pipeline_128b.log
+```
+
+`--expect 171` 必须替换为源 SSD 数据第一个字节的十进制值。成功标志包括：
+
+```text
+lwe full SSD-to-remote-HPU-to-SSD pipeline passed
+destination_ssd_readback_checked=yes
+remote_hpu_ciphertext_compute=passed
 ```
 
 ## 7. 停止与安全规则

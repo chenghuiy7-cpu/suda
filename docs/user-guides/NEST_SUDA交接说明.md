@@ -1,7 +1,7 @@
 # NEST SUDA 交接说明
 
-本文给出 `nest` 分支的源码边界和最小复现入口。完整的跨机器部署、
-TFHE-rs/HPU 服务端和实验室私有 artifact 安装由 NEST 顶层仓库统一管理。
+本文给出 GitHub `main` 分支的源码边界和最小复现入口。完整的跨机器部署、
+TFHE-rs/HPU 服务端和实验室私有 artifact 安装均由 SUDA 仓库统一管理。
 
 ## 1. 本分支包含的内容
 
@@ -28,8 +28,8 @@ TFHE-rs/HPU 服务端和实验室私有 artifact 安装由 NEST 顶层仓库统�
 
 ```bash
 export SUDA_ROOT="$HOME/suda"
-git clone -b nest git@10.30.19.43:yangchenghui/suda.git "$SUDA_ROOT"
-git -C "$SUDA_ROOT" submodule update --init --recursive
+git clone --recurse-submodules -b main \
+  https://github.com/chenghuiy7-cpu/suda.git "$SUDA_ROOT"
 ```
 
 自定义 guest kernel 所需的 QDMA headers 和 `bio_map_user_iov` 导出修改已经保存为：
@@ -51,7 +51,7 @@ dirty 子模块状态，patch 文件才是可重复构建的来源。
 但可从本机只读 artifact 源安装到个人 clone：
 
 ```bash
-export NEST_LWE_KEYSET_SOURCE=/home/yangchenghui/suda/device/operators/hls/lwe_encrypt/testdata
+export NEST_LWE_KEYSET_SOURCE=/path/to/validated/psi64-keyset
 bash "$SUDA_ROOT/device/operators/hls/lwe_encrypt/testdata/install_validated_keyset.sh" \
   "$NEST_LWE_KEYSET_SOURCE"
 ```
@@ -66,23 +66,28 @@ bash "$SUDA_ROOT/device/operators/hls/lwe_encrypt/testdata/install_validated_key
 为了完整验证和独立启动服务，建议安装全部三份。三者必须来自同一次生成，
 不能混用。
 
-需要生成个人新 keyset 时，在应用过 NEST overlay 的 TFHE-rs 源码树执行：
+需要生成个人新 keyset 时，在 SUDA 根目录执行独立 keygen。它只读取未修改子模块的
+公开 API，不需要 NEST overlay：
 
 ```bash
-export TFHE_RS_ROOT="$HOME/hpu/tfhe-rs"
-export HPU_BACKEND_DIR="$TFHE_RS_ROOT/backends/tfhe-hpu-backend"
-
-cd "$TFHE_RS_ROOT"
-cargo run --release -p tfhe --features hpu \
-  --example hpu_export_lwe_encrypt_key -- \
-  --params "$TFHE_RS_ROOT/mockups/tfhe-hpu-mockup/params/tuniform_64b_pfail128_psi64.toml" \
-  --output-dir "$SUDA_ROOT/device/operators/hls/lwe_encrypt/testdata" \
-  --sync-write
+cd "$SUDA_ROOT"
+bash hpu/scripts/generate_psi64_keyset.sh
+bash hpu/scripts/install_psi64_keyset.sh
 ```
 
 生成新 keyset 不需要重新生成 CSD 比特流，因为 Big-LWE key 在运行时装入
 算子 context；但必须把新 compressed ServerKey 部署到 129 并重启 HPU 服务。
 旧 keyset 对应的密文不能与新 keyset 混用。
+
+新生成的 ServerKey 与 manifest 中记录的实验室基线摘要不同。部署前记录其大小和摘要：
+
+```bash
+export GENERATED_SERVER_KEY="$SUDA_ROOT/device/operators/hls/lwe_encrypt/testdata/psi64_integer_compressed_server_key.bincode"
+export HPU_REMOTE_SERVER_KEY_SIZE=$(stat -c %s "$GENERATED_SERVER_KEY")
+export HPU_REMOTE_SERVER_KEY_SHA256=$(sha256sum "$GENERATED_SERVER_KEY" | awk '{print $1}')
+```
+
+在准备 129 runtime 和启动服务时必须导出同样的两个变量。
 
 ## 5. 生成 HLS RTL
 

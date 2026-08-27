@@ -22,7 +22,7 @@ PC 交织或 torus 位宽转换，只截取两个 slot 的有效系数区并构�
 ## 构建
 
 ```bash
-cd /home/yangchenghui/suda/host/applications/vscode-lwe-encrypt-remote-offload
+cd /path/to/suda/host/applications/vscode-lwe-encrypt-remote-offload
 make -j4
 make test
 ```
@@ -31,7 +31,9 @@ make test
 
 ## 运行
 
-先在 129 启动 `hpu_lwe_remote_server`，然后在 132 的 QEMU 中执行：
+先按
+[`LWE远程HPU部署与运行命令.md`](../../../docs/user-guides/LWE远程HPU部署与运行命令.md)
+在 129 启动 SUDA 自带的 `suda-remote-hpu-server`，然后在 132 的 QEMU 中执行：
 
 ```bash
 cd /mnt/suda/host/applications/vscode-lwe-encrypt-remote-offload
