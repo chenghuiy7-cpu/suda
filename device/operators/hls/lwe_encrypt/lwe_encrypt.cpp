@@ -87,9 +87,23 @@ static bool is_suda_done_packet(Acc_Data_Pkt pkt)
     return pkt.user.range(7, 4) != 0;
 }
 
+static bool is_u8_radix_mode(ap_uint<32> input_mode)
+{
+#pragma HLS INLINE
+    return input_mode == LWE_ENCRYPT_INPUT_U8_RADIX ||
+           input_mode == LWE_ENCRYPT_INPUT_U8_RADIX_SCALAR_STREAM;
+}
+
 static void forward_done_packet(Acc_Data &data_out, Acc_Data_Pkt done_pkt)
 {
 #pragma HLS INLINE off
+    // The input DMA marker has 16 valid bytes. RX accounts for and strips
+    // a full 64-byte marker, just like our synthetic/error packets and the
+    // filter status packet. Preserve the status payload while normalizing
+    // the output framing; forwarding sparse TKEEP makes RX remove payload.
+    done_pkt.keep = ~ap_uint<64>(0);
+    done_pkt.strb = ~ap_uint<64>(0);
+    done_pkt.last = 1;
     data_out.write(done_pkt);
 }
 
@@ -368,7 +382,7 @@ void lwe_encrypt(Acc_Data &data_in, Acc_Data &data_out, ap_uint<512> context[256
     ap_uint<64> base_seed = cfg.range(383, 320);
     ap_uint<64> nonce = cfg.range(447, 384);
 
-    if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX) {
+    if (is_u8_radix_mode(input_mode)) {
         delta = LWE_ENCRYPT_HPU_DELTA;
         if (noise_mode == LWE_ENCRYPT_NOISE_TUNIFORM) {
             noise_bound_log2 = LWE_ENCRYPT_HPU_GLWE_NOISE_BOUND_LOG2;
@@ -380,13 +394,13 @@ void lwe_encrypt(Acc_Data &data_in, Acc_Data &data_out, ap_uint<512> context[256
         return;
     }
 
-    if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX &&
+    if (is_u8_radix_mode(input_mode) &&
         mask_dimension != LWE_ENCRYPT_HPU_BIG_LWE_DIMENSION) {
         write_error_packet(data_out, 2);
         return;
     }
 
-    if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX &&
+    if (is_u8_radix_mode(input_mode) &&
         noise_mode == LWE_ENCRYPT_NOISE_INPUT) {
         write_error_packet(data_out, 3);
         return;
@@ -398,7 +412,7 @@ void lwe_encrypt(Acc_Data &data_in, Acc_Data &data_out, ap_uint<512> context[256
     }
 
     if (output_layout == LWE_ENCRYPT_OUTPUT_HPU_NATIVE &&
-        input_mode != LWE_ENCRYPT_INPUT_U8_RADIX) {
+        !is_u8_radix_mode(input_mode)) {
         write_error_packet(data_out, 6);
         return;
     }
@@ -425,7 +439,22 @@ stream_loop:
             continue;
         }
 
-        if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX) {
+        if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX_SCALAR_STREAM) {
+            // filter -> LWE 图中，一个 payload beat 就代表一个被选中的
+            // quantity。不要再用 TKEEP 推断该 beat 包含多少个明文。
+            encrypt_u8_radix(
+                input_pkt.data.range(7, 0),
+                data_out,
+                context,
+                mask_dimension,
+                noise_mode,
+                noise_bound_log2,
+                output_layout,
+                base_seed,
+                nonce,
+                processed_count);
+            processed_count++;
+        } else if (input_mode == LWE_ENCRYPT_INPUT_U8_RADIX) {
             ap_uint<512> packed_data = input_pkt.data;
             ap_uint<64> packed_keep = input_pkt.keep;
         packed_u8_loop:

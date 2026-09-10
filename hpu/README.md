@@ -107,9 +107,12 @@ bash hpu/scripts/verify_remote_hpu.sh
 在 132 构建自包含运行包：
 
 ```bash
-export CARGO_TARGET_DIR=/data/$USER/cargo-targets/suda-remote-hpu
 bash hpu/scripts/package_remote_server.sh
 ```
+
+不设置 `CARGO_TARGET_DIR` 时，Cargo 构建产物保存在当前 SUDA checkout 内的
+`hpu/remote-hpu/target/`；生成的部署包保存在 `hpu/artifacts/`。新用户不需要在
+`/data` 或仓库外创建任何构建目录。
 
 将 `hpu/artifacts/suda-remote-hpu-server.tar.gz` 用 `scp` 发到 129。129 只需解压、填写
 `config/hpu-server-bundle.env.example` 中的机器参数，然后运行：

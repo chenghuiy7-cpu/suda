@@ -100,7 +100,7 @@ reg   [0:0] icmp_ln878_reg_650_pp0_iter1_reg;
 wire   [63:0] mask_word_V_fu_375_p2;
 reg   [63:0] mask_word_V_reg_654;
 reg   [63:0] mask_word_V_reg_654_pp0_iter1_reg;
-reg   [0:0] tmp_3_reg_667;
+reg   [0:0] tmp_4_reg_667;
 wire   [0:0] p_Result_s_fu_432_p2;
 reg   [0:0] p_Result_s_reg_671;
 wire   [63:0] body_V_2_fu_477_p3;
@@ -221,7 +221,7 @@ initial begin
 #0 icmp_ln878_reg_650_pp0_iter1_reg = 1'd0;
 #0 mask_word_V_reg_654 = 64'd0;
 #0 mask_word_V_reg_654_pp0_iter1_reg = 64'd0;
-#0 tmp_3_reg_667 = 1'd0;
+#0 tmp_4_reg_667 = 1'd0;
 #0 p_Result_s_reg_671 = 1'd0;
 #0 ap_enable_reg_pp0_iter2 = 1'b0;
 #0 icmp_ln18_reg_681 = 1'd0;
@@ -586,10 +586,10 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-        tmp_3_reg_667 <= 1'd0;
+        tmp_4_reg_667 <= 1'd0;
     end else begin
         if (((icmp_ln878_fu_331_p2 == 1'd0) & (1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0))) begin
-            tmp_3_reg_667 <= ap_phi_mux_natural_index_V_1_phi_fu_247_p4[32'd6];
+            tmp_4_reg_667 <= ap_phi_mux_natural_index_V_1_phi_fu_247_p4[32'd6];
         end
     end
 end
@@ -733,7 +733,7 @@ always @ (*) begin
 end
 
 always @ (*) begin
-    if (((tmp_3_reg_667 == 1'd0) & (1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0) & (ap_enable_reg_pp0_iter1 == 1'b1))) begin
+    if (((tmp_4_reg_667 == 1'd0) & (1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0) & (ap_enable_reg_pp0_iter1 == 1'b1))) begin
         pc0_V_we1 = 1'b1;
     end else begin
         pc0_V_we1 = 1'b0;
@@ -757,7 +757,7 @@ always @ (*) begin
 end
 
 always @ (*) begin
-    if (((tmp_3_reg_667 == 1'd1) & (1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0) & (ap_enable_reg_pp0_iter1 == 1'b1))) begin
+    if (((tmp_4_reg_667 == 1'd1) & (1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0) & (ap_enable_reg_pp0_iter1 == 1'b1))) begin
         pc1_V_we1 = 1'b1;
     end else begin
         pc1_V_we1 = 1'b0;

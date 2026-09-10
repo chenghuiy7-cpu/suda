@@ -1,5 +1,9 @@
 FPGA_ROOT := $(shell pwd)
 
+# Vivado 输出需要经过 tee 留档；使用 bash pipefail 保留 Vivado 自身的
+# 失败状态，避免 tee 返回 0 后继续使用旧 DCP 生成 BOOT.bin。
+SHELL := /bin/bash
+
 # Hardware install file
 O ?= $(FPGA_ROOT)
 HDF_INSTALL := $(O)/system.hdf
@@ -45,9 +49,8 @@ else
 vivado_prj: FORCE
 	@mkdir -p $(DIR_GEN_OBJ)
 ifeq ($(VIVADO_MODE),batch)
-	@cd $(VIVADO_PRJ_LOC) && $(VIVADO) $(VIVADO_PRJ_FLAGS) 2>&1 | tee $(VIVADO_LOG_LOC)/$(FPGA_ACT).log
+	@set -o pipefail; cd $(VIVADO_PRJ_LOC) && $(VIVADO) $(VIVADO_PRJ_FLAGS) 2>&1 | tee $(VIVADO_LOG_LOC)/$(FPGA_ACT).log
 else
 	@cd $(VIVADO_PRJ_LOC) && $(VIVADO) $(VIVADO_PRJ_FLAGS)
 endif
 endif
-

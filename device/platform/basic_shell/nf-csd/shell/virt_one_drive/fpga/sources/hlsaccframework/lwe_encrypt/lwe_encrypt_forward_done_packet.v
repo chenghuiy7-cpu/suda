@@ -24,10 +24,7 @@ module lwe_encrypt_forward_done_packet (
         data_out_TID,
         data_out_TDEST,
         done_pkt_data,
-        done_pkt_keep,
-        done_pkt_strb,
         done_pkt_user,
-        done_pkt_last,
         done_pkt_id,
         done_pkt_dest
 );
@@ -51,10 +48,7 @@ output  [0:0] data_out_TLAST;
 output  [7:0] data_out_TID;
 output  [7:0] data_out_TDEST;
 input  [511:0] done_pkt_data;
-input  [63:0] done_pkt_keep;
-input  [63:0] done_pkt_strb;
 input  [7:0] done_pkt_user;
-input  [0:0] done_pkt_last;
 input  [7:0] done_pkt_id;
 input  [7:0] done_pkt_dest;
 
@@ -156,11 +150,11 @@ assign data_out_TDEST = done_pkt_dest;
 
 assign data_out_TID = done_pkt_id;
 
-assign data_out_TKEEP = done_pkt_keep;
+assign data_out_TKEEP = 64'd18446744073709551615;
 
-assign data_out_TLAST = done_pkt_last;
+assign data_out_TLAST = 1'd1;
 
-assign data_out_TSTRB = done_pkt_strb;
+assign data_out_TSTRB = 64'd18446744073709551615;
 
 assign data_out_TUSER = done_pkt_user;
 

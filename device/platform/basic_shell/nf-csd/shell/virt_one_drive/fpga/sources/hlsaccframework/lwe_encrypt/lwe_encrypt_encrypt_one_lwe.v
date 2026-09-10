@@ -167,7 +167,7 @@ lwe_encrypt_mul_64s_64s_64_5_1 #(
     .din0_WIDTH( 64 ),
     .din1_WIDTH( 64 ),
     .dout_WIDTH( 64 ))
-mul_64s_64s_64_5_1_U44(
+mul_64s_64s_64_5_1_U83(
     .clk(ap_clk),
     .reset(ap_rst),
     .din0(grp_fu_172_p0),

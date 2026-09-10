@@ -765,6 +765,52 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
   }
 
   static int
+  mcdma_copy_rx_finish_beat(struct spdk_axi_dma_io *io,
+				    uint32_t completion_bytes,
+				    uint32_t finish_bytes,
+				    uint8_t *finish_data)
+  {
+	uint64_t offset;
+	uint32_t remaining;
+	uint32_t copied = 0;
+
+	if (io == NULL || io->iovs == NULL || io->iovcnt <= 0 ||
+	    finish_bytes == 0 || completion_bytes < finish_bytes ||
+	    finish_data == NULL) {
+	  return -EINVAL;
+	}
+
+	offset = completion_bytes - finish_bytes;
+	remaining = finish_bytes;
+	for (int i = 0; i < io->iovcnt && remaining > 0; ++i) {
+	  uint64_t iov_len = io->iovs[i].iov_len;
+	  uint32_t copy_len;
+
+	  if (offset >= iov_len) {
+		offset -= iov_len;
+		continue;
+	  }
+	  if (io->iovs[i].iov_base == NULL) {
+		return -EFAULT;
+	  }
+
+	  copy_len = remaining;
+	  if (copy_len > iov_len - offset) {
+		copy_len = iov_len - offset;
+	  }
+	  memcpy(
+		finish_data + copied,
+		(uint8_t *)io->iovs[i].iov_base + offset,
+		copy_len);
+	  copied += copy_len;
+	  remaining -= copy_len;
+	  offset = 0;
+	}
+
+	return remaining == 0 ? 0 : -ERANGE;
+  }
+
+  static int
   mcdma_clear_rx_finish_beat(struct spdk_axi_dma_io *io,
 				    uint32_t completion_bytes,
 				    uint32_t finish_bytes)
@@ -847,6 +893,32 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 					finish_beat_bytes);
 			  }
 			  if (!ch->is_tx && finish_completion_bytes >= finish_beat_bytes) {
+				uint64_t finish_qword[8] = {0};
+				int copy_rc = mcdma_copy_rx_finish_beat(
+					io,
+					finish_completion_bytes,
+					finish_beat_bytes,
+					(uint8_t *)finish_qword);
+				if (copy_rc == 0) {
+				  SPDK_NOTICELOG(
+					  "MCDMA_RX_FINISH_DUMP RX结束包内容 req=%p request_id=%u qword=[%016llx %016llx %016llx %016llx %016llx %016llx %016llx %016llx]\n",
+					  ch->req,
+					  ch->req->request_id,
+					  (unsigned long long)finish_qword[0],
+					  (unsigned long long)finish_qword[1],
+					  (unsigned long long)finish_qword[2],
+					  (unsigned long long)finish_qword[3],
+					  (unsigned long long)finish_qword[4],
+					  (unsigned long long)finish_qword[5],
+					  (unsigned long long)finish_qword[6],
+					  (unsigned long long)finish_qword[7]);
+				} else {
+				  SPDK_ERRLOG(
+					  "MCDMA_RX_FINISH_DUMP RX结束包读取失败 req=%p request_id=%u rc=%d\n",
+					  ch->req,
+					  ch->req->request_id,
+					  copy_rc);
+				}
 				int clear_rc = mcdma_clear_rx_finish_beat(
 					io, finish_completion_bytes, finish_beat_bytes);
 
@@ -3588,26 +3660,35 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						ctx->fsm_state = FETCH_DATA;
 						ctx->to_size = 2;
 						ctx->from_size = 2;
-						int i=0;
-						for(i=0;i<8;i++){
-							if(need_init_ctx[i]==1) break;
+						int op_indices[2] = {-1, -1};
+						int found = 0;
+						for(int i = 0; i < program->apply_operators_num && found < 2; ++i){
+							if(need_init_ctx[i] == 1){
+								op_indices[found++] = i;
+							}
 						}
-						ctx->from_iovecs[0].iov_base = NULL;
-						ctx->from_iovecs[0].paddr = cmd->dptr.prp.prp1;
-						ctx->from_iovecs[0].iov_len =  4096;
-						ctx->to_iovecs[0].iov_base = request->acccontext[i]->context.static_data;
-						ctx->to_iovecs[0].iov_len =  4096;
-						ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
-						for(;i<8;i++){
-							if(need_init_ctx[i]==1) break;
+						assert(found == 2);
+						for(int page = 0; page < 2; ++page){
+							int op_index = op_indices[page];
+							ctx->from_iovecs[page].iov_base = NULL;
+							ctx->from_iovecs[page].paddr =
+								page == 0 ? cmd->dptr.prp.prp1 : cmd->dptr.prp.prp2;
+							ctx->from_iovecs[page].iov_len = PAGE_SIZE;
+							ctx->to_iovecs[page].iov_base =
+								(void *)((uintptr_t)request->acccontext[op_index] + PAGE_SIZE);
+							ctx->to_iovecs[page].iov_len = PAGE_SIZE;
+							ctx->to_iovecs[page].paddr =
+								spdk_vtophys(ctx->to_iovecs[page].iov_base, NULL);
+							SPDK_NOTICELOG(
+								"HLS_CTX_FETCH 双context分页搬运 req=%p page=%d op_index=%d host_paddr=0x%llx dst_vaddr=%p dst_paddr=0x%llx len=%u\n",
+								request,
+								page,
+								op_index,
+								(unsigned long long)ctx->from_iovecs[page].paddr,
+								ctx->to_iovecs[page].iov_base,
+								(unsigned long long)ctx->to_iovecs[page].paddr,
+								(unsigned int)ctx->to_iovecs[page].iov_len);
 						}
-						ctx->from_iovecs[1].iov_base = NULL;
-						ctx->from_iovecs[1].paddr = cmd->dptr.prp.prp2;
-						ctx->from_iovecs[1].iov_len =  4096;
-						ctx->to_iovecs[1].iov_base = request->acccontext[i]->context.static_data;
-						ctx->to_iovecs[1].iov_len =  4096;
-						ctx->to_iovecs[1].paddr = spdk_vtophys(ctx->to_iovecs[1].iov_base,NULL);
-						SPDK_DEBUGLOG(nvmf,"FETCH TWO BLOCK CONTEXT");
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 					}
 					else if(need_init_num>2){
@@ -4256,13 +4337,21 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						if(need_init_ctx[k]==1){
 							ctx->from_iovecs[m].iov_base = NULL;
 							ctx->from_iovecs[m].iov_len = 4096;
-							if(k==0) ctx->from_iovecs[m].paddr = cmd.dptr.prp.prp1;
-							else if(need_init_ctx[0]==1) ctx->from_iovecs[m].paddr = ((unsigned long long*)(mcdma_req->sgl_buf))[m-1];
-							else ctx->from_iovecs[m].paddr = ((unsigned long long*)(mcdma_req->sgl_buf))[m];
-							ctx->to_iovecs[m].iov_base = (unsigned long long)(request->acccontext[m])+4096;
+							if(m == 0) ctx->from_iovecs[m].paddr = cmd.dptr.prp.prp1;
+							else ctx->from_iovecs[m].paddr = ((unsigned long long*)(mcdma_req->sgl_buf))[m-1];
+							ctx->to_iovecs[m].iov_base =
+								(void *)((uintptr_t)request->acccontext[k] + PAGE_SIZE);
 							ctx->to_iovecs[m].iov_len =  4096;
 							ctx->to_iovecs[m].paddr = spdk_vtophys(ctx->to_iovecs[m].iov_base,NULL);
-							SPDK_DEBUGLOG(nvmf,"FETCH CONTEXT ADDRESS INDEX m %d VADDR%llx PADDR%llx\n",m,ctx->to_iovecs[m].iov_base,ctx->to_iovecs[m].paddr);
+							SPDK_NOTICELOG(
+								"HLS_CTX_FETCH 多context搬运 req=%p page=%d op_index=%d host_paddr=0x%llx dst_vaddr=%p dst_paddr=0x%llx len=%u\n",
+								request,
+								m,
+								k,
+								(unsigned long long)ctx->from_iovecs[m].paddr,
+								ctx->to_iovecs[m].iov_base,
+								(unsigned long long)ctx->to_iovecs[m].paddr,
+								(unsigned int)ctx->to_iovecs[m].iov_len);
 							++m;
 						}
 					}
@@ -4273,24 +4362,38 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					ctx->fsm_state = NON_OP;
 					mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
 						mcdma_req->impl_thread = spdk_get_thread();
-						//DUMP CONTEXT
-						unsigned int *staged_da = (unsigned int *)((unsigned long long)(request->acccontext[0])+4096);
-						memcpy(request->acccontext[0]->context.static_data,(void*)((unsigned long long)(request->acccontext[0])+4096),2048);
-						unsigned int *da = (unsigned int*)(request->acccontext[0]->context.static_data);
-						SPDK_NOTICELOG("LWE_CTX_VERIFY context已搬入 req=%p accctx=%p context_phy=0x%llx staged_u32=[%u,%u,%u,%u,%u] static_u32=[%u,%u,%u,%u,%u]\n",
-							request,
-							request->acccontext[0],
-							(unsigned long long)request->acccontext[0]->context_phy,
-							staged_da[0],
-							staged_da[1],
-							staged_da[2],
-							staged_da[3],
-							staged_da[4],
-							da[0],
-							da[1],
-							da[2],
-							da[3],
-							da[4]);
+						for(int k = 0; k < program->apply_operators_num; ++k){
+							if(need_init_ctx[k] != 1){
+								continue;
+							}
+							struct spdk_hlsacccompute_opcontext *opctx = request->acccontext[k];
+							unsigned int *staged_da =
+								(unsigned int *)((uintptr_t)opctx + PAGE_SIZE);
+							memcpy(
+								opctx->context.static_data,
+								(void *)staged_da,
+								sizeof(opctx->context.static_data));
+							unsigned int *da = (unsigned int *)opctx->context.static_data;
+							SPDK_NOTICELOG(
+								"HLS_CTX_VERIFY context已独立提交 req=%p op_index=%d type_id=%u accctx=%p context_phy=0x%llx staged_u32=[%u,%u,%u,%u,%u,%u] static_u32=[%u,%u,%u,%u,%u,%u]\n",
+								request,
+								k,
+								(unsigned int)program->apply_operators_id_map[k],
+								opctx,
+								(unsigned long long)opctx->context_phy,
+								staged_da[0],
+								staged_da[1],
+								staged_da[2],
+								staged_da[3],
+								staged_da[4],
+								staged_da[5],
+								da[0],
+								da[1],
+								da[2],
+								da[3],
+								da[4],
+								da[5]);
+						}
 						//SPDK_NOTICELOG("CONTEXT DUMP%x %x %x %x\n",da[0],da[1],da[2],da[3]);
 						//usleep(10);
 						if(request->priority<120)//Preempt if priority is high

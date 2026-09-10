@@ -110,8 +110,9 @@ static void write_plaintext(Acc_Data &data_in)
 
     Acc_Data_Pkt done_pkt;
     done_pkt.data = 0;
-    done_pkt.keep = -1;
-    done_pkt.strb = -1;
+    // Match the actual external DMA finish marker (16 valid bytes).
+    done_pkt.keep = 0xffff;
+    done_pkt.strb = 0xffff;
     done_pkt.user = 0xff;
     done_pkt.last = 1;
     done_pkt.id = 0;
@@ -177,6 +178,8 @@ static void verify_output_stream(Acc_Data &data_out)
         if (out_pkt.user.range(7, 4) != 0) {
             assert(out_pkt.user == 0xff);
             assert(out_pkt.last);
+            assert(out_pkt.keep == ~ap_uint<64>(0));
+            assert(out_pkt.strb == ~ap_uint<64>(0));
             saw_done = true;
             break;
         }

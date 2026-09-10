@@ -61,6 +61,7 @@
 #define LWE_ENCRYPT_INPUT_ENCODED 0
 #define LWE_ENCRYPT_INPUT_CLEAR 1
 #define LWE_ENCRYPT_INPUT_U8_RADIX 2
+#define LWE_ENCRYPT_INPUT_U8_RADIX_SCALAR_STREAM 3
 #define LWE_ENCRYPT_U8_RADIX_BLOCK_COUNT \
     (8 / LWE_ENCRYPT_HPU_MESSAGE_WIDTH)
 
@@ -77,7 +78,8 @@
 //           In u8 radix mode this is the exact number of consecutive u8 bytes.
 //           In the legacy single-LWE modes this remains the packet/request count.
 // [ 95: 64] input_mode; 0 = encoded plaintext, 1 = clear block * delta,
-//                         2 = u8 clear input split into four 2-bit radix blocks
+//                         2 = packed u8 input split into four 2-bit radix blocks,
+//                         3 = one u8 in data[7:0] per non-finish stream beat
 // [127: 96] noise_mode; 0 = internal toy t-uniform-like noise,
 //                       1 = input noise word (single-LWE modes only),
 //                       2 = zero noise
@@ -105,6 +107,12 @@
 //   Every valid TKEEP byte is one consecutive clear u8 value. A 512-bit beat
 //   therefore carries up to 64 plaintext bytes. input_count limits the exact
 //   number consumed, so the final beat may be only partially used.
+//
+// u8 radix scalar-stream mode:
+//   Every non-finish beat carries exactly one clear u8 value in data[7:0].
+//   TKEEP does not determine the number of inputs. This mode is intended for
+//   operator graphs such as selective_filter -> lwe_encrypt, where each filter
+//   output beat represents one selected field.
 //   External per-ciphertext noise is not representable in this packed mode;
 //   use LWE_ENCRYPT_NOISE_TUNIFORM or LWE_ENCRYPT_NOISE_ZERO.
 //   Output order is least-significant radix block first.

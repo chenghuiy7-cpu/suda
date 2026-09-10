@@ -114,8 +114,8 @@ reg   [63:0] pc_data_load_reg_324;
 wire    ap_block_state3_pp0_stage1_iter0;
 reg    ap_block_state6_pp0_stage1_iter1;
 reg    ap_block_pp0_stage1_11001;
-wire   [10:0] zext_ln162_fu_280_p1;
-reg   [10:0] zext_ln162_reg_329;
+wire   [10:0] zext_ln176_fu_280_p1;
+reg   [10:0] zext_ln176_reg_329;
 wire    ap_CS_fsm_state11;
 wire   [0:0] icmp_ln878_1_fu_284_p2;
 wire    ap_block_state12_pp1_stage0_iter0;
@@ -224,7 +224,7 @@ initial begin
 #0 add_ln691_reg_310 = 11'd0;
 #0 ap_enable_reg_pp0_iter0 = 1'b0;
 #0 pc_data_load_reg_324 = 64'd0;
-#0 zext_ln162_reg_329 = 11'd0;
+#0 zext_ln176_reg_329 = 11'd0;
 #0 i_V_2_reg_338 = 11'd0;
 #0 ap_enable_reg_pp1_iter0 = 1'b0;
 #0 packet_word_count_V_1_reg_146 = 4'd0;
@@ -527,19 +527,19 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-                zext_ln162_reg_329[0] <= 1'b0;
-        zext_ln162_reg_329[1] <= 1'b0;
-        zext_ln162_reg_329[2] <= 1'b0;
-        zext_ln162_reg_329[3] <= 1'b0;
-        zext_ln162_reg_329[4] <= 1'b0;
-        zext_ln162_reg_329[5] <= 1'b0;
-        zext_ln162_reg_329[6] <= 1'b0;
-        zext_ln162_reg_329[7] <= 1'b0;
-        zext_ln162_reg_329[8] <= 1'b0;
-        zext_ln162_reg_329[9] <= 1'b0;
+                zext_ln176_reg_329[0] <= 1'b0;
+        zext_ln176_reg_329[1] <= 1'b0;
+        zext_ln176_reg_329[2] <= 1'b0;
+        zext_ln176_reg_329[3] <= 1'b0;
+        zext_ln176_reg_329[4] <= 1'b0;
+        zext_ln176_reg_329[5] <= 1'b0;
+        zext_ln176_reg_329[6] <= 1'b0;
+        zext_ln176_reg_329[7] <= 1'b0;
+        zext_ln176_reg_329[8] <= 1'b0;
+        zext_ln176_reg_329[9] <= 1'b0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state11)) begin
-                        zext_ln162_reg_329[9 : 0] <= zext_ln162_fu_280_p1[9 : 0];
+                        zext_ln176_reg_329[9 : 0] <= zext_ln176_fu_280_p1[9 : 0];
         end
     end
 end
@@ -1002,16 +1002,16 @@ assign icmp_ln878_1_fu_284_p2 = ((ap_phi_mux_i_V_1_phi_fu_184_p4 == 11'd1536) ? 
 
 assign icmp_ln878_fu_269_p2 = ((ap_phi_mux_i_V_phi_fu_139_p4 == 11'd1024) ? 1'b1 : 1'b0);
 
-assign icmp_ln882_fu_296_p2 = ((ap_phi_mux_i_V_1_phi_fu_184_p4 < zext_ln162_reg_329) ? 1'b1 : 1'b0);
+assign icmp_ln882_fu_296_p2 = ((ap_phi_mux_i_V_1_phi_fu_184_p4 < zext_ln176_reg_329) ? 1'b1 : 1'b0);
 
 assign include_body_offset_read_read_fu_86_p2 = include_body_offset;
 
 assign pc_data_address0 = i_V_cast_fu_275_p1;
 
-assign zext_ln162_fu_280_p1 = ap_phi_mux_written_words_V_phi_fu_172_p4;
+assign zext_ln176_fu_280_p1 = ap_phi_mux_written_words_V_phi_fu_172_p4;
 
 always @ (posedge ap_clk) begin
-    zext_ln162_reg_329[10] <= 1'b0;
+    zext_ln176_reg_329[10] <= 1'b0;
 end
 
 endmodule //lwe_encrypt_write_hpu_native_pc_slot

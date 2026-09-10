@@ -35,6 +35,10 @@ module OperatorController
     parameter FIFO_NUM = 1,
     parameter DESTID_WIDTH = 8,
     parameter KEEP_WIDTH = ((DATA_WIDTH+7)/8),
+    // Only operators that emit sparse byte lanes need TKEEP storage and
+    // forwarding.  Keeping it disabled removes 64 keep bits per FIFO word
+    // from the timing-critical controllers used by the other slots.
+    parameter KEEP_PASSTHROUGH = 0,
     parameter USER_WIDTH = 8
 )
 (
@@ -184,6 +188,7 @@ module OperatorController
      */
     wire [DATA_WIDTH-1:0]                   m_axis_inside_tdata_inner[FIFO_NUM-1:0];
     wire [KEEP_WIDTH-1:0]                   m_axis_inside_tkeep_inner[FIFO_NUM-1:0];
+    wire [KEEP_WIDTH-1:0]                   fifo_tkeep_inner[FIFO_NUM-1:0];
     wire                                    m_axis_inside_tvalid_inner[FIFO_NUM-1:0];
     wire                                    m_axis_inside_tready_inner[FIFO_NUM-1:0];
     wire                                    m_axis_inside_tlast_inner[FIFO_NUM-1:0];
@@ -734,26 +739,32 @@ module OperatorController
                 .s_axis_tvalid(s_axis_outside_tvalid_inner[i]),
                 .s_axis_tready(s_axis_outside_tready_inner[i]),
                 .s_axis_tlast(s_axis_outside_tlast_inner[i]),
-                .s_axis_tkeep({KEEP_WIDTH{1'b1}}),
+                .s_axis_tkeep(KEEP_PASSTHROUGH ?
+                              s_axis_outside_tkeep_inner[i] :
+                              {KEEP_WIDTH{1'b1}}),
                 .s_axis_tuser(s_axis_outside_tuser_inner[i]),
                 .m_axis_tdata(m_axis_inside_tdata_inner[i]),
                 .m_axis_tvalid(m_axis_inside_tvalid_inner[i]),
                 .m_axis_tready(m_axis_inside_tready_inner[i]),
                 .m_axis_tlast(m_axis_inside_tlast_inner[i]),
-                .m_axis_tkeep(),
+                .m_axis_tkeep(fifo_tkeep_inner[i]),
                 .m_axis_tuser(m_axis_inside_tuser_inner[i]),
                 .status_depth(fifo_depth[i])
             );
 
             assign m_axis_outside_tdata_inner[i] = s_axis_inside_tdata_inner[i];
-            assign m_axis_outside_tkeep_inner[i] = {KEEP_WIDTH{1'b1}};
+            assign m_axis_outside_tkeep_inner[i] = KEEP_PASSTHROUGH ?
+                                                   s_axis_inside_tkeep_inner[i] :
+                                                   {KEEP_WIDTH{1'b1}};
             assign m_axis_outside_tlast_inner[i] = s_axis_inside_tlast_inner[i];
             assign m_axis_outside_tvalid_inner[i] = s_axis_inside_tvalid_inner[i];
             assign m_axis_outside_tuser_inner[i] = s_axis_inside_tuser_inner[i];
             assign s_axis_inside_tready_inner[i] = m_axis_outside_tready_inner[i];
 
-            assign m_axis_inside_tkeep_inner[i] = {KEEP_WIDTH{1'b1}};
-            
+            assign m_axis_inside_tkeep_inner[i] = KEEP_PASSTHROUGH ?
+                                                  fifo_tkeep_inner[i] :
+                                                  {KEEP_WIDTH{1'b1}};
+
             assign m_axis_outside_tdest_inner[i] = fifo_dest[i];
             assign m_axis_outside_tdest[(i+1)*DESTID_WIDTH-1-:DESTID_WIDTH] = m_axis_outside_tdest_inner[i];
 
@@ -801,9 +812,15 @@ module OperatorController
             assign connections_to[i] = ctrl_req_from_ctrl_tdata[(i*16+15)-:8];
 
         
-            always @(posedge clk)begin
-                if(fsm_state==RECV_APPLY_REQ_PAYLOAD)
-                    fifo_dest[i] = connections_to[i];
+            // 仅在 APPLY 连接负载真正完成 AXI-Stream 握手时更新路由。
+            // 原实现会在 TVALID=0 时持续采样总线，可能把上一拍或无效数据
+            // 覆盖到 fifo_dest，导致多算子图退化为错误旁路。
+            always @(posedge clk or negedge resetn)begin
+                if(~resetn)
+                    fifo_dest[i] <= 0;
+                else if(fsm_state==RECV_APPLY_REQ_PAYLOAD &&
+                        ctrl_req_from_ctrl_tvalid && ctrl_req_from_ctrl_tready)
+                    fifo_dest[i] <= connections_to[i];
             end
         end
 

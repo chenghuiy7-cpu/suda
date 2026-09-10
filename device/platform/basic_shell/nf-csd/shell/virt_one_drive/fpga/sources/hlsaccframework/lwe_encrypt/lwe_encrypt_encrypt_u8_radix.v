@@ -95,8 +95,8 @@ wire    ap_CS_fsm_state2;
 wire   [60:0] encoded_V_fu_237_p3;
 reg   [60:0] encoded_V_reg_311;
 wire   [0:0] icmp_ln878_fu_208_p2;
-wire   [63:0] zext_ln323_fu_246_p1;
-reg   [63:0] zext_ln323_reg_316;
+wire   [63:0] zext_ln337_fu_246_p1;
+reg   [63:0] zext_ln337_reg_316;
 wire   [31:0] ciphertext_index_V_fu_251_p3;
 reg   [31:0] ciphertext_index_V_reg_321;
 wire    grp_encrypt_encoded_lwe_hpu_native_fu_141_ap_start;
@@ -139,7 +139,7 @@ reg    ap_block_state3_on_subcall_done;
 reg    grp_encrypt_encoded_lwe_hpu_native_fu_141_ap_start_reg;
 reg    grp_encrypt_encoded_lwe_fu_167_ap_start_reg;
 wire   [2:0] shift_fu_218_p2;
-wire   [7:0] zext_ln320_fu_224_p1;
+wire   [7:0] zext_ln334_fu_224_p1;
 wire   [7:0] lshr_ln799_fu_228_p2;
 wire   [1:0] trunc_ln208_fu_233_p1;
 wire   [1:0] trunc_ln1345_fu_214_p1;
@@ -152,7 +152,7 @@ initial begin
 #0 cmp_i_i12_reg_299 = 1'd0;
 #0 add_ln691_reg_303 = 3'd0;
 #0 encoded_V_reg_311 = 61'd0;
-#0 zext_ln323_reg_316 = 64'd0;
+#0 zext_ln337_reg_316 = 64'd0;
 #0 ciphertext_index_V_reg_321 = 32'd0;
 #0 block_index_V_reg_130 = 3'd0;
 #0 grp_encrypt_encoded_lwe_hpu_native_fu_141_ap_start_reg = 1'b0;
@@ -212,7 +212,7 @@ lwe_encrypt_encrypt_encoded_lwe grp_encrypt_encoded_lwe_fu_167(
     .mask_dimension(mask_dimension),
     .noise_mode(noise_mode),
     .noise_bound_log2(noise_bound_log2),
-    .encoded(zext_ln323_reg_316),
+    .encoded(zext_ln337_reg_316),
     .input_noise(64'd0),
     .base_seed(base_seed),
     .nonce(nonce),
@@ -306,11 +306,11 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-                zext_ln323_reg_316[59] <= 1'b0;
-        zext_ln323_reg_316[60] <= 1'b0;
+                zext_ln337_reg_316[59] <= 1'b0;
+        zext_ln337_reg_316[60] <= 1'b0;
     end else begin
         if (((icmp_ln878_fu_208_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state2))) begin
-                        zext_ln323_reg_316[60 : 59] <= zext_ln323_fu_246_p1[60 : 59];
+                        zext_ln337_reg_316[60 : 59] <= zext_ln337_fu_246_p1[60 : 59];
         end
     end
 end
@@ -540,7 +540,7 @@ assign grp_encrypt_encoded_lwe_hpu_native_fu_141_data_out_TREADY = (data_out_TRE
 
 assign icmp_ln878_fu_208_p2 = ((block_index_V_reg_130 == 3'd4) ? 1'b1 : 1'b0);
 
-assign lshr_ln799_fu_228_p2 = clear_u8 >> zext_ln320_fu_224_p1;
+assign lshr_ln799_fu_228_p2 = clear_u8 >> zext_ln334_fu_224_p1;
 
 assign shift_fu_218_p2 = block_index_V_reg_130 << 3'd1;
 
@@ -548,14 +548,14 @@ assign trunc_ln1345_fu_214_p1 = block_index_V_reg_130[1:0];
 
 assign trunc_ln208_fu_233_p1 = lshr_ln799_fu_228_p2[1:0];
 
-assign zext_ln320_fu_224_p1 = shift_fu_218_p2;
+assign zext_ln334_fu_224_p1 = shift_fu_218_p2;
 
-assign zext_ln323_fu_246_p1 = encoded_V_fu_237_p3;
+assign zext_ln337_fu_246_p1 = encoded_V_fu_237_p3;
 
 always @ (posedge ap_clk) begin
     encoded_V_reg_311[58:0] <= 59'b00000000000000000000000000000000000000000000000000000000000;
-    zext_ln323_reg_316[58:0] <= 59'b00000000000000000000000000000000000000000000000000000000000;
-    zext_ln323_reg_316[63:61] <= 3'b000;
+    zext_ln337_reg_316[58:0] <= 59'b00000000000000000000000000000000000000000000000000000000000;
+    zext_ln337_reg_316[63:61] <= 3'b000;
 end
 
 endmodule //lwe_encrypt_encrypt_u8_radix

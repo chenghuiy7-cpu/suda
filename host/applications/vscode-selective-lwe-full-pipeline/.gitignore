@@ -1,0 +1,4 @@
+vscode-selective-lwe-full-pipeline
+*.o
+*.log
+*.bin

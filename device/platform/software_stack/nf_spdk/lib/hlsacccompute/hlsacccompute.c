@@ -727,7 +727,11 @@ static inline void id_remap(union AssSchedCmd *src_cmd,
         {
             ++j;
             dst_cmd[j].apply_ops_payload1.context_address = opcontext_map[i]->context_phy;
-            SPDK_DEBUGLOG(hlsacc,"CONTEXT MAP PHY%llx\n",opcontext_map[i]->context_phy);
+            SPDK_NOTICELOG(
+                "HLS_GRAPH_MAP 调度映射 logical_op=%d physical_slot=%u context_phy=0x%llx\n",
+                i,
+                (unsigned int)id_map[i],
+                (unsigned long long)opcontext_map[i]->context_phy);
             ++j;
             dst_cmd[j].apply_ops_payload2.connections_num = src_cmd[j].apply_ops_payload2.connections_num;
             for (int k = 0; k < dst_cmd[j].apply_ops_payload2.connections_num && k < 3; k++)
@@ -744,6 +748,13 @@ static inline void id_remap(union AssSchedCmd *src_cmd,
                     to = (id_map[to >> 4] << 4) | (to & 0xf);
                 dst_cmd[j].apply_ops_payload2.connections[k].from = from;
                 dst_cmd[j].apply_ops_payload2.connections[k].to = to;
+                SPDK_NOTICELOG(
+                    "HLS_GRAPH_EDGE 调度边 logical_op=%d edge=%d from=0x%02x to=0x%02x connections=%u\n",
+                    i,
+                    k,
+                    from,
+                    to,
+                    (unsigned int)dst_cmd[j].apply_ops_payload2.connections_num);
             }
             if (spdk_unlikely(dst_cmd[j].apply_ops_payload2.connections_num > 3))
             {

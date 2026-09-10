@@ -65,7 +65,6 @@ hpu/keys/psi64/psi64_integer_compressed_server_key.bincode
 
 ```bash
 export SUDA_ROOT="$HOME/suda"
-export CARGO_TARGET_DIR="/data/$USER/cargo-targets/suda-remote-hpu"
 
 cd "$SUDA_ROOT"
 bash hpu/scripts/prepare_tfhe_rs_submodule.sh
@@ -75,6 +74,10 @@ bash hpu/scripts/package_remote_server.sh
 ls -lh hpu/artifacts/suda-remote-hpu-server.tar.gz
 sha256sum hpu/artifacts/suda-remote-hpu-server.tar.gz
 ```
+
+这里不设置 `CARGO_TARGET_DIR`。服务端构建产物位于
+`$SUDA_ROOT/hpu/remote-hpu/target/`，部署包位于 `$SUDA_ROOT/hpu/artifacts/`；
+132 上本流程使用的源码、私有制品和构建产物全部位于新用户自己的 SUDA checkout。
 
 打包脚本会校验 `psi64.hpu` 和 ServerKey 的大小及 SHA-256，并拒绝从有本地改动的
 TFHE-rs 子模块构建。包含以下内容：

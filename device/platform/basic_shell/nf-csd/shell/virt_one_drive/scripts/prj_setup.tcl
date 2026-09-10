@@ -9,6 +9,7 @@ add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hls
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/blowfish_en/*.v]
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/lwe_encrypt/*.v]
 add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/lwe_decrypt/*.v]
+add_files -fileset sources_1 [glob -nocomplain ${design_dir}/../fpga/sources/hlsaccframework/selective_filter/*.v]
 
 
 # 更新编译顺序

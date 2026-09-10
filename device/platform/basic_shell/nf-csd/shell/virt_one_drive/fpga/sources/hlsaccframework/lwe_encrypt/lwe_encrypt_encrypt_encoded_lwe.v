@@ -136,10 +136,10 @@ wire   [0:0] icmp_ln878_4_fu_483_p2;
 reg   [0:0] icmp_ln878_4_reg_704;
 wire   [63:0] magnitude_mask_V_fu_498_p2;
 reg   [63:0] magnitude_mask_V_reg_709;
-wire   [63:0] select_ln257_fu_509_p3;
-reg   [63:0] select_ln257_reg_714;
-wire   [0:0] icmp_ln257_1_fu_516_p2;
-reg   [0:0] icmp_ln257_1_reg_719;
+wire   [63:0] select_ln271_fu_509_p3;
+reg   [63:0] select_ln271_reg_714;
+wire   [0:0] icmp_ln271_1_fu_516_p2;
+reg   [0:0] icmp_ln271_1_reg_719;
 wire   [0:0] icmp_ln870_7_fu_521_p2;
 reg   [0:0] icmp_ln870_7_reg_724;
 wire   [0:0] icmp_ln870_8_fu_530_p2;
@@ -228,7 +228,7 @@ wire   [63:0] zext_ln1497_3_fu_464_p1;
 wire   [25:0] tmp_fu_474_p4;
 wire   [63:0] zext_ln781_fu_489_p1;
 wire   [63:0] r_13_fu_492_p2;
-wire   [0:0] icmp_ln257_fu_504_p2;
+wire   [0:0] icmp_ln271_fu_504_p2;
 wire   [31:0] or_ln870_fu_526_p2;
 wire   [63:0] r_12_fu_536_p2;
 wire   [63:0] magnitude_mask_V_4_fu_546_p3;
@@ -267,8 +267,8 @@ initial begin
 #0 rng_state_V_18_reg_698 = 64'd0;
 #0 icmp_ln878_4_reg_704 = 1'd0;
 #0 magnitude_mask_V_reg_709 = 64'd0;
-#0 select_ln257_reg_714 = 64'd0;
-#0 icmp_ln257_1_reg_719 = 1'd0;
+#0 select_ln271_reg_714 = 64'd0;
+#0 icmp_ln271_1_reg_719 = 1'd0;
 #0 icmp_ln870_7_reg_724 = 1'd0;
 #0 icmp_ln870_8_reg_729 = 1'd0;
 #0 noise_V_reg_734 = 64'd0;
@@ -422,10 +422,10 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-        icmp_ln257_1_reg_719 <= 1'd0;
+        icmp_ln271_1_reg_719 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state7)) begin
-            icmp_ln257_1_reg_719 <= icmp_ln257_1_fu_516_p2;
+            icmp_ln271_1_reg_719 <= icmp_ln271_1_fu_516_p2;
         end
     end
 end
@@ -588,10 +588,10 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-        select_ln257_reg_714 <= 64'd0;
+        select_ln271_reg_714 <= 64'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state7)) begin
-            select_ln257_reg_714 <= select_ln257_fu_509_p3;
+            select_ln271_reg_714 <= select_ln271_fu_509_p3;
         end
     end
 end
@@ -839,7 +839,7 @@ assign add_ln691_fu_423_p2 = (mask_word_V_reg_661 + ap_phi_mux_body_V_phi_fu_222
 
 assign and_ln819_fu_411_p2 = (shl_ln819_fu_405_p2 & context_Dout_A);
 
-assign and_ln870_fu_580_p2 = (icmp_ln870_7_reg_724 & icmp_ln257_1_reg_719);
+assign and_ln870_fu_580_p2 = (icmp_ln870_7_reg_724 & icmp_ln271_1_reg_719);
 
 assign ap_CS_fsm_pp0_stage0 = ap_CS_fsm[32'd1];
 
@@ -975,9 +975,9 @@ assign i_V_4_cast10_fu_320_p1 = ap_phi_mux_i_V_3_phi_fu_211_p4;
 
 assign i_V_fu_314_p2 = (ap_phi_mux_i_V_3_phi_fu_211_p4 + 13'd1);
 
-assign icmp_ln257_1_fu_516_p2 = ((noise_mode == 32'd0) ? 1'b1 : 1'b0);
+assign icmp_ln271_1_fu_516_p2 = ((noise_mode == 32'd0) ? 1'b1 : 1'b0);
 
-assign icmp_ln257_fu_504_p2 = ((noise_mode == 32'd1) ? 1'b1 : 1'b0);
+assign icmp_ln271_fu_504_p2 = ((noise_mode == 32'd1) ? 1'b1 : 1'b0);
 
 assign icmp_ln870_7_fu_521_p2 = ((noise_bound_log2 != 32'd0) ? 1'b1 : 1'b0);
 
@@ -1033,11 +1033,11 @@ assign rng_state_V_18_fu_468_p2 = (zext_ln1497_3_fu_464_p1 ^ rng_state_V_17_fu_4
 
 assign rng_state_V_fu_541_p2 = (rng_state_V_18_reg_698 ^ r_12_fu_536_p2);
 
-assign select_ln257_fu_509_p3 = ((icmp_ln257_fu_504_p2[0:0] == 1'b1) ? input_noise : 64'd0);
+assign select_ln271_fu_509_p3 = ((icmp_ln271_fu_504_p2[0:0] == 1'b1) ? input_noise : 64'd0);
 
 assign select_ln30_fu_572_p3 = ((p_Result_4_fu_558_p3[0:0] == 1'b1) ? sub_ln213_fu_566_p2 : ret_5_fu_552_p2);
 
-assign select_ln870_fu_584_p3 = ((and_ln870_fu_580_p2[0:0] == 1'b1) ? select_ln30_fu_572_p3 : select_ln257_reg_714);
+assign select_ln870_fu_584_p3 = ((and_ln870_fu_580_p2[0:0] == 1'b1) ? select_ln30_fu_572_p3 : select_ln271_reg_714);
 
 assign shl_ln819_fu_405_p2 = 512'd1 << zext_ln819_fu_402_p1;
 
