@@ -7,6 +7,9 @@ runtime_lib_dir="$spdk_dir/build/arm-runtime-lib"
 # Always start from the current four-slot layout.  A value inherited from an
 # older shell must not silently keep the legacy Blowfish layout active.
 operator_config="$spdk_dir/config.json"
+prefix=
+log_args=()
+runtime_trace=0
 
 if [ -d "$runtime_lib_dir" ]; then
     export LD_LIBRARY_PATH="$runtime_lib_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -14,7 +17,7 @@ fi
 
 cd "$script_dir"
 
-while getopts :bdmntc: flag
+while getopts :bdmtc: flag
 do
     echo "$flag"
     case "$flag" in
@@ -30,6 +33,10 @@ do
     "m")
 	prefix="taskset 0x01"
 	;;
+    "t")
+        runtime_trace=1
+        log_args=(-L nvme -L nvmq -L nvmf)
+        ;;
     *)
         echo "invalid flag '$flag'"
     esac
@@ -40,10 +47,17 @@ if [ ! -r "$operator_config" ]; then
     exit 1
 fi
 export HLSACC_OPERATOR_CONFIG="$operator_config"
+export HLSACC_RUNTIME_TRACE="$runtime_trace"
 echo "HLSACC_OPERATOR_CONFIG=$HLSACC_OPERATOR_CONFIG"
 sha256sum "$HLSACC_OPERATOR_CONFIG"
 grep -E 'operator_type_id|operator_type_name|slot_id' "$HLSACC_OPERATOR_CONFIG"
 
-$prefix "$spdk_dir/build/bin/nvmf_tgt" -c "$conf_file" -m 0x0f -e nvmf_mcdma -L nvme -L nvmq -L nvmf
+if ((runtime_trace == 0)); then
+    echo "HLSACC_RUNTIME_TRACE=disabled (use -t to enable nvme/nvmq/nvmf debug logs)"
+else
+    echo "HLSACC_RUNTIME_TRACE=enabled"
+fi
+
+$prefix "$spdk_dir/build/bin/nvmf_tgt" -c "$conf_file" -m 0x0f -e nvmf_mcdma "${log_args[@]}"
 # $prefix ../build/bin/nvmf_tgt -c $conf_file -m 0x01 -e axi_dma # nvmf_mcdma # ,axi_dma
 # $prefix ../build/bin/nvmf_tgt -c $conf_file -m 0x01

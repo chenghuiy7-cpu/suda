@@ -58,6 +58,14 @@ SPDK_LOG_REGISTER_COMPONENT(nvmq);
 #define CP SPDK_DEBUGLOG(nvmf, "Checkpoint\n");;
 
 const char *g_mcdma_dev = "b0000000.dma";
+static bool g_mcdma_hotpath_trace;
+
+#define MCDMA_HOTPATH_LOG(...) \
+	do { \
+		if (spdk_unlikely(g_mcdma_hotpath_trace)) { \
+			SPDK_NOTICELOG(__VA_ARGS__); \
+		} \
+	} while (0)
 
 uint8_t poll_group_cnt = 0;
 
@@ -1296,7 +1304,7 @@ static const char *handc_fsm_name(int state)
 
 void compute_handc_impl(void* ctx){
 	struct handc_ctx *hc = (struct handc_ctx*) ctx;
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_IMPL enter req=%p opc=0x%x fsm=%s cur_rx=%llu total_rx=%llu\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
@@ -1324,7 +1332,7 @@ void compute_handc_impl(void* ctx){
 	}else{
 		hc->fsm_state = END_FETCH_DATA;
 	}
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_IMPL request_process req=%p next_fsm=%s\n",
 		hc->mcdma_req,
 		handc_fsm_name(hc->fsm_state));
@@ -1348,7 +1356,7 @@ compute_handc_try_complete(struct handc_ctx *hc)
 	}
 
 	hc->completion_posted = true;
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_DMA_DONE TX/RX均已完成 req=%p opc=0x%x tx=%llu/%llu rx=%llu/%llu error=%d，返回请求线程\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
@@ -1393,7 +1401,7 @@ void compute_handc_op_tx_impl(struct spdk_axi_dma_io *io, int status){
 	   hc->cur_tx_bytes != hc->total_tx_bytes){
 		hc->dma_error = status != 0 ? status : -EIO;
 	}
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_TX_CMPL multi-BD发送完成 req=%p opc=0x%x status=%d bytes=%u total=%llu iovcnt=%d error=%d fsm=%s\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
@@ -1419,7 +1427,7 @@ void compute_handc_op_rx_impl(struct spdk_axi_dma_io *io, int status){
 	   hc->cur_rx_bytes != hc->total_rx_bytes){
 		hc->dma_error = status != 0 ? status : -EIO;
 	}
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_RX_CMPL multi-BD接收完成 req=%p opc=0x%x status=%d bytes=%u cur_rx=%llu total_rx=%llu iovcnt=%d error=%d fsm=%s\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
@@ -1457,7 +1465,7 @@ void compute_handc_op(void* ctx){
 	unsigned long long total_rx_bytes = 0;
 	unsigned long long total_tx_bytes = 0;
 	int ret;
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_OP start req=%p opc=0x%x fsm=%s from_size=%d to_size=%d\n",
 		hc->mcdma_req,
 		hc->mcdma_req ? hc->mcdma_req->req.cmd->nvme_cmd.opc : 0,
@@ -1492,7 +1500,7 @@ void compute_handc_op(void* ctx){
 		compute_handc_fail_before_submit(hc, -EINVAL);
 		return;
 	}
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_IOV_SUMMARY 保留4KB IOV并准备multi-BD事务 req=%p tx_iovcnt=%d rx_iovcnt=%d bytes=%llu tx_first=0x%llx tx_last=0x%llx rx_first=0x%llx rx_last=0x%llx\n",
 		hc->mcdma_req,
 		hc->from_size,
@@ -1545,7 +1553,7 @@ void compute_handc_op(void* ctx){
 	/* 先挂接目标RX BD，再启动源TX，防止AXI Stream在无接收缓冲时丢失。 */
 	ret = spdk_env_axi_dma_rx_channel_recv(
 		rx_ch->env_ch, hc->to_iovecs, hc->to_size, rx_io);
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_OP RX_MULTI_BD_SUBMIT req=%p ret=%d iovcnt=%d total_rx=%llu\n",
 		hc->mcdma_req,
 		ret,
@@ -1561,7 +1569,7 @@ void compute_handc_op(void* ctx){
 
 	ret = spdk_env_axi_dma_tx_channel_send(
 		tx_ch->env_ch, hc->from_iovecs, hc->from_size, tx_io);
-	SPDK_NOTICELOG(
+	MCDMA_HOTPATH_LOG(
 		"HANDC_OP TX_MULTI_BD_SUBMIT req=%p ret=%d iovcnt=%d total_tx=%llu packet_count=1\n",
 		hc->mcdma_req,
 		ret,
@@ -3378,7 +3386,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					continue;
 
 				}else if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_READ){
-					SPDK_NOTICELOG(
+					MCDMA_HOTPATH_LOG(
 						"SLM_READ enter req=%p cid=%u mem_nsid=0x%x mem_id=%u start=%llu len=%u prp1=0x%llx prp2=0x%llx lookup_ret=%d ns_vaddr=%p ns_paddr=%p\n",
 						mcdma_req,
 						mcdma_req->req.cmd->nvme_cmd.cid,
@@ -3442,7 +3450,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					}
 					ctx->mcdma_req = mcdma_req;
 					ctx->rtransport = rtransport;
-					SPDK_NOTICELOG(
+					MCDMA_HOTPATH_LOG(
 						"SLM_READ handc_submit req=%p fsm=%s from_size=%d to_size=%d from0=%p from0_paddr=0x%llx from0_len=%llu to0_paddr=0x%llx to0_len=%llu\n",
 						mcdma_req,
 						handc_fsm_name(ctx->fsm_state),
@@ -3979,16 +3987,18 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 							mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
 							continue;
 						}
-						SPDK_NOTICELOG(
+						MCDMA_HOTPATH_LOG(
 							"SLM_WRITE_IOV_BUILD PRP展开完成 req=%p iovcnt=%d bytes=%u\n",
 							mcdma_req, ctx->from_size, cmd->cdw12);
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 						continue;
 					}else if(ctx->fsm_state==END_FETCH_DATA){
-						printf("GET DATA ns_vaddr%llx nsid%d\n ",ns_vaddr,cmd->nsid&(~SLM_MASK));
+						MCDMA_HOTPATH_LOG("GET DATA ns_vaddr%p nsid%d\n",
+							ns_vaddr, cmd->nsid&(~SLM_MASK));
 						if(ns_vaddr!=NULL){
 							char* dumpdata = (char*)(ns_vaddr);
-							printf("%d %d %d %c\n",dumpdata[0],dumpdata[1],dumpdata[2],dumpdata[3]);
+							MCDMA_HOTPATH_LOG("%d %d %d %c\n",
+								dumpdata[0], dumpdata[1], dumpdata[2], dumpdata[3]);
 						}
 					}
 
@@ -3996,7 +4006,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					//First，Try to Get Prp Pages
 					//SPDK_DEBUGLOG(nvmf,"ENTER FETCH DATA\n");
 					if(ctx->fsm_state == FETCH_DATA){
-						SPDK_NOTICELOG(
+						MCDMA_HOTPATH_LOG(
 							"SLM_READ FETCH_DATA req=%p cid=%u mem_id=%u start=%llu len=%d ns_vaddr=%p\n",
 							mcdma_req,
 							mcdma_req->req.cmd->nvme_cmd.cid,
@@ -4044,7 +4054,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 							continue;
 						}
 						SPDK_DEBUGLOG(nvmf,"GET FROM SIZE%d,TO SIZE%d\n",ctx->from_size,ctx->to_size);
-						SPDK_NOTICELOG(
+						MCDMA_HOTPATH_LOG(
 							"SLM_READ FETCH_DATA handc_submit req=%p from_size=%d to_size=%d from0=%p from0_paddr=0x%llx to0_paddr=0x%llx\n",
 							mcdma_req,
 							ctx->from_size,
@@ -4055,7 +4065,7 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 						continue;
 					}else{
-						SPDK_NOTICELOG(
+						MCDMA_HOTPATH_LOG(
 							"SLM_READ END_FETCH_DATA req=%p cid=%u fsm=%s ready_to_complete\n",
 							mcdma_req,
 							mcdma_req->req.cmd->nvme_cmd.cid,
@@ -4574,6 +4584,12 @@ nvmf_mcdma_create(struct spdk_nvmf_transport_opts *opts)
 	uint32_t			min_in_capsule_data_size;
 	int				max_device_sge = SPDK_NVMF_MAX_SGL_ENTRIES;
 	pthread_mutexattr_t		attr;
+	const char			*hotpath_trace;
+
+	hotpath_trace = getenv("HLSACC_RUNTIME_TRACE");
+	g_mcdma_hotpath_trace = hotpath_trace != NULL && strcmp(hotpath_trace, "1") == 0;
+	SPDK_NOTICELOG("MCDMA SLM/HandC hot-path trace: %s\n",
+		g_mcdma_hotpath_trace ? "enabled" : "disabled");
 
 	qtransport = calloc(1, sizeof(*qtransport));
 	if (!qtransport) {
