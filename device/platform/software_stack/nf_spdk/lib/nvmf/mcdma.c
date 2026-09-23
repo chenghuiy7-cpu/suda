@@ -35,8 +35,12 @@ SPDK_LOG_REGISTER_COMPONENT(nvmq);
 #define SPDK_NVMF_MCDMA_MAX_CTRLRS_PER_DISK 4
 #define SPDK_NVMF_MCDMA_MAX_QPAIRS 4
 #define SPDK_NVMF_MCDMA_DEFAULT_IN_CAPSULE_DATA_SIZE 4096
-#define SPDK_NVMF_MCDMA_DEFAULT_MAX_IO_SIZE 131072
-#define SPDK_NVMF_MCDMA_MIN_IO_BUFFER_SIZE (SPDK_NVMF_MCDMA_DEFAULT_MAX_IO_SIZE / SPDK_NVMF_MAX_SGL_ENTRIES)
+#define SPDK_NVMF_MCDMA_DEFAULT_MAX_IO_SIZE (128 * 1024 * 1024)
+/* Buffer-backed NVMf I/O remains sized for 2 MiB; larger SLM vendor commands
+ * pull Host pages directly through their PRP chain. */
+#define SPDK_NVMF_MCDMA_BUFFERED_MAX_IO_SIZE (2 * 1024 * 1024)
+#define SPDK_NVMF_MCDMA_MIN_IO_BUFFER_SIZE \
+	(SPDK_NVMF_MCDMA_BUFFERED_MAX_IO_SIZE / SPDK_NVMF_MAX_SGL_ENTRIES)
 #define SPDK_NVMF_MCDMA_DEFAULT_NUM_SHARED_BUFFERS 4095
 #define SPDK_NVMF_MCDMA_DEFAULT_BUFFER_CACHE_SIZE 32
 #define SPDK_NVMF_MCDMA_DEFAULT_NO_SRQ false
@@ -326,6 +330,11 @@ struct spdk_nvmf_mcdma_resources {
 	 */
 	void					*bufs;
 	void					*cpl_data_bufs;
+	/*
+	 * Backing storage for Host<->SLM requests larger than the 64-entry
+	 * in-context IOV fast path.  Each request owns one TX and one RX slice.
+	 */
+	struct spdk_axi_dma_iovec		*handc_extended_iovecs;
 	// struct ibv_mr				*bufs_mr;
 
 	/* Receives that are waiting for a request object */
@@ -1247,12 +1256,32 @@ release_channel:
  * Context Used To Operate Data Between Host and Device
  * Each IOV describes at most one PAGE_SIZE host/SLM page.
  */
-#define HANDC_IOVEC_CAPACITY 64
-#define HANDC_MAX_TRANSFER_BYTES (HANDC_IOVEC_CAPACITY * PAGE_SIZE)
+#define HANDC_INLINE_IOVEC_CAPACITY 64
+#define HANDC_IOVEC_CAPACITY 256
+#define HANDC_DMA_WINDOW_BYTES (HANDC_IOVEC_CAPACITY * PAGE_SIZE)
+#define HANDC_MAX_TRANSFER_BYTES (128 * HANDC_DMA_WINDOW_BYTES)
+
+/*
+ * A SLM command of up to 128 MiB is transferred as 1 MiB windows.  Each window is
+ * represented by at most 256 4 KiB PRP-backed IOVs and submitted to AXI MCDMA
+ * as one multi-BD transaction.  Requests up to 256 KiB
+ * keep using the arrays embedded in the 4 KiB request context.  Larger
+ * requests select per-request backing storage allocated with the qpair.
+ * Keep the transport's advertised MDTS and the Host<->SLM implementation
+ * capacity in lockstep.
+ */
+static_assert(HANDC_DMA_WINDOW_BYTES == 1024 * 1024);
+static_assert(HANDC_MAX_TRANSFER_BYTES ==
+	SPDK_NVMF_MCDMA_DEFAULT_MAX_IO_SIZE);
 
 struct handc_ctx{
-	struct spdk_axi_dma_iovec from_iovecs[HANDC_IOVEC_CAPACITY];
-	struct spdk_axi_dma_iovec to_iovecs[HANDC_IOVEC_CAPACITY];
+	struct spdk_axi_dma_iovec inline_from_iovecs[HANDC_INLINE_IOVEC_CAPACITY];
+	struct spdk_axi_dma_iovec inline_to_iovecs[HANDC_INLINE_IOVEC_CAPACITY];
+	struct spdk_axi_dma_iovec *extended_from_iovecs;
+	struct spdk_axi_dma_iovec *extended_to_iovecs;
+	struct spdk_axi_dma_iovec *from_iovecs;
+	struct spdk_axi_dma_iovec *to_iovecs;
+	int iovec_capacity;
 	int from_size;							//4B
 	int to_size;							//4B
 	struct spdk_nvmf_mcdma_device* device;  //8B
@@ -1263,11 +1292,18 @@ struct handc_ctx{
 		FETCH_PRP,
 		END_FETCH_PRP,
 		FETCH_DATA,
+		TRANSFER_DATA,
 		END_FETCH_DATA,
 		OPERATOR_SOURCE_RANGES,
 		NON_OP
 	} fsm_state;
 	unsigned long long cur_bytes;
+	unsigned int transfer_length;
+	unsigned int transfer_bytes_prepared;
+	unsigned int prp_index;
+	unsigned int prp_entries_in_page;
+	unsigned int prp_entries_remaining;
+	unsigned long long next_prp_page;
 	unsigned long long prp_buf;
 	unsigned long long total_rx_bytes;
 	unsigned long long cur_rx_bytes;
@@ -1282,6 +1318,23 @@ struct handc_ctx{
 
 static_assert(sizeof(struct handc_ctx)<4096);
 
+static void
+handc_select_iovecs(struct handc_ctx *hc, unsigned int transfer_bytes)
+{
+	unsigned int iovec_count =
+		(transfer_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+
+	if(iovec_count > HANDC_INLINE_IOVEC_CAPACITY){
+		hc->from_iovecs = hc->extended_from_iovecs;
+		hc->to_iovecs = hc->extended_to_iovecs;
+		hc->iovec_capacity = HANDC_IOVEC_CAPACITY;
+	}else{
+		hc->from_iovecs = hc->inline_from_iovecs;
+		hc->to_iovecs = hc->inline_to_iovecs;
+		hc->iovec_capacity = HANDC_INLINE_IOVEC_CAPACITY;
+	}
+}
+
 static const char *handc_fsm_name(int state)
 {
 	switch (state) {
@@ -1291,6 +1344,8 @@ static const char *handc_fsm_name(int state)
 		return "END_FETCH_PRP";
 	case FETCH_DATA:
 		return "FETCH_DATA";
+	case TRANSFER_DATA:
+		return "TRANSFER_DATA";
 	case END_FETCH_DATA:
 		return "END_FETCH_DATA";
 	case OPERATOR_SOURCE_RANGES:
@@ -1328,7 +1383,21 @@ void compute_handc_impl(void* ctx){
 		return;
 	}
 	if(hc->fsm_state==FETCH_PRP){
+		unsigned long long *prp_list =
+			(unsigned long long *)hc->mcdma_req->sgl_buf;
+
+		hc->prp_index = 0;
+		if(hc->prp_entries_remaining > PAGE_SIZE / sizeof(*prp_list)){
+			hc->prp_entries_in_page = PAGE_SIZE / sizeof(*prp_list) - 1;
+			hc->next_prp_page = prp_list[PAGE_SIZE / sizeof(*prp_list) - 1];
+		}else{
+			hc->prp_entries_in_page = hc->prp_entries_remaining;
+			hc->next_prp_page = 0;
+		}
 		hc->fsm_state = FETCH_DATA;
+	}else if(hc->fsm_state==TRANSFER_DATA){
+		hc->fsm_state = hc->transfer_bytes_prepared < hc->transfer_length ?
+			FETCH_DATA : END_FETCH_DATA;
 	}else{
 		hc->fsm_state = END_FETCH_DATA;
 	}
@@ -1472,14 +1541,14 @@ void compute_handc_op(void* ctx){
 		handc_fsm_name(hc->fsm_state),
 		hc->from_size,
 		hc->to_size);
-	if(hc->from_size <= 0 || hc->from_size > HANDC_IOVEC_CAPACITY ||
-	   hc->to_size <= 0 || hc->to_size > HANDC_IOVEC_CAPACITY){
+	if(hc->from_size <= 0 || hc->from_size > hc->iovec_capacity ||
+	   hc->to_size <= 0 || hc->to_size > hc->iovec_capacity){
 		hc->total_tx_bytes = 0;
 		hc->total_rx_bytes = 0;
 		SPDK_ERRLOG(
 			"HANDC_OP 非法IOV数量 req=%p from_size=%d to_size=%d capacity=%d\n",
 			hc->mcdma_req, hc->from_size, hc->to_size,
-			HANDC_IOVEC_CAPACITY);
+			hc->iovec_capacity);
 		compute_handc_fail_before_submit(hc, -EINVAL);
 		return;
 	}
@@ -1800,6 +1869,7 @@ nvmf_mcdma_dump_qpair_contents(struct spdk_nvmf_mcdma_qpair *rqpair)
 static void
 nvmf_mcdma_resources_destroy(struct spdk_nvmf_mcdma_resources *resources)
 {
+	free(resources->handc_extended_iovecs);
 	spdk_free(resources->cpls);
 	spdk_free(resources->bufs);
 	spdk_free(resources->reqs);
@@ -1838,6 +1908,7 @@ static void mcdma_qe_recv_cmpl(struct spdk_axi_dma_io *io, int status)
 	struct byp_io	*byp_io = io->ctx;
 	struct spdk_mcdma_qp *mcdma_qp = (struct spdk_mcdma_qp *)byp_io->req;
 	struct spdk_nvmf_mcdma_poller *rpoller = mcdma_qp->poller;
+	struct spdk_nvme_cmd *rx_cmd = io->iovs[0].iov_base;
 	struct spdk_nvmf_mcdma_qpair target;
 	target.qp_num = qdma_qid_to_nvme_qid(io->ctrl.tid, &target);
 	struct spdk_nvmf_mcdma_qpair *rqpair = qpairs_tree_RB_FIND(&rpoller->qpairs, &target);
@@ -1855,6 +1926,18 @@ static void mcdma_qe_recv_cmpl(struct spdk_axi_dma_io *io, int status)
 	
 
 	SPDK_DEBUGLOG(nvmf, "MCDMA recv packet from q %u, paddr %lX\n", rqpair->qp_num, io->iovs[0].paddr);
+	if ((rx_cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+	     rx_cmd->opc == SPDK_NVME_OPC_SLM_WRITE) &&
+	    rx_cmd->cdw12 >= 32U * 1024U * 1024U) {
+		MCDMA_HOTPATH_LOG(
+			"MCDMA_QE_RX status=%d tid=%u qid=%u ctrlr=%u bytes=%llu rxeof=%u opc=0x%x cid=%u nsid=0x%x len=%u prp1=0x%llx prp2=0x%llx\n",
+			status, io->ctrl.tid, rqpair->qp_num, rqpair->ctrlr_num,
+			(unsigned long long)io->transfered_length,
+			io->status.rxeof, rx_cmd->opc, rx_cmd->cid,
+			rx_cmd->nsid, rx_cmd->cdw12,
+			(unsigned long long)rx_cmd->dptr.prp.prp1,
+			(unsigned long long)rx_cmd->dptr.prp.prp2);
+	}
 	print_sqe(io->iovs[0].iov_base);
 	// print_sqe(io->iovs[1].iov_base);
 
@@ -1916,6 +1999,9 @@ nvmf_mcdma_resources_create(struct spdk_nvmf_mcdma_resource_opts *opts)
 
 	resources->reqs = spdk_zmalloc(opts->max_queue_depth * sizeof(*resources->reqs),
 				       0x1000, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
+	resources->handc_extended_iovecs = calloc(
+		(size_t)opts->max_queue_depth * 2 * HANDC_IOVEC_CAPACITY,
+		sizeof(*resources->handc_extended_iovecs));
 	resources->recv_pool = calloc(1, sizeof(struct spdk_simple_pool));
 	spdk_simple_pool_init(resources->recv_pool, opts->max_queue_depth, sizeof(struct spdk_nvmf_mcdma_recv));
 	
@@ -1928,7 +2014,8 @@ nvmf_mcdma_resources_create(struct spdk_nvmf_mcdma_resource_opts *opts)
 	resources->cpl_data_bufs = spdk_zmalloc(opts->max_queue_depth * opts->in_capsule_data_size,
 					       0x1000, NULL, SPDK_ENV_LCORE_ID_ANY,
 					       SPDK_MALLOC_DMA);
-		if (!resources->reqs || !resources->recv_pool ||
+		if (!resources->reqs || !resources->handc_extended_iovecs ||
+			!resources->recv_pool ||
 			!resources->cpls || (opts->in_capsule_data_size && !resources->bufs)) {
 			SPDK_ERRLOG("Unable to allocate sufficient memory for RDMA queue.\n");
 			goto cleanup;
@@ -1968,6 +2055,16 @@ nvmf_mcdma_resources_create(struct spdk_nvmf_mcdma_resource_opts *opts)
 		mcdma_req->data_buf = spdk_zmalloc(PAGE_SIZE, PAGE_SIZE, NULL, SPDK_ENV_SOCKET_ID_ANY, SPDK_MALLOC_DMA);
 		if (!mcdma_req->data_buf) {
 			SPDK_ERRLOG("Failed to allocate request sgl buffer");
+		} else {
+			struct handc_ctx *ctx = mcdma_req->data_buf;
+			struct spdk_axi_dma_iovec *request_iovecs =
+				resources->handc_extended_iovecs +
+				(size_t)i * 2 * HANDC_IOVEC_CAPACITY;
+
+			ctx->extended_from_iovecs = request_iovecs;
+			ctx->extended_to_iovecs =
+				request_iovecs + HANDC_IOVEC_CAPACITY;
+			handc_select_iovecs(ctx, HANDC_INLINE_IOVEC_CAPACITY * PAGE_SIZE);
 		}
 
 		/* Set up memory to send responses */
@@ -2984,6 +3081,17 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 			/* The first element of the SGL is the NVMe command */
 			mcdma_req->req.cmd = (union nvmf_h2c_msg *)mcdma_recv->byp_io->iov.iov_base;
 			memset(mcdma_req->req.rsp, 0, sizeof(*mcdma_req->req.rsp));
+			if ((mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_READ ||
+			     mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE) &&
+			    mcdma_req->req.cmd->nvme_cmd.cdw12 >= 32U * 1024U * 1024U) {
+				MCDMA_HOTPATH_LOG(
+					"MCDMA_REQ_NEW req=%p qid=%u opc=0x%x cid=%u nsid=0x%x len=%u\n",
+					mcdma_req, rqpair->qp_num,
+					mcdma_req->req.cmd->nvme_cmd.opc,
+					mcdma_req->req.cmd->nvme_cmd.cid,
+					mcdma_req->req.cmd->nvme_cmd.nsid,
+					mcdma_req->req.cmd->nvme_cmd.cdw12);
+			}
 
 			if (spdk_unlikely(spdk_nvmf_request_get_dif_ctx(&mcdma_req->req, &mcdma_req->req.dif.dif_ctx))) {
 				mcdma_req->req.dif_enabled = true;
@@ -3332,6 +3440,17 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
 					continue;
 				}
+					if(cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+					   cmd->opc == SPDK_NVME_OPC_SLM_WRITE){
+						handc_select_iovecs(ctx, read_or_write_length);
+						ctx->transfer_length = read_or_write_length;
+						ctx->transfer_bytes_prepared = 0;
+						ctx->prp_index = 0;
+						ctx->prp_entries_in_page = 0;
+						ctx->prp_entries_remaining = read_or_write_length > PAGE_SIZE ?
+							(read_or_write_length - PAGE_SIZE + PAGE_SIZE - 1) / PAGE_SIZE : 0;
+						ctx->next_prp_page = 0;
+					}
 				//SPDK_DEBUGLOG(nvmf,"READ OR WRITE LENGTH%d\n",read_or_write_length);
 				ctx->impl_thread = spdk_get_thread();
 				if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE){
@@ -3339,8 +3458,9 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					//SPDK_DEBUGLOG(nvmf,"SLM WRITE\n");
 					ctx->device = rqpair->device;
 					
-					if(read_or_write_length<=bsize){
-						ctx->fsm_state = FETCH_DATA;
+						if(read_or_write_length<=bsize){
+							ctx->fsm_state = TRANSFER_DATA;
+							ctx->transfer_bytes_prepared = read_or_write_length;
 						ctx->from_size = 1;
 						ctx->to_size = 1;
 						ctx->from_iovecs[0].iov_base = NULL;
@@ -3350,8 +3470,9 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
 						ctx->to_iovecs[0].iov_len = read_or_write_length;
 						SPDK_DEBUGLOG(nvmf,"Get PRP ADDRESS%llx DATA ELM%llx ADDRESS%llx ELM%c\n",cmd->dptr.prp.prp1,*((uint64_t*)ctx->to_iovecs[0].iov_base),ctx->to_iovecs[0].iov_base,((char*)(ctx->to_iovecs[0].iov_base))[0]);
-					}else if(read_or_write_length>bsize&&read_or_write_length<=2*bsize){
-						ctx->fsm_state = FETCH_DATA;
+						}else if(read_or_write_length>bsize&&read_or_write_length<=2*bsize){
+							ctx->fsm_state = TRANSFER_DATA;
+							ctx->transfer_bytes_prepared = read_or_write_length;
 						ctx->from_size = 2;
 						ctx->to_size = 2;
 						ctx->from_iovecs[0].iov_base = NULL;
@@ -3407,8 +3528,9 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 					ctx->device = rqpair->device;
 					
 					//SPDK_DEBUGLOG(nvmf,"CUR CORE%u\n",spdk_env_get_current_core());
-					if(read_or_write_length<=bsize){
-						ctx->fsm_state = FETCH_DATA;
+						if(read_or_write_length<=bsize){
+							ctx->fsm_state = TRANSFER_DATA;
+							ctx->transfer_bytes_prepared = read_or_write_length;
 						ctx->from_size = 1;
 						ctx->to_size = 1;
 						ctx->to_iovecs[0].iov_base = NULL;
@@ -3418,8 +3540,9 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						ctx->from_iovecs[0].paddr = spdk_vtophys(ctx->from_iovecs[0].iov_base,NULL);
 						ctx->from_iovecs[0].iov_len = read_or_write_length;
 						SPDK_DEBUGLOG(nvmf,"Get PRP ADDRESS%llx DATA ELM%llx ADDRESS%llx ELM%c\n",cmd->dptr.prp.prp1,*((uint64_t*)ctx->from_iovecs[0].iov_base),ctx->from_iovecs[0].iov_base,((char*)(ctx->from_iovecs[0].iov_base))[0]);
-					}else if(read_or_write_length>bsize&&read_or_write_length<=2*bsize){
-						ctx->fsm_state = FETCH_DATA;
+						}else if(read_or_write_length>bsize&&read_or_write_length<=2*bsize){
+							ctx->fsm_state = TRANSFER_DATA;
+							ctx->transfer_bytes_prepared = read_or_write_length;
 						ctx->from_size = 2;
 						ctx->to_size = 2;
 						ctx->to_iovecs[0].iov_base = NULL;
@@ -3943,53 +4066,85 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						mcdma_req, cmd->opc, cmd->nsid&(~SLM_MASK), ret, ns_vaddr);
 					mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
 					ctx->fsm_state = NON_OP;
-					mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
-					continue;
-				}
-				if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE){
-					//If Need To Fetch Data
-					if(ctx->fsm_state == FETCH_DATA){
-						mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
-						unsigned long long* prp_list = (unsigned long long*)mcdma_req->sgl_buf;
-						for(int i=0;i<16;i++){
-							SPDK_DEBUGLOG(nvmf,"GET PRP2 ADDRESS%llx\n",prp_list[i]);
-						}
-						ctx->from_size = 1;
-						ctx->to_size = 1;
-						ctx->from_iovecs[0].iov_base = NULL;
-						ctx->from_iovecs[0].paddr = cmd->dptr.prp.prp1;
-						ctx->from_iovecs[0].iov_len = PAGE_SIZE;
-						ctx->to_iovecs[0].iov_base = ns_vaddr+starting_bytes;
-						ctx->to_iovecs[0].iov_len = PAGE_SIZE;
-						ctx->to_iovecs[0].paddr = spdk_vtophys(ctx->to_iovecs[0].iov_base,NULL);
-						starting_bytes += PAGE_SIZE;
-						read_or_write_length -= PAGE_SIZE;
-						for(int i=1;i<HANDC_IOVEC_CAPACITY&&(read_or_write_length>0);i++){
-							++(ctx->from_size);
-							++(ctx->to_size);
-							ctx->from_iovecs[i].iov_base = NULL;
-							ctx->from_iovecs[i].paddr = prp_list[i-1];
-							unsigned int incr_bytes = PAGE_SIZE<read_or_write_length?PAGE_SIZE:read_or_write_length;
-							ctx->from_iovecs[i].iov_len = incr_bytes;
-							ctx->to_iovecs[i].iov_base = ns_vaddr+starting_bytes;
-							ctx->to_iovecs[i].iov_len = incr_bytes;
-							starting_bytes += incr_bytes;
-							ctx->to_iovecs[i].paddr = spdk_vtophys(ctx->to_iovecs[i].iov_base,NULL);
-							read_or_write_length -= incr_bytes;
-						}
-						if(read_or_write_length != 0){
-							SPDK_ERRLOG(
-								"SLM_WRITE_IOV_BUILD PRP展开后仍有剩余数据 req=%p remaining=%d iovcnt=%d max_bytes=%u\n",
-								mcdma_req, read_or_write_length, ctx->from_size,
-								(unsigned int)HANDC_MAX_TRANSFER_BYTES);
+						mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+						continue;
+					}
+					if((cmd->opc == SPDK_NVME_OPC_SLM_READ ||
+					    cmd->opc == SPDK_NVME_OPC_SLM_WRITE) &&
+					   ctx->fsm_state == FETCH_DATA &&
+					   ctx->prp_index >= ctx->prp_entries_in_page &&
+					   ctx->prp_entries_remaining > 0){
+						if(ctx->next_prp_page == 0){
+							SPDK_ERRLOG("SLM PRP链提前结束 req=%p remaining_entries=%u\n",
+								mcdma_req, ctx->prp_entries_remaining);
 							mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
 							ctx->fsm_state = NON_OP;
 							mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
 							continue;
 						}
-						MCDMA_HOTPATH_LOG(
-							"SLM_WRITE_IOV_BUILD PRP展开完成 req=%p iovcnt=%d bytes=%u\n",
-							mcdma_req, ctx->from_size, cmd->cdw12);
+						mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
+						ctx->fsm_state = FETCH_PRP;
+						ctx->from_size = 1;
+						ctx->to_size = 1;
+						ctx->from_iovecs[0].iov_base = NULL;
+						ctx->from_iovecs[0].paddr = ctx->next_prp_page;
+						ctx->from_iovecs[0].iov_len = PAGE_SIZE;
+						ctx->to_iovecs[0].iov_base = mcdma_req->sgl_buf;
+						ctx->to_iovecs[0].paddr = spdk_vtophys(mcdma_req->sgl_buf, NULL);
+						ctx->to_iovecs[0].iov_len = PAGE_SIZE;
+						spdk_thread_send_msg(rqpair->device->handc_thread, compute_handc_op, ctx);
+						continue;
+					}
+					if(mcdma_req->req.cmd->nvme_cmd.opc == SPDK_NVME_OPC_SLM_WRITE){
+						//If Need To Fetch Data
+						if(ctx->fsm_state == FETCH_DATA){
+							mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
+							unsigned long long* prp_list = (unsigned long long*)mcdma_req->sgl_buf;
+							unsigned int remaining = ctx->transfer_length - ctx->transfer_bytes_prepared;
+							int i = 0;
+
+							if(ctx->transfer_bytes_prepared == 0 && remaining > 0){
+								unsigned int incr_bytes = PAGE_SIZE < remaining ? PAGE_SIZE : remaining;
+								ctx->from_iovecs[i].iov_base = NULL;
+								ctx->from_iovecs[i].paddr = cmd->dptr.prp.prp1;
+								ctx->from_iovecs[i].iov_len = incr_bytes;
+								ctx->to_iovecs[i].iov_base = ns_vaddr + starting_bytes;
+								ctx->to_iovecs[i].iov_len = incr_bytes;
+								ctx->to_iovecs[i].paddr = spdk_vtophys(ctx->to_iovecs[i].iov_base, NULL);
+								ctx->transfer_bytes_prepared += incr_bytes;
+								remaining -= incr_bytes;
+								i++;
+							}
+							while(i < HANDC_IOVEC_CAPACITY && remaining > 0){
+								if(ctx->prp_index >= ctx->prp_entries_in_page)
+									break;
+								unsigned int incr_bytes = PAGE_SIZE < remaining ? PAGE_SIZE : remaining;
+								ctx->from_iovecs[i].iov_base = NULL;
+								ctx->from_iovecs[i].paddr = prp_list[ctx->prp_index++];
+								ctx->prp_entries_remaining--;
+								ctx->from_iovecs[i].iov_len = incr_bytes;
+								ctx->to_iovecs[i].iov_base = ns_vaddr + starting_bytes + ctx->transfer_bytes_prepared;
+								ctx->to_iovecs[i].iov_len = incr_bytes;
+								ctx->to_iovecs[i].paddr = spdk_vtophys(ctx->to_iovecs[i].iov_base, NULL);
+								ctx->transfer_bytes_prepared += incr_bytes;
+								remaining -= incr_bytes;
+								i++;
+							}
+							if(i == 0){
+								SPDK_ERRLOG("SLM_WRITE 无可提交PRP req=%p remaining=%u\n",
+									mcdma_req, ctx->prp_entries_remaining);
+								mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+								ctx->fsm_state = NON_OP;
+								mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+								continue;
+							}
+							ctx->from_size = i;
+							ctx->to_size = i;
+							ctx->fsm_state = TRANSFER_DATA;
+							MCDMA_HOTPATH_LOG(
+								"SLM_WRITE_WINDOW req=%p iovcnt=%d prepared=%u/%u prp_index=%u\n",
+								mcdma_req, ctx->from_size, ctx->transfer_bytes_prepared,
+								ctx->transfer_length, ctx->prp_index);
 						spdk_thread_send_msg(rqpair->device->handc_thread,compute_handc_op,ctx);
 						continue;
 					}else if(ctx->fsm_state==END_FETCH_DATA){
@@ -4017,48 +4172,59 @@ nvmf_mcdma_request_process(struct spdk_nvmf_mcdma_transport *rtransport,
 						spdk_trace_record(TRACE_MCDMA_REQUEST_STATE_HLS_EXEC, 0, 0,
 							(uintptr_t)mcdma_req,"srfetda");
 						
-						mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
-						//SPDK_DEBUGLOG(nvmf,"FETCH_DATA REQUEST%llx CTX%llx\n",mcdma_req,ctx);
-						unsigned long long* prp_list = (unsigned long long*)mcdma_req->sgl_buf;
-						ctx->from_size = 1;
-						ctx->to_size = 1;
-						ctx->to_iovecs[0].iov_base = NULL;
-						ctx->to_iovecs[0].paddr = cmd->dptr.prp.prp1;
-						ctx->to_iovecs[0].iov_len = PAGE_SIZE;
-						ctx->from_iovecs[0].iov_base = ns_vaddr+starting_bytes;
-						ctx->from_iovecs[0].iov_len = PAGE_SIZE;
-						ctx->from_iovecs[0].paddr = spdk_vtophys(ctx->from_iovecs[0].iov_base,NULL);
-						read_or_write_length -= PAGE_SIZE;
-						starting_bytes += PAGE_SIZE;
-						for(int i=1;i<HANDC_IOVEC_CAPACITY&&(read_or_write_length>0);i++){
-							ctx->from_size++;
-							ctx->to_size++;
-							ctx->to_iovecs[i].iov_base = NULL;
-							ctx->to_iovecs[i].paddr = prp_list[i-1];
-							unsigned int incr_bytes = PAGE_SIZE<read_or_write_length?PAGE_SIZE:read_or_write_length;
-							ctx->to_iovecs[i].iov_len = incr_bytes;
-							ctx->from_iovecs[i].iov_base = ns_vaddr+starting_bytes;
-							ctx->from_iovecs[i].iov_len = incr_bytes;
-							starting_bytes += incr_bytes;
-							ctx->from_iovecs[i].paddr = spdk_vtophys(ctx->from_iovecs[i].iov_base,NULL);
-							read_or_write_length -= incr_bytes;
-						}
-						if(read_or_write_length != 0){
-							SPDK_ERRLOG(
-								"SLM_READ_IOV_BUILD PRP展开后仍有剩余数据 req=%p remaining=%d iovcnt=%d max_bytes=%u\n",
-								mcdma_req, read_or_write_length, ctx->from_size,
-								(unsigned int)HANDC_MAX_TRANSFER_BYTES);
-							mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
-							ctx->fsm_state = NON_OP;
-							mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
-							continue;
-						}
+							mcdma_req->state = MCDMA_REQUEST_STATE_EXECUTING;
+							//SPDK_DEBUGLOG(nvmf,"FETCH_DATA REQUEST%llx CTX%llx\n",mcdma_req,ctx);
+							unsigned long long* prp_list = (unsigned long long*)mcdma_req->sgl_buf;
+							unsigned int remaining = ctx->transfer_length - ctx->transfer_bytes_prepared;
+							int i = 0;
+
+							if(ctx->transfer_bytes_prepared == 0 && remaining > 0){
+								unsigned int incr_bytes = PAGE_SIZE < remaining ? PAGE_SIZE : remaining;
+								ctx->to_iovecs[i].iov_base = NULL;
+								ctx->to_iovecs[i].paddr = cmd->dptr.prp.prp1;
+								ctx->to_iovecs[i].iov_len = incr_bytes;
+								ctx->from_iovecs[i].iov_base = ns_vaddr + starting_bytes;
+								ctx->from_iovecs[i].iov_len = incr_bytes;
+								ctx->from_iovecs[i].paddr = spdk_vtophys(ctx->from_iovecs[i].iov_base, NULL);
+								ctx->transfer_bytes_prepared += incr_bytes;
+								remaining -= incr_bytes;
+								i++;
+							}
+							while(i < HANDC_IOVEC_CAPACITY && remaining > 0){
+								if(ctx->prp_index >= ctx->prp_entries_in_page)
+									break;
+								unsigned int incr_bytes = PAGE_SIZE < remaining ? PAGE_SIZE : remaining;
+								ctx->to_iovecs[i].iov_base = NULL;
+								ctx->to_iovecs[i].paddr = prp_list[ctx->prp_index++];
+								ctx->prp_entries_remaining--;
+								ctx->to_iovecs[i].iov_len = incr_bytes;
+								ctx->from_iovecs[i].iov_base = ns_vaddr + starting_bytes + ctx->transfer_bytes_prepared;
+								ctx->from_iovecs[i].iov_len = incr_bytes;
+								ctx->from_iovecs[i].paddr = spdk_vtophys(ctx->from_iovecs[i].iov_base, NULL);
+								ctx->transfer_bytes_prepared += incr_bytes;
+								remaining -= incr_bytes;
+								i++;
+							}
+							if(i == 0){
+								SPDK_ERRLOG("SLM_READ 无可提交PRP req=%p remaining=%u\n",
+									mcdma_req, ctx->prp_entries_remaining);
+								mcdma_req->req.rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INVALID_FIELD;
+								ctx->fsm_state = NON_OP;
+								mcdma_req->state = MCDMA_REQUEST_STATE_READY_TO_COMPLETE;
+								continue;
+							}
+							ctx->from_size = i;
+							ctx->to_size = i;
+							ctx->fsm_state = TRANSFER_DATA;
 						SPDK_DEBUGLOG(nvmf,"GET FROM SIZE%d,TO SIZE%d\n",ctx->from_size,ctx->to_size);
 						MCDMA_HOTPATH_LOG(
-							"SLM_READ FETCH_DATA handc_submit req=%p from_size=%d to_size=%d from0=%p from0_paddr=0x%llx to0_paddr=0x%llx\n",
-							mcdma_req,
-							ctx->from_size,
-							ctx->to_size,
+								"SLM_READ_WINDOW req=%p from_size=%d to_size=%d prepared=%u/%u prp_index=%u from0=%p from0_paddr=0x%llx to0_paddr=0x%llx\n",
+								mcdma_req,
+								ctx->from_size,
+								ctx->to_size,
+								ctx->transfer_bytes_prepared,
+								ctx->transfer_length,
+								ctx->prp_index,
 							ctx->from_iovecs[0].iov_base,
 							(unsigned long long)ctx->from_iovecs[0].paddr,
 							(unsigned long long)ctx->to_iovecs[0].paddr);
@@ -4693,9 +4859,15 @@ nvmf_mcdma_create(struct spdk_nvmf_transport_opts *opts)
 		opts->in_capsule_data_size = min_in_capsule_data_size;
 	}
 
-	if (opts->io_unit_size * max_device_sge < opts->max_io_size) {
+	/* SLM READ/WRITE above 2 MiB uses direct Host PRP pulling and does not
+	 * consume the shared NVMf data-buffer pool.  Size that pool for the
+	 * largest buffer-backed request instead of the 128 MiB vendor-command cap. */
+	uint32_t buffered_max_io_size = spdk_min(
+		opts->max_io_size,
+		(uint32_t)SPDK_NVMF_MCDMA_BUFFERED_MAX_IO_SIZE);
+	if (opts->io_unit_size * max_device_sge < buffered_max_io_size) {
 		/* divide and round up. */
-		opts->io_unit_size = (opts->max_io_size + max_device_sge - 1) / max_device_sge;
+		opts->io_unit_size = (buffered_max_io_size + max_device_sge - 1) / max_device_sge;
 
 		/* round up to the nearest 4k. */
 		opts->io_unit_size = (opts->io_unit_size + NVMF_DATA_BUFFER_ALIGNMENT - 1) & ~NVMF_DATA_BUFFER_MASK;

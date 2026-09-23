@@ -20,7 +20,8 @@
                   "method": "nvmf_create_transport",
                   "params": {
                     "trtype": "QDMA",
-                    "max_queue_depth": 128
+                    "max_queue_depth": 128,
+                    "max_io_size": 134217728
                   }
               },
               {

@@ -31,7 +31,12 @@
 
 #define NVME_QDMA_CONNECT_TIMEOUT_MS	3000		/* 3 second */
 
-#define NVME_QDMA_MAX_SEGMENTS		256
+#define NVME_QDMA_MAX_IO_BYTES		(128U * 1024U * 1024U)
+/* A page-unaligned 128 MiB userspace buffer can span 32,769 pages. */
+#define NVME_QDMA_MAX_SEGMENTS		((NVME_QDMA_MAX_IO_BYTES / 4096U) + 1U)
+
+/* 128 MiB needs at most 65 chained 4 KiB PRP-list pages. */
+#define NVME_QDMA_MAX_PRP_LIST_PAGES	65
 
 #define NVME_QDMA_MAX_INLINE_SEGMENTS	4
 
@@ -86,10 +91,17 @@ struct nvme_qdma_cqe {
 struct nvme_qdma_sqe {
 	void			*qe_data;
 	struct scatterlist	*sg;
+	struct sg_table	sg_table;
 	struct bio	*bio;
 	int npages;		/* In the PRP list. 0 means small pool in use */
 	int nents;		/* Used in scatterlist */
 	void		*sgl_buf;
+	void		*prp_list_pages[NVME_QDMA_MAX_PRP_LIST_PAGES];
+	dma_addr_t	prp_list_dmas[NVME_QDMA_MAX_PRP_LIST_PAGES];
+	unsigned int	nr_prp_list_pages;
+	bool		sg_dynamic;
+	bool		dma_mapped;
+	enum dma_data_direction dma_dir;
 	struct list_head	entry;
 };
 
@@ -346,16 +358,28 @@ static int nvme_qdma_alloc_rsp(unsigned long dev_hndl, uint16_t qid, struct nvme
 
 static int sqe_member_init(struct nvme_qdma_sqe *sqe, gfp_t gfp_mask)
 {
+	unsigned int i;
+
 	sqe->qe_data = kzalloc(sizeof(struct nvme_command), GFP_KERNEL);
 	if (!sqe->qe_data)
 		return -1;
 
-	sqe->sgl_buf = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
+	sqe->sgl_buf = kzalloc(PAGE_SIZE, gfp_mask);
 	BUG_ON(((uintptr_t)sqe->sgl_buf) & (PAGE_SIZE - 1)); // SGL buf isn't 4KB aligned
 	if (unlikely(!sqe->sgl_buf)) {
 		pr_err("failed to allocate sgl buffer for req %p\n", sqe);
 		return -1;
 	}
+	for (i = 0; i < NVME_QDMA_MAX_PRP_LIST_PAGES; i++) {
+		sqe->prp_list_pages[i] = NULL;
+		sqe->prp_list_dmas[i] = 0;
+	}
+	sqe->prp_list_pages[0] = sqe->sgl_buf;
+	sqe->nr_prp_list_pages = 0;
+	sqe->sg_dynamic = false;
+	sqe->dma_mapped = false;
+	sqe->dma_dir = DMA_NONE;
+	memset(&sqe->sg_table, 0, sizeof(sqe->sg_table));
 
 	sqe->bio = NULL;
         //pr_warning("get pointer qe_data%p\n",sqe->qe_data);
@@ -377,15 +401,74 @@ static void *sqe_kmalloc(gfp_t gfp_mask, void *pool_data)
 
 static void sqe_member_free(struct nvme_qdma_sqe *sqe)
 {
+	unsigned int i;
+
 	if (sqe->bio) {
 		blk_rq_unmap_user(sqe->bio);
 	}
 	//pr_warning("free pointer qe_data%p\n",sqe->qe_data);
 	//pr_warning("free pointer sgl_buf%p\n",sqe->sgl_buf);
 	kfree(sqe->qe_data);
+	for (i = 1; i < NVME_QDMA_MAX_PRP_LIST_PAGES; i++) {
+		kfree(sqe->prp_list_pages[i]);
+		sqe->prp_list_pages[i] = NULL;
+	}
 	kfree(sqe->sgl_buf);
 	sqe->qe_data = NULL;
 	sqe->sgl_buf = NULL;
+	sqe->prp_list_pages[0] = NULL;
+	sqe->nr_prp_list_pages = 0;
+}
+
+static void nvme_qdma_free_sg(struct nvme_qdma_ctrl *ctrl,
+		struct nvme_qdma_sqe *sqe)
+{
+	unsigned int i;
+
+	for (i = 0; i < sqe->nr_prp_list_pages; i++) {
+		pci_unmap_page(ctrl->device->xpdev->pdev,
+				sqe->prp_list_dmas[i], PAGE_SIZE, DMA_TO_DEVICE);
+		sqe->prp_list_dmas[i] = 0;
+	}
+	sqe->nr_prp_list_pages = 0;
+
+	if (sqe->dma_mapped && sqe->sg) {
+		dma_unmap_sg_attrs(&ctrl->device->xpdev->pdev->dev,
+				sqe->sg, sqe->nents, sqe->dma_dir,
+				DMA_ATTR_NO_WARN);
+		sqe->dma_mapped = false;
+		sqe->dma_dir = DMA_NONE;
+	}
+	if (sqe->bio) {
+		blk_rq_unmap_user(sqe->bio);
+		sqe->bio = NULL;
+	}
+
+	if (!sqe->sg)
+		return;
+
+	if (sqe->sg_dynamic)
+		sg_free_table(&sqe->sg_table);
+	else
+		mempool_free(sqe->sg, ctrl->iod_mempool);
+	sqe->sg = NULL;
+	sqe->sg_dynamic = false;
+	memset(&sqe->sg_table, 0, sizeof(sqe->sg_table));
+}
+
+static int nvme_qdma_alloc_dynamic_sg(struct nvme_qdma_sqe *sqe,
+		unsigned int nents)
+{
+	if (!nents || nents > NVME_QDMA_MAX_SEGMENTS)
+		return -EINVAL;
+
+	memset(&sqe->sg_table, 0, sizeof(sqe->sg_table));
+	if (sg_alloc_table(&sqe->sg_table, nents, GFP_ATOMIC))
+		return -ENOMEM;
+
+	sqe->sg = sqe->sg_table.sgl;
+	sqe->sg_dynamic = true;
+	return 0;
 }
 
 static void sqe_kfree(void *element, void *pool_data)
@@ -913,9 +996,33 @@ static inline u64 nvme_qdma_req_get_addr_prefix(u8 func_id, u16 qid, u16 cid)
 	return (1ULL << 63) | (((u64)func_id) << 61) | (((u64)qid) << 58) | (((u64)cid) << 48);
 }
 
+static void *nvme_qdma_get_prp_list_page(struct nvme_qdma_sqe *sqe,
+		unsigned int index)
+{
+	void *page;
+
+	if (index >= NVME_QDMA_MAX_PRP_LIST_PAGES)
+		return NULL;
+	if (index == 0) {
+		if (!sqe->sgl_buf)
+			sqe->sgl_buf = kzalloc(PAGE_SIZE, GFP_ATOMIC);
+		sqe->prp_list_pages[0] = sqe->sgl_buf;
+		page = sqe->sgl_buf;
+	} else {
+		page = sqe->prp_list_pages[index];
+		if (!page) {
+			page = kzalloc(PAGE_SIZE, GFP_ATOMIC);
+			sqe->prp_list_pages[index] = page;
+		}
+	}
+	if (page)
+		memset(page, 0, PAGE_SIZE);
+	return page;
+}
+
 static blk_status_t nvme_qdma_setup_prps(struct nvme_qdma_ctrl *ctrl,
 										 struct nvme_qdma_request *iod, struct nvme_qdma_sqe *sqe,
-										 struct nvme_rw_command *cmnd, int length, int dma_dir,
+										 struct nvme_rw_command *cmnd, int length,
 										 bool fill_lba)
 {
 	struct scatterlist *sg = sqe->sg;
@@ -925,8 +1032,8 @@ static blk_status_t nvme_qdma_setup_prps(struct nvme_qdma_ctrl *ctrl,
 	int offset = dma_addr & (page_size - 1);
 	__le64 *prp_list;
 	dma_addr_t first_dma;
-	dma_addr_t prp_dma = pci_map_page(ctrl->device->xpdev->pdev, virt_to_page(sqe->sgl_buf),
-									  0, PAGE_SIZE, dma_dir);
+	dma_addr_t prp_dma;
+	unsigned int list_page = 0;
 	int i;
 
 	/* get PF id */
@@ -956,17 +1063,39 @@ static blk_status_t nvme_qdma_setup_prps(struct nvme_qdma_ctrl *ctrl,
 		goto done;
 	}
 
-	prp_list = sqe->sgl_buf;
+	prp_list = nvme_qdma_get_prp_list_page(sqe, 0);
 	if (!prp_list) {
 		first_dma = dma_addr;
 		sqe->npages = -1;
 		return BLK_STS_RESOURCE;
 	}
+	prp_dma = pci_map_page(ctrl->device->xpdev->pdev,
+				virt_to_page(prp_list), 0, PAGE_SIZE, DMA_TO_DEVICE);
+	if (pci_dma_mapping_error(ctrl->device->xpdev->pdev, prp_dma))
+		return BLK_STS_RESOURCE;
+	sqe->prp_list_dmas[0] = prp_dma;
+	sqe->nr_prp_list_pages = 1;
 
 	first_dma = prp_dma;
 	i = 0;
 	for (;;) {
-		BUG_ON(i == page_size >> 3);
+		if (i == page_size >> 3) {
+			__le64 *old_prp_list = prp_list;
+
+			list_page++;
+			prp_list = nvme_qdma_get_prp_list_page(sqe, list_page);
+			if (!prp_list)
+				return BLK_STS_RESOURCE;
+			prp_dma = pci_map_page(ctrl->device->xpdev->pdev,
+						virt_to_page(prp_list), 0, PAGE_SIZE, DMA_TO_DEVICE);
+			if (pci_dma_mapping_error(ctrl->device->xpdev->pdev, prp_dma))
+				return BLK_STS_RESOURCE;
+			sqe->prp_list_dmas[list_page] = prp_dma;
+			sqe->nr_prp_list_pages = list_page + 1;
+			prp_list[0] = old_prp_list[i - 1];
+			old_prp_list[i - 1] = cpu_to_le64(prp_dma | addr_prefix);
+			i = 1;
+		}
 		prp_list[i] = cpu_to_le64((dma_addr) | addr_prefix);
 		i++;
 		dma_len -= page_size;
@@ -1525,7 +1654,7 @@ static int nvme_qdma_configure_admin_queue(struct nvme_qdma_ctrl *ctrl,
 		goto out_stop_queue;
 
 	ctrl->ctrl.max_segments = ctrl->max_fr_pages;
-	ctrl->ctrl.max_hw_sectors = ctrl->max_fr_pages << (ilog2(SZ_4K) - 9);
+	ctrl->ctrl.max_hw_sectors = NVME_QDMA_MAX_IO_BYTES >> 9;
 
 	blk_mq_unquiesce_queue(ctrl->ctrl.admin_q);
 
@@ -1922,8 +2051,7 @@ static void nvme_qdma_unmap_data(struct nvme_qdma_queue *queue,
 			//	kfree(sqe->sg);
 			//}
 			//else
-				mempool_free(sqe->sg, queue->ctrl->iod_mempool);
-			sqe->sg = NULL;
+				nvme_qdma_free_sg(queue->ctrl, sqe);
 		}
 		list_del(&sqe->entry);
 		if (unlikely(queue->qid == 0 || ctrl->sqe_mempool == NULL)) {
@@ -2332,17 +2460,19 @@ static int nvme_qdma_map_data(struct nvme_qdma_queue *queue,
 {
 	struct nvme_qdma_request *req = blk_mq_rq_to_pdu(rq);
 	struct nvme_qdma_sqe *sqe = list_first_entry_or_null(&req->sqe_list, struct nvme_qdma_sqe, entry);
+	unsigned int nr_phys_segments = blk_rq_nr_phys_segments(rq);
 
 	// dev->xpdev->pdev->dev;
 	// unsigned long dev_hndl = dev->dev;
 	int nr_mapped;
+	blk_status_t prp_status;
 
 	req->num_sge = 1;
 	// refcount_set(&req->ref, 2); /* send and recv completions */
 
-	pr_debug("blk_rq_nr_phys_segments is %u\n", blk_rq_nr_phys_segments(rq));
+	pr_debug("blk_rq_nr_phys_segments is %u\n", nr_phys_segments);
 
-	if (!blk_rq_nr_phys_segments(rq)) {
+	if (!nr_phys_segments) {
 		if(sqe->sgl_buf != NULL)
 			kfree(sqe->sgl_buf);
 		sqe->sgl_buf = NULL;
@@ -2372,15 +2502,14 @@ static int nvme_qdma_map_data(struct nvme_qdma_queue *queue,
 		return 0;
 	} else {
 		if(nvme_is_slm_rw(c)){
-			//only slm read write could work only prepare for operate host data bigger than 128KB
-			sqe->sg = kmalloc(sizeof(struct scatterlist) * 256, GFP_KERNEL);
+			/* Allocate large SLM scatterlists in page-sized chunks. */
+			if (nvme_qdma_alloc_dynamic_sg(sqe, nr_phys_segments))
+				goto out_free_sg;
 			pr_debug("map special data\n");
-			if(sqe->sg){
-				sg_init_table(sqe->sg,256);
-			}
 		}
 		else{
 			sqe->sg = mempool_alloc(queue->ctrl->iod_mempool, GFP_ATOMIC);
+			sqe->sg_dynamic = false;
 			if(sqe->sg){
 				sg_init_table(sqe->sg, blk_rq_nr_phys_segments(rq));
 			}
@@ -2394,8 +2523,25 @@ static int nvme_qdma_map_data(struct nvme_qdma_queue *queue,
 									 rq_dma_dir(rq), DMA_ATTR_NO_WARN);
 		if (!nr_mapped)
 			goto out_free_sg;
+		sqe->dma_mapped = true;
+		sqe->dma_dir = rq_dma_dir(rq);
 		nvmq_print_sgl(sqe->sg, sqe->nents);
-		nvme_qdma_setup_prps(queue->ctrl, req, sqe, &c->rw, blk_rq_payload_bytes(rq), rq_dma_dir(rq), false);
+		prp_status = nvme_qdma_setup_prps(queue->ctrl, req, sqe, &c->rw,
+				blk_rq_payload_bytes(rq), false);
+		if (prp_status != BLK_STS_OK) {
+			pr_warn("failed to build PRP chain for %u-byte request: status=%u pages=%u\n",
+				blk_rq_payload_bytes(rq), prp_status,
+				sqe->nr_prp_list_pages);
+			nvme_qdma_free_sg(queue->ctrl, sqe);
+			return prp_status == BLK_STS_RESOURCE ? -ENOMEM : -EIO;
+		}
+		if (nvme_is_slm_rw(c) &&
+		    blk_rq_payload_bytes(rq) >= 32U * 1024U * 1024U)
+			pr_notice("SLM PRP chain ready: bytes=%u sg_nents=%d dma_nents=%d list_pages=%u prp1=0x%llx prp2=0x%llx\n",
+				blk_rq_payload_bytes(rq), sqe->nents, nr_mapped,
+				sqe->nr_prp_list_pages,
+				(unsigned long long)le64_to_cpu(c->rw.dptr.prp1),
+				(unsigned long long)le64_to_cpu(c->rw.dptr.prp2));
 	/*	
 		if(queue->qid != 0 && c->common.opcode == 1 && c->rw.slba == 0 ){
 		
@@ -2432,8 +2578,8 @@ static int nvme_qdma_map_data(struct nvme_qdma_queue *queue,
 		return 0;
 out_free_sg:
 		pr_warning("failed at out_free_sg");
-		mempool_free(sqe->sg, queue->ctrl->iod_mempool);
-		return BLK_STS_RESOURCE;
+		nvme_qdma_free_sg(queue->ctrl, sqe);
+		return -ENOMEM;
 	}
 }
 
@@ -2441,6 +2587,20 @@ static int nvme_qdma_qe_send_done(struct qdma_request *qdma_req, unsigned int by
 {
 	struct nvme_qdma_request *req = container_of(qdma_req, struct nvme_qdma_request, qdma_req);
 	struct request *rq = blk_mq_rq_from_pdu(req);
+	struct nvme_qdma_sqe *sqe;
+	struct nvme_command *cmd;
+
+	if (!list_empty(&req->sqe_list)) {
+		sqe = list_first_entry(&req->sqe_list, struct nvme_qdma_sqe, entry);
+		cmd = sqe->qe_data;
+		if (nvme_is_slm_rw(cmd) &&
+		    le32_to_cpu(cmd->common.cdw12) >= 32U * 1024U * 1024U)
+			pr_notice("SLM command H2C complete: qid=%u cid=%u opc=0x%x bytes=%u len=%u err=%d\n",
+				req->queue ? req->queue->qid : 0,
+				le16_to_cpu(cmd->common.command_id),
+				cmd->common.opcode, bytes_done,
+				le32_to_cpu(cmd->common.cdw12), err);
+	}
 
 	if (unlikely(err)) {
 		pr_err("Failed to send qdma request: %d\n", err);
@@ -3110,8 +3270,8 @@ static int __blk_rq_map_user_iov(struct request_queue *q, struct nvme_qdma_sqe *
 		struct rq_map_data *map_data, struct iov_iter *iter,
 		gfp_t gfp_mask, bool copy)
 {
-	// struct bio *bio, *orig_bio;
 	struct bio *bio;
+	struct bio *tail;
 
 	// if (copy)
 	// 	bio = bio_copy_user_iov(q, map_data, iter, gfp_mask);
@@ -3136,7 +3296,14 @@ static int __blk_rq_map_user_iov(struct request_queue *q, struct nvme_qdma_sqe *
 	// 	return ret;
 	// }
 
-	sqe->bio = bio;
+	if (!sqe->bio) {
+		sqe->bio = bio;
+	} else {
+		tail = sqe->bio;
+		while (tail->bi_next)
+			tail = tail->bi_next;
+		tail->bi_next = bio;
+	}
 
 	bio_get(bio);
 
@@ -3149,7 +3316,6 @@ static int nvme_qdma_rq_map_user_iov(struct request_queue *q,
 {
 	bool copy = false;
 	unsigned long align = q->dma_pad_mask | queue_dma_alignment(q);
-	struct bio *bio = NULL;
 	struct iov_iter i;
 	int ret = -EINVAL;
 
@@ -3167,20 +3333,19 @@ static int nvme_qdma_rq_map_user_iov(struct request_queue *q,
 
 	i = *iter;
 
-	ret =__blk_rq_map_user_iov(q, sqe, map_data, &i, gfp_mask, copy);
-	if (ret)
-		goto unmap_rq;
-	
-	bio = sqe->bio;
-
-	BUG_ON(iov_iter_count(&i));
+	do {
+		ret = __blk_rq_map_user_iov(q, sqe, map_data, &i,
+				gfp_mask, copy);
+		if (ret)
+			goto unmap_rq;
+	} while (iov_iter_count(&i));
 
 	// if (!bio_flagged(bio, BIO_USER_MAPPED))
 	// 	rq->rq_flags |= RQF_COPY_USER;
 	return 0;
 
 unmap_rq:
-	blk_rq_unmap_user(bio);
+	blk_rq_unmap_user(sqe->bio);
 fail:
 	sqe->bio = NULL;
 	return ret;
@@ -3219,7 +3384,8 @@ static int nvme_qdma_sqe_map_data(struct nvme_qdma_queue *queue, struct nvme_qdm
 		struct request *rq, struct nvme_qdma_sqe *sqe, struct nvme_command *c)
 {
 	int nr_mapped, ret;
-	unsigned short nr_phys_segments = 0;
+	blk_status_t prp_status;
+	unsigned int nr_phys_segments = 0;
 	unsigned int data_len;
 
 	bool is_compute_cmd = nvme_opcode_is_compute_cmd(c->common.opcode);
@@ -3228,18 +3394,25 @@ static int nvme_qdma_sqe_map_data(struct nvme_qdma_queue *queue, struct nvme_qdm
 
 	struct bvec_iter iter;
 	struct bio_vec bv;
+	struct bio *mapped_bio;
 
 	u64 ubuf = le64_to_cpu(memcpy_lba_from_host ? lba : c->rw.dptr.prp1);
-	u32 ulen = (le16_to_cpu(c->rw.length) + 1) * PAGE_SIZE;
+	u32 ulen = nvme_is_slm_rw(c) ? le32_to_cpu(c->common.cdw12) :
+		(le16_to_cpu(c->rw.length) + 1) * PAGE_SIZE;
 
 	pr_debug("opcode is 0x%x ubuf is %llX ulen is %u\n", c->common.opcode, ubuf, ulen);
 
 	ret = nvme_qdma_rq_map_user(rq->q, NULL, sqe, (void *)ubuf, ulen, GFP_KERNEL);
+	if (ret)
+		return ret;
 
-	data_len = sqe->bio->bi_iter.bi_size;
-
-	bio_for_each_bvec(bv, sqe->bio, iter)
-		nr_phys_segments++;
+	data_len = 0;
+	mapped_bio = sqe->bio;
+	for_each_bio(mapped_bio) {
+		data_len += mapped_bio->bi_iter.bi_size;
+		bio_for_each_bvec(bv, mapped_bio, iter)
+			nr_phys_segments++;
+	}
 
 	pr_debug("blk_rq_nr_phys_segments is %u\n", nr_phys_segments);
 
@@ -3249,10 +3422,17 @@ static int nvme_qdma_sqe_map_data(struct nvme_qdma_queue *queue, struct nvme_qdm
 		return nvme_qdma_set_sg_null(c);
 	}
 
-	sqe->sg = mempool_alloc(queue->ctrl->iod_mempool, GFP_ATOMIC);
+	if (nvme_is_slm_rw(c) || nr_phys_segments > NVMQ_MAX_SEGS) {
+		if (nvme_qdma_alloc_dynamic_sg(sqe, nr_phys_segments))
+			goto out_free_sg;
+	} else {
+		sqe->sg = mempool_alloc(queue->ctrl->iod_mempool, GFP_ATOMIC);
+		sqe->sg_dynamic = false;
+	}
 	if (!sqe->sg)
 		goto out_free_sg;
-	sg_init_table(sqe->sg, nr_phys_segments);
+	if (!sqe->sg_dynamic)
+		sg_init_table(sqe->sg, nr_phys_segments);
 	sqe->nents = nvme_qdma_rq_map_sg(rq->q, sqe->bio, sqe->sg);
 	if (!sqe->nents)
 		goto out_free_sg;
@@ -3260,16 +3440,25 @@ static int nvme_qdma_sqe_map_data(struct nvme_qdma_queue *queue, struct nvme_qdm
 									sqe_dma_dir(sqe), DMA_ATTR_NO_WARN);
 	if (!nr_mapped)
 		goto out_free_sg;
+	sqe->dma_mapped = true;
+	sqe->dma_dir = sqe_dma_dir(sqe);
 	nvmq_print_sgl(sqe->sg, sqe->nents);
-	nvme_qdma_setup_prps(queue->ctrl, req, sqe, &c->rw, data_len, sqe_dma_dir(sqe), memcpy_lba_from_host);
+	prp_status = nvme_qdma_setup_prps(queue->ctrl, req, sqe, &c->rw,
+			data_len, memcpy_lba_from_host);
+	if (prp_status != BLK_STS_OK) {
+		pr_warn("failed to build user PRP chain for %u-byte request: status=%u pages=%u\n",
+			data_len, prp_status, sqe->nr_prp_list_pages);
+		nvme_qdma_free_sg(queue->ctrl, sqe);
+		return prp_status == BLK_STS_RESOURCE ? -ENOMEM : -EIO;
+	}
 	// ret = nvme_qdma_map_sgls(queue, req, c, req->nents);
 	// if (ret) {
 	// 	pr_err("map data to sgl failed: %d\n", ret);
 	// }
 	return 0;
 out_free_sg:
-	mempool_free(sqe->sg, queue->ctrl->iod_mempool);
-	return BLK_STS_RESOURCE;
+	nvme_qdma_free_sg(queue->ctrl, sqe);
+	return -ENOMEM;
 }
 
 static inline bool nvme_qdma_command_use_device_mem(struct nvme_command *cmd)
@@ -3371,6 +3560,7 @@ static blk_status_t nvme_qdma_queue_rq(struct blk_mq_hw_ctx *hctx,
 
 	list_for_each_entry(sqe, &req->sqe_list, entry) {
 		c = sqe->qe_data;
+		err = 0;
 		if (!is_kernel) {
 			err = nvme_qdma_map_data(queue, rq, c);
 		} else if (!nvme_qdma_command_use_device_mem(c)) {
@@ -3382,7 +3572,10 @@ static blk_status_t nvme_qdma_queue_rq(struct blk_mq_hw_ctx *hctx,
 		if (unlikely(err < 0)) {
 			dev_err(queue->ctrl->ctrl.device,
 					"Failed to map data (%d)\n", err);
-			nvmq_cleanup_cmd(rq);
+			/* The block layer may retry BLK_STS_RESOURCE.  Release every
+			 * SQE-owned SG/PRP mapping before returning so a retry starts
+			 * from a clean request instead of leaking the incomplete chain. */
+			nvme_qdma_unmap_data(queue, rq);
 			goto err;
 		}
 	}
@@ -3451,9 +3644,16 @@ static blk_status_t nvme_qdma_queue_rq(struct blk_mq_hw_ctx *hctx,
 	}
 
 	pr_debug("Submit q %u cmd %u op %u slba %llu len %u flags 0x%X\n", queue->qid, c->common.command_id, c->common.opcode, c->rw.slba, c->rw.length, c->common.flags);
-        
-
 	qdma_req_update_count(qdma_req);
+	if (nvme_is_slm_rw(c) &&
+	    le32_to_cpu(c->common.cdw12) >= 32U * 1024U * 1024U)
+		pr_notice("SLM command H2C submit: qid=%u cid=%u opc=0x%x nsid=0x%x len=%u prp1=0x%llx prp2=0x%llx capsule_bytes=%u\n",
+			queue->qid, le16_to_cpu(c->common.command_id),
+			c->common.opcode, le32_to_cpu(c->common.nsid),
+			le32_to_cpu(c->common.cdw12),
+			(unsigned long long)le64_to_cpu(c->common.dptr.prp1),
+			(unsigned long long)le64_to_cpu(c->common.dptr.prp2),
+			qdma_req->count);
 	//if(special_command_sel)
 	//print_qdma_req(qdma_req);
 	refcount_set(&req->ref, 2); /* send and recv completions */
@@ -4011,3 +4211,4 @@ module_init(nvme_qdma_init_module);
 module_exit(nvme_qdma_cleanup_module);
 
 MODULE_LICENSE("GPL v2");
+MODULE_VERSION("128m-prp-v5-trace");

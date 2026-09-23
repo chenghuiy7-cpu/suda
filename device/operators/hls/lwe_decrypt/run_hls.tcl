@@ -1,4 +1,4 @@
-# run_hls.tcl - HLS script for the native psi64 Big-LWE decrypt operator.
+# run_hls.tcl - HLS script for native/compact psi64 Big-LWE decryption.
 
 if {[llength $argv] >= 4} {
     set target_name [lindex $argv 2]
@@ -9,6 +9,9 @@ if {[llength $argv] >= 4} {
 }
 
 set project_name ${target_name}
+if {[info exists env(LWE_DECRYPT_HLS_PROJECT)]} {
+    set project_name $env(LWE_DECRYPT_HLS_PROJECT)
+}
 set solution_name "solution1"
 
 catch {unset env(DEBUG)}
@@ -31,11 +34,6 @@ if {[info exists env(LD_LIBRARY_PATH)]} {
 
 set top_dir [file normalize [file join [file dirname [info script]] "../.."]]
 set shared_include_dir [file join $top_dir "../shared_components/hls"]
-if {[info exists env(VITIS_HLS_ROOT)]} {
-    set vitis_hls_include "$env(VITIS_HLS_ROOT)/include"
-} else {
-    set vitis_hls_include "/opt/Xilinx_2020.2/Vitis_HLS/2020.2/include"
-}
 if {[info exists env(HLS_HOST_ARCH_INCLUDE)]} {
     set linux_arch_include $env(HLS_HOST_ARCH_INCLUDE)
 } else {
@@ -44,7 +42,14 @@ if {[info exists env(HLS_HOST_ARCH_INCLUDE)]} {
 if {![file isdirectory $linux_arch_include]} {
     error "Host architecture include directory not found: ${linux_arch_include}. Set HLS_HOST_ARCH_INCLUDE."
 }
-set compile_flags "-I${shared_include_dir} -I${vitis_hls_include} -I${linux_arch_include} -DUSING_XILINX_STREAM"
+# Let HLS choose synthesis or simulation headers; an explicit simulation
+# include directory shadows the synthesizable internal hls::stream model.
+# The bundled MPFR still expects this macro when the host GMP header is used.
+set compile_flags "-I${shared_include_dir} -I${linux_arch_include} -DUSING_XILINX_STREAM -D__gmp_const=const"
+set test_flags $compile_flags
+if {[info exists env(LWE_DECRYPT_TEST_SMOKE)] && $env(LWE_DECRYPT_TEST_SMOKE) eq "1"} {
+    append test_flags " -DLWE_DECRYPT_COSIM_SMOKE"
+}
 
 proc repack_ip_with_safe_revision {project_name solution_name target_name} {
     set ip_dir [file join [pwd] $project_name $solution_name impl ip]
@@ -77,7 +82,7 @@ proc repack_ip_with_safe_revision {project_name solution_name target_name} {
 puts "Creating/opening project: ${project_name}"
 open_project -reset ${project_name}
 add_files ${target_name}.cpp -cflags "${compile_flags}"
-add_files -tb test.cpp -cflags "${compile_flags}"
+add_files -tb test.cpp -cflags "${test_flags}"
 set_top lwe_decrypt
 
 open_solution -reset ${solution_name}

@@ -47,7 +47,7 @@ constexpr uint32_t kPredicateEq = 1;
 constexpr uint32_t kFilterOutputQuantity = 1;
 constexpr uint32_t kMaxCopyLbasPerRange = 32;
 constexpr size_t kDefaultSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024 * 1024;
 constexpr int kSlmReadEintrMaxRetries = 16;
 constexpr size_t kLogicalWordsPerCiphertext = kMaskDimension + 1;
 constexpr size_t kPacketsPerCiphertext = (kMaskDimension / 8) + 1;
@@ -128,7 +128,7 @@ void print_usage(const char* argv0)
         "  --input-lbas N      copy N 4KB SSD blocks to input SLM\n"
         "                      (default: minimum needed for all records)\n"
         "  --slm-read-chunk-bytes N\n"
-        "                      output SLM read size: 4KB..128KB, 4KB aligned\n"
+        "                      output SLM read size: 4KB..128MiB, 4KB aligned\n"
         "                      (default: 131072; use 4096 for legacy mode)\n"
         "  --slm-read-queue-depth N\n"
         "                      concurrent SLM reads: 1, 2, or 4 (default: 1)\n"

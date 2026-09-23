@@ -40,9 +40,9 @@ constexpr uint32_t kDefaultPlaintextBytes = 1;
 constexpr uint32_t kMaxCopyLbasPerRange = 32;
 constexpr uint32_t kMaxSlmToSsdCopyRanges = 64;
 constexpr size_t kDefaultSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kDefaultSlmWriteChunkBytes = kLbaSize;
-constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024 * 1024;
+constexpr size_t kDefaultSlmWriteChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024 * 1024;
 constexpr int kSlmReadEintrMaxRetries = 16;
 constexpr size_t kLogicalWordsPerCiphertext = kMaskDimension + 1;
 constexpr size_t kOutputDonePacketBytes = kAxisBytes;
@@ -124,8 +124,8 @@ void print_usage(const char* argv0)
         "  --scalar N         remote u8 ADDS scalar (default: 1)\n"
         "  --remote-operation adds|echo remote operation (default: adds)\n"
         "                      echo measures same-size TCP/protocol cost without HPU\n"
-        "  --slm-read-chunk-bytes N 4096..131072, 4KB aligned (default: 131072)\n"
-        "  --slm-write-chunk-bytes N 4096..131072, 4KB aligned (default: 4096)\n"
+        "  --slm-read-chunk-bytes N 4096..134217728, 4KB aligned (default: 131072)\n"
+        "  --slm-write-chunk-bytes N 4096..134217728, 4KB aligned (default: 131072)\n"
         "  --connect-timeout-ms N TCP connect timeout (default: 10000)\n"
         "  --io-timeout-secs N TCP send/receive timeout (default: 300)\n"
         "  --max-response-bytes N response allocation limit (default: 512MiB)\n"

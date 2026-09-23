@@ -18,7 +18,8 @@ namespace {
 
 constexpr size_t kLbaSize = 4096;
 constexpr size_t kAxisBytes = 64;
-constexpr size_t kSlmWriteChunkBytes = kLbaSize;
+constexpr size_t kDefaultSlmWriteChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024 * 1024;
 constexpr size_t kSlmReadChunkBytes = 128 * 1024;
 constexpr int kEintrRetries = 16;
 constexpr uint32_t kComputeNsid = 2;
@@ -29,7 +30,6 @@ constexpr uint32_t kCarryWidth = 2;
 constexpr uint32_t kPaddingWidth = 1;
 constexpr uint32_t kDeltaLog2 = 59;
 constexpr uint64_t kDelta = uint64_t{1} << kDeltaLog2;
-constexpr uint32_t kInputLayoutHpuNative = 1;
 constexpr size_t kLogicalWordsPerLwe = kMaskDimension + 1;
 constexpr size_t kHpuPcCount = 2;
 constexpr size_t kHpuPcGroupWords = 16;
@@ -48,6 +48,7 @@ enum class InputFormat {
     kAuto,
     kLweHls01,
     kHpuNative,
+    kLogical,
 };
 
 struct Options {
@@ -58,9 +59,11 @@ struct Options {
     const char* admin_device = "nvmq0";
     const char* io_device = "nvmq0n1";
     InputFormat input_format = InputFormat::kAuto;
+    uint32_t input_layout = 1;
     uint32_t plaintext_bytes = 0;
     uint32_t operator_type_id = 3;
     uint32_t program_id = 12;
+    size_t slm_write_chunk_bytes = kDefaultSlmWriteChunkBytes;
     uint8_t expected_first = 0;
     bool expected_first_set = false;
     bool inspect_only = false;
@@ -69,10 +72,11 @@ struct Options {
 };
 
 struct CiphertextInput {
-    std::vector<uint8_t> native_bytes;
+    std::vector<uint8_t> payload_bytes;
     std::vector<uint8_t> expected;
     uint32_t plaintext_bytes = 0;
     std::string source_layout;
+    uint32_t input_layout = 1;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -92,10 +96,12 @@ void print_usage(const char* argv0)
     fprintf(
         stderr,
         "Usage: %s --input PATH [options]\n"
-        "  --input PATH       LWEHLS01 logical dump or raw HPU-native payload\n"
-        "  --input-format F   auto|lwehls01|hpu-native (default: auto)\n"
+        "  --input PATH       LWEHLS01 dump or raw native/logical payload\n"
+        "  --input-format F   auto|lwehls01|hpu-native|logical (default: auto)\n"
+        "  --fpga-input-layout hpu-native|cpu|cpu-padded (default: hpu-native)\n"
+        "                     cpu sends compact natural-order LWE directly\n"
         "  --plaintext-bytes N\n"
-        "                     raw HPU-native u8 count; LWEHLS01 infers it\n"
+        "                     raw payload u8 count; LWEHLS01 infers it\n"
         "  --key PATH         2048-byte binary Big-LWE key\n"
         "  --expect-file PATH expected packed u8 file for raw input\n"
         "  --expect N         optionally check the first decrypted u8\n"
@@ -104,6 +110,9 @@ void print_usage(const char* argv0)
         "  --program-id N     compute program slot (default: 12)\n"
         "  --admin DEV        NVMe admin device (default: nvmq0)\n"
         "  --io DEV           NVMe I/O device (default: nvmq0n1)\n"
+        "  --slm-write-chunk-bytes N\n"
+        "                     input SLM write size: 4KB..128MiB, 4KB aligned\n"
+        "                     (default: 131072)\n"
         "  --inspect-only     parse and repack input without accessing FPGA\n"
         "  --benchmark        print stage timings\n"
         "  --skip-output      do not write the decrypted u8 file\n"
@@ -172,8 +181,21 @@ bool parse_options(int argc, char** argv, Options* options)
                 options->input_format = InputFormat::kLweHls01;
             } else if (strcmp(text, "hpu-native") == 0) {
                 options->input_format = InputFormat::kHpuNative;
+            } else if (strcmp(text, "logical") == 0) {
+                options->input_format = InputFormat::kLogical;
             } else {
                 fprintf(stderr, "Invalid input format: %s\n", text);
+                return false;
+            }
+        } else if (strcmp(arg, "--fpga-input-layout") == 0) {
+            if (strcmp(text, "cpu") == 0) {
+                options->input_layout = 0;
+            } else if (strcmp(text, "cpu-padded") == 0) {
+                options->input_layout = 2;
+            } else if (strcmp(text, "hpu-native") == 0) {
+                options->input_layout = 1;
+            } else {
+                fprintf(stderr, "Invalid FPGA input layout: %s\n", text);
                 return false;
             }
         } else if (strcmp(arg, "--plaintext-bytes") == 0) {
@@ -182,6 +204,13 @@ bool parse_options(int argc, char** argv, Options* options)
                 return false;
             }
             options->plaintext_bytes = static_cast<uint32_t>(value);
+        } else if (strcmp(arg, "--slm-write-chunk-bytes") == 0) {
+            if (!parse_u64(text, &value) || value < kLbaSize ||
+                value > kMaxSlmWriteChunkBytes || value % kLbaSize != 0) {
+                fprintf(stderr, "Invalid SLM write chunk size: %s\n", text);
+                return false;
+            }
+            options->slm_write_chunk_bytes = static_cast<size_t>(value);
         } else if (strcmp(arg, "--operator-type") == 0) {
             if (!parse_u64(text, &value) || value > UINT8_MAX) {
                 fprintf(stderr, "Invalid operator type: %s\n", text);
@@ -366,9 +395,11 @@ bool parse_lwehls01(
             static_cast<unsigned long long>(expected_word_count));
         return false;
     }
-    const uint64_t native_bytes = item_count * kHpuNativeBytesPerU8;
-    if (native_bytes > INT_MAX) {
-        fprintf(stderr, "HPU-native input exceeds the runtime size limit\n");
+    const size_t natural_stride = options.input_layout == 2 ? 2056 : kLogicalWordsPerLwe;
+    const uint64_t payload_bytes = item_count * (options.input_layout != 1
+        ? kRadixBlockCount * natural_stride * 8 : kHpuNativeBytesPerU8);
+    if (payload_bytes > INT_MAX - (kLbaSize - 1)) {
+        fprintf(stderr, "Ciphertext input exceeds the runtime size limit\n");
         return false;
     }
 
@@ -401,7 +432,22 @@ bool parse_lwehls01(
         return false;
     }
 
-    input->native_bytes.assign(static_cast<size_t>(native_bytes), 0);
+    if (options.input_layout != 1) {
+        input->payload_bytes.assign(static_cast<size_t>(payload_bytes), 0);
+        for (size_t i = 0; i < logical_words.size(); ++i) {
+            store_le64(&input->payload_bytes,
+                (i / kLogicalWordsPerLwe) * natural_stride + i % kLogicalWordsPerLwe,
+                logical_words[i]);
+        }
+        input->plaintext_bytes = static_cast<uint32_t>(item_count);
+        input->input_layout = options.input_layout;
+        input->source_layout = options.input_layout == 2
+            ? "LWEHLS01-logical->64B-padded-natural-order"
+            : "LWEHLS01-logical->compact-natural-order";
+        return true;
+    }
+
+    input->payload_bytes.assign(static_cast<size_t>(payload_bytes), 0);
     const size_t lwe_count =
         static_cast<size_t>(item_count) * kRadixBlockCount;
     for (size_t lwe_index = 0; lwe_index < lwe_count; ++lwe_index) {
@@ -417,12 +463,12 @@ bool parse_lwehls01(
             const size_t pc_offset =
                 (group / kHpuPcCount) * kHpuPcGroupWords + lane;
             store_le64(
-                &input->native_bytes,
+                &input->payload_bytes,
                 native_base + pc * kHpuPcSlotWords + pc_offset,
                 logical_words[logical_base + natural_index]);
         }
         store_le64(
-            &input->native_bytes,
+            &input->payload_bytes,
             native_base + kHpuPcDataWords,
             logical_words[logical_base + kMaskDimension]);
     }
@@ -437,6 +483,10 @@ bool parse_hpu_native(
     const Options& options,
     CiphertextInput* input)
 {
+    if (options.input_layout != 1) {
+        fprintf(stderr, "Raw HPU-native input requires --fpga-input-layout hpu-native\n");
+        return false;
+    }
     uint64_t item_count = options.plaintext_bytes;
     if (item_count == 0) {
         if (file_bytes.empty() || file_bytes.size() % kHpuNativeBytesPerU8 != 0) {
@@ -470,11 +520,58 @@ bool parse_hpu_native(
         return false;
     }
 
-    input->native_bytes.assign(
+    input->payload_bytes.assign(
         file_bytes.begin(),
         file_bytes.begin() + payload_bytes);
     input->plaintext_bytes = static_cast<uint32_t>(item_count);
     input->source_layout = "raw-hpu-native-psi64-v80";
+    return true;
+}
+
+bool parse_logical(
+    const std::vector<uint8_t>& file_bytes,
+    const Options& options,
+    CiphertextInput* input)
+{
+    const uint32_t layout = options.input_layout == 2 ? 2 : 0;
+    const size_t stride = layout == 2 ? 2056 : kLogicalWordsPerLwe;
+    const size_t bytes_per_u8 = kRadixBlockCount * stride * 8;
+    uint64_t count = options.plaintext_bytes;
+    if (count == 0) {
+        if (file_bytes.empty() || file_bytes.size() % bytes_per_u8 != 0) {
+            fprintf(stderr, "Raw natural-order input requires %zuB per u8; "
+                            "pass --plaintext-bytes for an LBA-padded file\n", bytes_per_u8);
+            return false;
+        }
+        count = file_bytes.size() / bytes_per_u8;
+    }
+    if (count == 0 || count > UINT32_MAX ||
+        count * bytes_per_u8 > INT_MAX - (kLbaSize - 1)) {
+        fprintf(stderr, "Raw logical input size is unsupported\n");
+        return false;
+    }
+    const size_t bytes = static_cast<size_t>(count) * bytes_per_u8;
+    if (file_bytes.size() < bytes ||
+        std::any_of(file_bytes.begin() + bytes, file_bytes.end(),
+                    [](uint8_t value) { return value != 0; })) {
+        fprintf(stderr, "Raw logical input is truncated or has nonzero trailing data\n");
+        return false;
+    }
+    if (layout == 2) {
+        for (size_t lwe = 0; lwe < static_cast<size_t>(count) * kRadixBlockCount; ++lwe) {
+            for (size_t word = kLogicalWordsPerLwe; word < stride; ++word) {
+                if (load_le64(file_bytes, lwe * stride + word) != 0) {
+                    fprintf(stderr, "Nonzero per-LWE padding at LWE %zu word %zu\n", lwe, word);
+                    return false;
+                }
+            }
+        }
+    }
+    input->payload_bytes.assign(file_bytes.begin(), file_bytes.begin() + bytes);
+    input->plaintext_bytes = static_cast<uint32_t>(count);
+    input->input_layout = layout;
+    input->source_layout = layout == 2
+        ? "raw-64B-padded-natural-order" : "raw-compact-natural-order";
     return true;
 }
 
@@ -494,6 +591,9 @@ bool load_ciphertext_input(const Options& options, CiphertextInput* input)
     }
     if (format == InputFormat::kLweHls01) {
         return parse_lwehls01(file_bytes, options, input);
+    }
+    if (format == InputFormat::kLogical) {
+        return parse_logical(file_bytes, options, input);
     }
     return parse_hpu_native(file_bytes, options, input);
 }
@@ -544,7 +644,9 @@ bool verify_with_host_reference(
         uint8_t clear_u8 = 0;
         for (size_t block = 0; block < kRadixBlockCount; ++block) {
             const size_t lwe_index = item_index * kRadixBlockCount + block;
-            const size_t native_base = lwe_index * kHpuNativeWordsPerLwe;
+            const size_t native_base = lwe_index *
+                (input.input_layout == 1 ? kHpuNativeWordsPerLwe
+                    : input.input_layout == 2 ? 2056 : kLogicalWordsPerLwe);
             uint64_t dot = 0;
             for (size_t natural_index = 0;
                  natural_index < kMaskDimension;
@@ -557,13 +659,14 @@ bool verify_with_host_reference(
                     (group / kHpuPcCount) * kHpuPcGroupWords + lane;
                 if (key[natural_index] != 0) {
                     dot += load_le64(
-                        input.native_bytes,
-                        native_base + pc * kHpuPcSlotWords + pc_offset);
+                        input.payload_bytes,
+                        native_base + (input.input_layout != 1
+                            ? natural_index : pc * kHpuPcSlotWords + pc_offset));
                 }
             }
             const uint64_t body = load_le64(
-                input.native_bytes,
-                native_base + kHpuPcDataWords);
+                input.payload_bytes,
+                native_base + (input.input_layout != 1 ? kMaskDimension : kHpuPcDataWords));
             const uint64_t phase = body - dot;
             const uint64_t decoded =
                 ((phase + (kDelta / 2)) >> kDeltaLog2) & 3U;
@@ -612,7 +715,8 @@ void store_u64(uint8_t* data, size_t offset, uint64_t value)
 void build_context(
     uint8_t* context,
     const std::vector<uint8_t>& key,
-    uint32_t plaintext_bytes)
+    uint32_t plaintext_bytes,
+    uint32_t input_layout)
 {
     memset(context, 0, kLbaSize);
     // Host offset zero maps to HLS static context word 3 in OperatorController.
@@ -621,7 +725,7 @@ void build_context(
     store_u64(context, 8, kDelta);
     store_u32(context, 16, kMessageWidth);
     store_u32(context, 20, kRadixBlockCount);
-    store_u32(context, 24, kInputLayoutHpuNative);
+    store_u32(context, 24, input_layout);
 
     // Host offset 64 maps to HLS context word 4.
     for (size_t i = 0; i < key.size(); ++i) {
@@ -677,11 +781,12 @@ int transfer_slm(
     unsigned int mem_id,
     size_t bytes,
     void* buffer,
-    bool write)
+    bool write,
+    size_t write_chunk_bytes)
 {
     uint8_t* data = static_cast<uint8_t*>(buffer);
     const size_t chunk_limit =
-        write ? kSlmWriteChunkBytes : kSlmReadChunkBytes;
+        write ? write_chunk_bytes : kSlmReadChunkBytes;
     for (size_t offset = 0; offset < bytes;) {
         size_t chunk = std::min(chunk_limit, bytes - offset);
         int retries = 0;
@@ -758,7 +863,7 @@ int run_fpga(
     const std::vector<uint8_t>& key,
     double parse_pack_ms)
 {
-    const size_t input_bytes = input.native_bytes.size();
+    const size_t input_bytes = round_up_to_lba(input.payload_bytes.size());
     const size_t output_bytes =
         round_up_to_lba(static_cast<size_t>(input.plaintext_bytes) + kAxisBytes);
     void* input_buffer = nullptr;
@@ -773,12 +878,14 @@ int run_fpga(
         free(context_page);
         return 1;
     }
-    memcpy(input_buffer, input.native_bytes.data(), input_bytes);
+    memset(input_buffer, 0, input_bytes);
+    memcpy(input_buffer, input.payload_bytes.data(), input.payload_bytes.size());
     memset(output_buffer, 0, output_bytes);
     build_context(
         static_cast<uint8_t*>(context_page),
         key,
-        input.plaintext_bytes);
+        input.plaintext_bytes,
+        input.input_layout);
 
     int admin_fd = nvme_open(options.admin_device);
     int io_fd = nvme_open(options.io_device);
@@ -832,14 +939,15 @@ int run_fpga(
 
     fprintf(
         stderr,
-        "[lwe_decrypt] sizing plaintext_bytes=%u hpu_native_bytes=%zu "
+        "[lwe_decrypt] sizing plaintext_bytes=%u slm_input_bytes=%zu "
         "output_slm_bytes=%zu slm_write_chunk_bytes=%zu "
         "slm_write_requests=%zu slm_read_chunk_bytes=%zu\n",
         input.plaintext_bytes,
         input_bytes,
         output_bytes,
-        kSlmWriteChunkBytes,
-        (input_bytes + kSlmWriteChunkBytes - 1) / kSlmWriteChunkBytes,
+        options.slm_write_chunk_bytes,
+        (input_bytes + options.slm_write_chunk_bytes - 1) /
+            options.slm_write_chunk_bytes,
         kSlmReadChunkBytes);
 
     do {
@@ -870,15 +978,16 @@ int run_fpga(
         host_to_slm_start = Clock::now();
         fprintf(
             stderr,
-            "[lwe_decrypt] writing HPU-native ciphertext to input SLM "
+            "[lwe_decrypt] writing ciphertext to input SLM "
             "in %zu-byte chunks\n",
-            kSlmWriteChunkBytes);
+            options.slm_write_chunk_bytes);
         ret = transfer_slm(
             io_fd,
             input_mem_id,
             input_bytes,
             input_buffer,
-            true);
+            true,
+            options.slm_write_chunk_bytes);
         if (ret != 0) {
             break;
         }
@@ -998,7 +1107,8 @@ int run_fpga(
             output_mem_id,
             output_bytes,
             output_buffer,
-            false);
+            false,
+            options.slm_write_chunk_bytes);
         if (ret != 0) {
             break;
         }
@@ -1043,7 +1153,7 @@ int run_fpga(
         printf("decrypted_first_u8=0x%02x (%u)\n", actual[0], actual[0]);
         print_prefix("decrypted_prefix", actual, input.plaintext_bytes);
         printf("input_layout=%s\n", input.source_layout.c_str());
-        printf("hpu_native_input_bytes=%zu output_clear_bytes=%u\n",
+        printf("slm_input_bytes=%zu output_clear_bytes=%u\n",
                input_bytes,
                input.plaintext_bytes);
         printf("operator_type_id=%u program_id=%u rsid=%u\n",
@@ -1154,9 +1264,13 @@ int main(int argc, char** argv)
 
     printf("source_ciphertext=%s\n", options.input_path);
     printf("source_layout=%s\n", input.source_layout.c_str());
-    printf("plaintext_bytes=%u hpu_native_bytes=%zu\n",
+    printf("plaintext_bytes=%u ciphertext_payload_bytes=%zu\n",
            input.plaintext_bytes,
-           input.native_bytes.size());
+           input.payload_bytes.size());
+    printf("fpga_input_layout=%s layout_id=%u\n",
+           input.input_layout == 1 ? "hpu-native-psi64-v80"
+               : input.input_layout == 2 ? "64B-padded-natural-order" : "compact-natural-order",
+           input.input_layout);
     if (!input.expected.empty()) {
         print_prefix("expected_prefix", input.expected.data(), input.expected.size());
     }

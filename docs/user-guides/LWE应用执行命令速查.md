@@ -187,6 +187,11 @@ OUTPUT_CSV=remote_pipeline_benchmark_auto_lba.csv \
   | tee remote_pipeline_benchmark_summary.md
 ```
 
+当前应用的 SLM→Host 和 Host→SLM 默认请求均为 128 KiB，允许的单请求范围为
+4–256 KiB且必须按4 KiB对齐。ARM QDMA transport 的 `max_io_size` 同步为
+256 KiB。一个256 KiB请求由64个4 KiB PRP/IOV组成，但仍是一条NVMe命令，
+ARM MCDMA以一次multi-BD事务提交并在最后一个BD完成后返回。
+
 ## 6. 不过滤的 SSD→HPU→FPGA 解密→SSD：`vscode-lwe-full-pipeline`
 
 该程序把 SSD 前 128 个原始字节做远端 `+1`，FPGA 解密后从 SLM 直接 Copy 到目标 SSD。**覆盖目标 LBA 131072 的一个 4KB 页**。先确认第 1 节写入的 TPC-H 数据仍在源 LBA；`--expect` 是源 SSD 第一个字节，下面从同一参考文件计算：
@@ -222,6 +227,13 @@ set -o pipefail
 ./run_tpch_q6_update.sh 2>&1 | tee tpch_q6_full_update.log
 test_rc=${PIPESTATUS[0]}
 printf 'test_exit_code=%s\n' "$test_rc"
+```
+
+脚本默认读写粒度为128 KiB。验证256 KiB单请求路径时使用：
+
+```bash
+SLM_READ_CHUNK_BYTES=262144 SLM_WRITE_CHUNK_BYTES=262144 \
+  ./run_tpch_q6_update.sh 2>&1 | tee tpch_q6_full_update_256k.log
 ```
 
 预期 `selective SSD-to-remote-HPU-to-SSD update pipeline passed`、`selected_count=5`、`updated_count=5`、`destination_readback_checked=yes` 和退出码 0。当前 128 行样本中的行索引 `55,79,81,85,99`，`quantity` 由 `21,23,13,19,14` 变为 `22,24,14,20,15`。本流程使用 Host read/modify/write 保留每条记录其余字节；它与第 6 节直接将解密页 Copy 到 SSD 的落盘方式不同。

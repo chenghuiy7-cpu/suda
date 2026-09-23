@@ -14,6 +14,10 @@ server=${HPU_SERVER:-10.16.0.129}
 server_port=${HPU_SERVER_PORT:-19090}
 scalar=${HPU_SCALAR:-1}
 operation=${HPU_OPERATION:-adds}
+slm_read_chunk_bytes=${SLM_READ_CHUNK_BYTES:-131072}
+slm_write_chunk_bytes=${SLM_WRITE_CHUNK_BYTES:-131072}
+slm_read_queue_depth=${SLM_READ_QUEUE_DEPTH:-1}
+skip_ssd_prepare=${TPCH_SKIP_SSD_PREPARE:-0}
 key_path=${TPCH_LWE_KEY:-$suda_root/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin}
 binary="$tpch_test_dir/testdata/tpch_lineitem_512b.bin"
 diag_dir="$script_dir/testdata"
@@ -37,10 +41,22 @@ fi
 
 mkdir -p "$diag_dir"
 
-python3 "$tpch_test_dir/write_tpch_dataset_to_ssd.py" \
-    --input "$binary" \
-    --device "$ssd_device" \
-    --lba "$source_lba"
+case "$skip_ssd_prepare" in
+    0)
+        echo "[selective_full_runner] writing and verifying source TPC-H SSD image"
+        python3 -u "$tpch_test_dir/write_tpch_dataset_to_ssd.py" \
+            --input "$binary" \
+            --device "$ssd_device" \
+            --lba "$source_lba"
+        ;;
+    1)
+        echo "[selective_full_runner] reusing existing source SSD image without rewriting it"
+        ;;
+    *)
+        echo "TPCH_SKIP_SSD_PREPARE must be 0 or 1" >&2
+        exit 2
+        ;;
+esac
 
 make -C "$script_dir" -j2
 exec "$script_dir/vscode-selective-lwe-full-pipeline" \
@@ -57,6 +73,9 @@ exec "$script_dir/vscode-selective-lwe-full-pipeline" \
     --server-port "$server_port" \
     --scalar "$scalar" \
     --remote-operation "$operation" \
+    --slm-read-chunk-bytes "$slm_read_chunk_bytes" \
+    --slm-write-chunk-bytes "$slm_write_chunk_bytes" \
+    --slm-read-queue-depth "$slm_read_queue_depth" \
     --remote-native-output "$remote_native" \
     --remote-expected-output "$remote_expected" \
     --key "$key_path" \

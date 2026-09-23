@@ -10,6 +10,11 @@ SSD -> SLM -> FPGA lwe_encrypt -> Host memory -> TCP
 
 远端请求和响应都使用 `hpu-native-psi64-v80` 固定槽位布局。Host 不再把 HPU 结果转换为逻辑 LWE 后再交给解密算子。
 
+SLM 读写请求默认均为 128 KiB，可用 `--slm-read-chunk-bytes` 和
+`--slm-write-chunk-bytes` 设置为 4 KiB 对齐的 4 KiB–128 MiB。较大请求在
+Host 侧使用多页 PRP 链；ARM runtime 将其拆成连续的 1 MiB 窗口，每个窗口
+包含最多 256 个 4 KiB IOV，并各提交一次 multi-BD MCDMA 事务。
+
 ## 构建
 
 ```bash

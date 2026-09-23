@@ -48,9 +48,9 @@ constexpr uint32_t kPredicateEq = 1;
 constexpr uint32_t kFilterOutputQuantity = 1;
 constexpr uint32_t kMaxCopyLbasPerRange = 32;
 constexpr size_t kDefaultSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024;
-constexpr size_t kDefaultSlmWriteChunkBytes = kLbaSize;
-constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmReadChunkBytes = 128 * 1024 * 1024;
+constexpr size_t kDefaultSlmWriteChunkBytes = 128 * 1024;
+constexpr size_t kMaxSlmWriteChunkBytes = 128 * 1024 * 1024;
 constexpr int kSlmReadEintrMaxRetries = 16;
 constexpr size_t kLogicalWordsPerCiphertext = kMaskDimension + 1;
 constexpr size_t kPacketsPerCiphertext = (kMaskDimension / 8) + 1;
@@ -156,7 +156,7 @@ void print_usage(const char* argv0)
         "  --input-lbas N      copy N 4KB SSD blocks to input SLM\n"
         "                      (default: minimum needed for all records)\n"
         "  --slm-read-chunk-bytes N\n"
-        "                      output SLM read size: 4KB..128KB, 4KB aligned\n"
+        "                      output SLM read size: 4KB..128MiB, 4KB aligned\n"
         "                      (default: 131072; use 4096 for legacy mode)\n"
         "  --slm-read-queue-depth N\n"
         "                      concurrent SLM reads: 1, 2, or 4 (default: 1)\n"
@@ -170,7 +170,7 @@ void print_usage(const char* argv0)
         "  --plaintext-output PATH optional decrypted selected-byte dump\n"
         "  --remote-native-output PATH save the verified remote HPU-native response\n"
         "  --remote-expected-output PATH save its Host-decoded expected u8 bytes\n"
-        "  --slm-write-chunk-bytes N 4096..131072, 4KB aligned\n"
+        "  --slm-write-chunk-bytes N 4096..134217728, 4KB aligned (default: 131072)\n"
         "  --connect-timeout-ms N TCP connect timeout (default: 10000)\n"
         "  --io-timeout-secs N TCP I/O timeout (default: 300)\n"
         "  --max-response-bytes N response limit (default: 512MiB)\n"
@@ -1720,7 +1720,13 @@ bool run_decrypt_to_host(
         timings->slm_zero_ms = elapsed_clock_ms(stage_start, Clock::now());
 
         stage_start = Clock::now();
-        fprintf(stderr, "[selective_full] writing remote result to decrypt input SLM\n");
+        fprintf(stderr,
+                "[selective_full] writing remote result to decrypt input SLM "
+                "bytes=%zu chunk_bytes=%zu requests=%zu\n",
+                native_bytes,
+                options.slm_write_chunk_bytes,
+                (native_bytes + options.slm_write_chunk_bytes - 1) /
+                    options.slm_write_chunk_bytes);
         ret = write_slm_in_chunks(io_fd, input_mem_id, input_buffer,
                                   native_bytes, options.slm_write_chunk_bytes);
         if (ret != 0) break;

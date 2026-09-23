@@ -91,7 +91,21 @@ HPU_SERVER=10.16.0.129
 HPU_SERVER_PORT=19090
 HPU_SCALAR=1
 HPU_OPERATION=adds
+SLM_READ_CHUNK_BYTES=131072
+SLM_WRITE_CHUNK_BYTES=131072
+SLM_READ_QUEUE_DEPTH=1
+TPCH_SKIP_SSD_PREPARE=0
 ```
+
+The SLM read and write chunk sizes accept 4 KiB-aligned values from 4096 to
+134217728. Host-to-SLM writes now default to 128 KiB. Set both chunk variables
+to 134217728 to cover a ciphertext batch of up to 128 MiB with one NVMe command. The
+Host builds a chained PRP list and the ARM runtime submits consecutive 1 MiB,
+256-IOV multi-BD MCDMA windows.
+
+After one run has written and verified the source image, set
+`TPCH_SKIP_SSD_PREPARE=1` for request-size comparisons. This avoids repeating
+the ordinary block-device write/readback before every FPGA pipeline run.
 
 Before FPGA decryption, the runner saves the Host-verified remote response and
 its expected plaintext to:
