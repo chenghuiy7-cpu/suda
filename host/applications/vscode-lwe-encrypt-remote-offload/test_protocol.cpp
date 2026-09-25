@@ -83,13 +83,16 @@ bool serve_one(int listen_fd, uint64_t expected_operation)
     }
     uint64_t payload_bytes =
         load_le64(header.data() + 8 + kHeaderFields * 8);
+    size_t operand_count =
+        lwe_remote::operation_operand_count(expected_operation);
     bool valid =
         fields[0] == 2 &&
         fields[1] == lwe_remote::kFrameRequest &&
         fields[3] == expected_operation &&
         fields[4] == 0 &&
         fields[5] == 7 &&
-        payload_bytes == fields[13] * sizeof(uint64_t);
+        payload_bytes ==
+            fields[13] * operand_count * sizeof(uint64_t);
     if (!valid) {
         close(fd);
         return false;
@@ -100,11 +103,15 @@ bool serve_one(int listen_fd, uint64_t expected_operation)
         close(fd);
         return false;
     }
-    for (uint64_t i = 0; i < fields[13]; ++i) {
+    uint64_t request_word_count = fields[13] * operand_count;
+    for (uint64_t i = 0; i < request_word_count; ++i) {
         if (load_le64(payload.data() + i * 8) != i) {
             close(fd);
             return false;
         }
+    }
+    payload.resize(fields[13] * sizeof(uint64_t));
+    for (uint64_t i = 0; i < fields[13]; ++i) {
         store_le64(payload.data() + i * 8, i + 100);
     }
 
@@ -112,6 +119,10 @@ bool serve_one(int listen_fd, uint64_t expected_operation)
     for (size_t i = 0; i < kHeaderFields; ++i) {
         store_le64(header.data() + 8 + i * 8, fields[i]);
     }
+    payload_bytes = payload.size();
+    store_le64(
+        header.data() + 8 + kHeaderFields * 8,
+        payload_bytes);
     std::array<uint8_t, kTimingBytes> timing = {};
     memcpy(timing.data(), "LWEBEN01", 8);
     uint64_t timing_fields[kTimingFields] = {
@@ -180,7 +191,8 @@ int main()
             serve_one(listen_fd, lwe_remote::kOperationAddScalarU8) &&
             serve_one(
                 listen_fd,
-                lwe_remote::kOperationAddScalarU8HpuNativeRoundTrip);
+                lwe_remote::kOperationAddScalarU8HpuNativeRoundTrip) &&
+            serve_one(listen_fd, lwe_remote::kOperationAddU8);
     });
 
     lwe_remote::BatchMetadata metadata = {
@@ -255,6 +267,25 @@ int main()
         64 * 1024,
         &native_result,
         &error);
+    std::vector<uint64_t> binary_request_words(2 * metadata.ciphertext_word_count);
+    for (uint64_t i = 0; i < binary_request_words.size(); ++i) {
+        binary_request_words[i] = i;
+    }
+    lwe_remote::RpcResult binary_result;
+    bool binary_client_ok = lwe_remote::compute_u8(
+        "127.0.0.1",
+        ntohs(address.sin_port),
+        44,
+        lwe_remote::kOperationAddU8,
+        7,
+        metadata,
+        binary_request_words,
+        1000,
+        5,
+        4096,
+        &binary_result,
+        &error);
+
     server.join();
     close(listen_fd);
     if (!cpu_result_ok) {
@@ -274,8 +305,24 @@ int main()
             return 1;
         }
     }
+    if (!binary_client_ok ||
+        binary_result.ciphertext_words.size() !=
+            metadata.ciphertext_word_count ||
+        lwe_remote::operation_operand_count(lwe_remote::kOperationAddU8) != 2 ||
+        !lwe_remote::operation_returns_bool(lwe_remote::kOperationEqU8)) {
+        fprintf(stderr, "binary protocol test failed: %s\n", error.c_str());
+        return 1;
+    }
+    for (uint64_t i = 0; i < binary_result.ciphertext_words.size(); ++i) {
+        if (binary_result.ciphertext_words[i] != i + 100) {
+            fprintf(stderr, "binary protocol response mismatch at %llu\n",
+                    static_cast<unsigned long long>(i));
+            return 1;
+        }
+    }
 
     printf("lwe_remote_protocol_test=passed\n");
+    printf("binary_ciphertext_protocol_test=passed\n");
     printf("hpu_native_roundtrip_protocol_test=passed\n");
     printf("wire_magic=LWERPC01 header_bytes=%zu payload_bytes=128\n",
            kHeaderBytes);

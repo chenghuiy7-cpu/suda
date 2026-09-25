@@ -1,5 +1,5 @@
-//! SUDA-owned TCP service that executes scalar addition over ciphertexts on an
-//! unmodified upstream TFHE-rs HPU backend.
+//! SUDA-owned TCP service that executes batched u8 operations over ciphertexts
+//! on an unmodified upstream TFHE-rs HPU backend.
 
 use clap::Parser;
 use std::fs;
@@ -8,24 +8,20 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 use tfhe::integer::hpu::ciphertext::HpuRadixCiphertext;
-use tfhe::integer::CompressedServerKey;
+use tfhe::integer::{CompressedServerKey, IntegerCiphertext};
 use tfhe::shortint::parameters::{KeySwitch32PBSParameters, ShortintParameterSet};
 use tfhe_hpu_backend::prelude::*;
 
 mod bridge;
 mod protocol;
 
-use protocol::{
-    read_frame, write_ciphertext_frame_version, write_error_frame_version, write_server_timing,
-    BatchMetadata, ServerTiming, FRAME_REQUEST, FRAME_RESPONSE, OP_ADD_SCALAR_U8,
-    OP_ADD_SCALAR_U8_HPU_NATIVE, OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP, OP_ECHO_U8, VERSION_TIMING,
-};
+use protocol::*;
 
 const DEFAULT_SERVER_KEY_FILE: &str = "psi64_integer_compressed_server_key.bincode";
 
 #[derive(Parser, Debug)]
 #[command(
-    long_about = "Listen for LWE remote-compute requests, execute u8 ADDS on a real HPU, and return ciphertext results. This process never loads ClientKey."
+    long_about = "Listen for batched LWE remote-compute requests, execute u8 arithmetic, comparison, bitwise, shift, and rotate operations on a real HPU, and return ciphertext results. This process never loads ClientKey."
 )]
 struct Args {
     #[arg(long, default_value = "0.0.0.0:19090")]
@@ -41,10 +37,11 @@ struct Args {
     #[arg(long, default_value = DEFAULT_SERVER_KEY_FILE)]
     server_key: PathBuf,
 
-    #[arg(long, default_value_t = 300)]
+    #[arg(long, default_value_t = 3600)]
     io_timeout_secs: u64,
 
-    #[arg(long, default_value_t = 512 * 1024 * 1024)]
+    /// Maximum wire payload per request. The default is 4 GiB on the 64-bit HPU host.
+    #[arg(long, default_value_t = 4 * 1024 * 1024 * 1024_usize)]
     max_request_bytes: usize,
 
     /// Exit after serving one connection.
@@ -277,19 +274,39 @@ fn process_request(
             request.status
         ));
     }
-    if request.operation != OP_ADD_SCALAR_U8
-        && request.operation != OP_ADD_SCALAR_U8_HPU_NATIVE
-        && request.operation != OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP
-        && request.operation != OP_ECHO_U8
-    {
+
+    let base = base_operation(request.operation);
+    if !is_supported_operation(request.operation) {
         return Err(format!("unsupported operation {}", request.operation));
     }
-    let scalar = u8::try_from(request.scalar)
-        .map_err(|_| format!("u8 scalar is out of range: {}", request.scalar))?;
     bridge::validate_metadata(&request.metadata, params)?;
+    if input_is_hpu_native(request.operation) {
+        request.metadata.validate_hpu_native_payload()?;
+    } else {
+        request.metadata.validate_cpu_payload()?;
+    }
+    let expected_payload_words = request
+        .metadata
+        .ciphertext_word_count
+        .checked_mul(operation_operand_count(request.operation))
+        .ok_or_else(|| "request payload word count overflow".to_string())?;
+    if request.ciphertext_words.len() != expected_payload_words {
+        return Err(format!(
+            "request payload word count mismatch: payload={}, expected={expected_payload_words}",
+            request.ciphertext_words.len()
+        ));
+    }
+    let scalar = if operation_uses_scalar(base) {
+        Some(
+            u8::try_from(request.scalar)
+                .map_err(|_| format!("u8 scalar is out of range: {}", request.scalar))?,
+        )
+    } else {
+        None
+    };
     timing.request_validate = validate_start.elapsed();
 
-    if request.operation == OP_ECHO_U8 {
+    if base == OP_ECHO_U8 {
         let encode_start = Instant::now();
         let words = request.ciphertext_words.clone();
         timing.result_encode = encode_start.elapsed();
@@ -301,38 +318,44 @@ fn process_request(
         });
     }
 
-    let decode_start = Instant::now();
-    let native_roundtrip = request.operation == OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP;
-    let inputs = if request.operation == OP_ADD_SCALAR_U8 {
-        bridge::words_to_radix_ciphertexts(&request.metadata, &request.ciphertext_words, params)?
+    let output_native = output_is_hpu_native(request.operation);
+    let mut response_metadata = request.metadata.clone();
+    if operation_returns_bool(request.operation) {
+        response_metadata.radix_blocks_per_item = 1;
+    }
+    response_metadata.ciphertext_word_count = if output_native {
+        response_metadata.expected_hpu_native_word_count()?
     } else {
-        bridge::hpu_native_words_to_radix_ciphertexts(
-            &request.metadata,
-            &request.ciphertext_words,
-            hpu_device.params(),
-            params,
-        )?
+        response_metadata.expected_cpu_word_count()?
     };
-    timing.request_decode = decode_start.elapsed();
-    println!(
-        "request_decoded request_id={} operation={} items={} decode_ms={:.3}",
-        request.request_id,
-        operation_name(request.operation),
-        request.metadata.item_count,
-        timing.request_decode.as_secs_f64() * 1000.0,
-    );
 
-    // Keep only one input/output pair resident in the HPU ciphertext pool at a
-    // time. Holding the complete batch before dispatch makes a large request
-    // vulnerable to pool allocation stalls and delays the first HPU command.
-    let mut cpu_outputs = Vec::with_capacity(request.metadata.item_count);
-    for (item_index, input) in inputs.into_iter().enumerate() {
+    // Decode, execute, synchronize, and encode one item at a time. This keeps
+    // HPU residency and intermediate CPU memory independent of batch size.
+    let mut result_words = Vec::new();
+    result_words
+        .try_reserve_exact(response_metadata.ciphertext_word_count)
+        .map_err(|err| format!("unable to reserve response buffer: {err}"))?;
+    for item_index in 0..request.metadata.item_count {
+        let decode_start = Instant::now();
+        let lhs = decode_operand_item(request, 0, item_index, hpu_device, params)?;
+        let rhs = if operation_operand_count(request.operation) == 2 {
+            Some(decode_operand_item(
+                request, 1, item_index, hpu_device, params,
+            )?)
+        } else {
+            None
+        };
+        timing.request_decode += decode_start.elapsed();
+
         let prepare_start = Instant::now();
-        let hpu_input = HpuRadixCiphertext::from_radix_ciphertext(&input, hpu_device);
+        let hpu_lhs = HpuRadixCiphertext::from_radix_ciphertext(&lhs, hpu_device);
+        let hpu_rhs = rhs
+            .as_ref()
+            .map(|value| HpuRadixCiphertext::from_radix_ciphertext(value, hpu_device));
         timing.hpu_prepare += prepare_start.elapsed();
 
         let enqueue_start = Instant::now();
-        let hpu_output = &hpu_input + u128::from(scalar);
+        let hpu_output = execute_hpu_operation(base, &hpu_lhs, hpu_rhs.as_ref(), scalar)?;
         timing.hpu_enqueue += enqueue_start.elapsed();
 
         // HPU commands are asynchronous. wait() includes command completion
@@ -342,12 +365,43 @@ fn process_request(
         timing.hpu_wait_sync += wait_start.elapsed();
 
         let output_start = Instant::now();
-        cpu_outputs.push(hpu_output.to_radix_ciphertext());
+        let cpu_output = hpu_output.to_radix_ciphertext();
         timing.hpu_output_convert += output_start.elapsed();
-        drop(hpu_output);
-        drop(hpu_input);
 
-        if (item_index + 1) % 16 == 0 || item_index + 1 == request.metadata.item_count {
+        let encode_start = Instant::now();
+        let mut item_metadata = response_metadata.clone();
+        item_metadata.item_count = 1;
+        item_metadata.ciphertext_word_count = if output_native {
+            item_metadata.expected_hpu_native_word_count()?
+        } else {
+            item_metadata.expected_cpu_word_count()?
+        };
+        if cpu_output.blocks().len() != item_metadata.radix_blocks_per_item {
+            return Err(format!(
+                "HPU result radix count mismatch at item={item_index}: result={}, expected={}",
+                cpu_output.blocks().len(),
+                item_metadata.radix_blocks_per_item
+            ));
+        }
+        if output_native {
+            result_words.extend(bridge::radix_ciphertexts_to_hpu_native_words(
+                &item_metadata,
+                std::slice::from_ref(&cpu_output),
+                hpu_device.params(),
+            )?);
+        } else {
+            result_words.extend(bridge::radix_ciphertexts_to_words(std::slice::from_ref(
+                &cpu_output,
+            )));
+        }
+        timing.result_encode += encode_start.elapsed();
+
+        drop(cpu_output);
+        drop(hpu_output);
+        drop(hpu_rhs);
+        drop(hpu_lhs);
+
+        if (item_index + 1) % 256 == 0 || item_index + 1 == request.metadata.item_count {
             println!(
                 "hpu_progress request_id={} completed={}/{}",
                 request.request_id,
@@ -357,21 +411,6 @@ fn process_request(
         }
     }
 
-    let encode_start = Instant::now();
-    let mut response_metadata = request.metadata.clone();
-    let result_words = if native_roundtrip {
-        response_metadata.ciphertext_word_count =
-            response_metadata.expected_hpu_native_word_count()?;
-        bridge::radix_ciphertexts_to_hpu_native_words(
-            &response_metadata,
-            &cpu_outputs,
-            hpu_device.params(),
-        )?
-    } else {
-        response_metadata.ciphertext_word_count = response_metadata.expected_cpu_word_count()?;
-        bridge::radix_ciphertexts_to_words(&cpu_outputs)
-    };
-    timing.result_encode = encode_start.elapsed();
     if result_words.len() != response_metadata.ciphertext_word_count {
         return Err(format!(
             "HPU result word count mismatch: result={}, expected={}",
@@ -379,15 +418,15 @@ fn process_request(
             response_metadata.ciphertext_word_count
         ));
     }
-    drop(cpu_outputs);
     let sanitizer_start = Instant::now();
     hpu_device.mem_sanitizer();
     timing.mem_sanitizer = sanitizer_start.elapsed();
     timing.remote_process = process_start.elapsed();
     println!(
-        "hpu_compute request_id={} operation=ADDS scalar={} items={} enqueue_ms={:.3} wait_sync_ms={:.3} process_ms={:.3}",
+        "hpu_compute request_id={} operation={} scalar={} items={} enqueue_ms={:.3} wait_sync_ms={:.3} process_ms={:.3}",
         request.request_id,
-        scalar,
+        operation_name(request.operation),
+        scalar.map_or_else(|| "-".to_string(), |value| value.to_string()),
         request.metadata.item_count,
         timing.hpu_enqueue.as_secs_f64() * 1000.0,
         timing.hpu_wait_sync.as_secs_f64() * 1000.0,
@@ -400,6 +439,230 @@ fn process_request(
     })
 }
 
+fn decode_operand_item(
+    request: &protocol::CiphertextFrame,
+    operand_index: usize,
+    item_index: usize,
+    hpu_device: &HpuDevice,
+    params: &ShortintParameterSet,
+) -> Result<tfhe::integer::RadixCiphertext, String> {
+    let words_per_operand = request.metadata.ciphertext_word_count;
+    let words_per_item = words_per_operand
+        .checked_div(request.metadata.item_count)
+        .ok_or_else(|| "invalid empty batch".to_string())?;
+    if words_per_item.checked_mul(request.metadata.item_count) != Some(words_per_operand) {
+        return Err("ciphertext words do not divide evenly across batch items".to_string());
+    }
+    let start = operand_index
+        .checked_mul(words_per_operand)
+        .and_then(|base| {
+            item_index
+                .checked_mul(words_per_item)
+                .and_then(|offset| base.checked_add(offset))
+        })
+        .ok_or_else(|| "operand slice offset overflow".to_string())?;
+    let end = start
+        .checked_add(words_per_item)
+        .ok_or_else(|| "operand slice end overflow".to_string())?;
+    let words = request
+        .ciphertext_words
+        .get(start..end)
+        .ok_or_else(|| format!("missing operand {operand_index} item {item_index} payload"))?;
+
+    let mut metadata = request.metadata.clone();
+    metadata.item_count = 1;
+    metadata.ciphertext_word_count = words_per_item;
+    let mut decoded = if input_is_hpu_native(request.operation) {
+        bridge::hpu_native_words_to_radix_ciphertexts(
+            &metadata,
+            words,
+            hpu_device.params(),
+            params,
+        )?
+    } else {
+        bridge::words_to_radix_ciphertexts(&metadata, words, params)?
+    };
+    decoded
+        .pop()
+        .ok_or_else(|| format!("operand {operand_index} item {item_index} decoded empty"))
+}
+
+fn is_supported_operation(operation: u64) -> bool {
+    let base = base_operation(operation);
+    if base == OP_ECHO_U8 {
+        return operation == OP_ECHO_U8;
+    }
+    matches!(
+        base,
+        OP_ADD_SCALAR_U8
+            | OP_SUB_SCALAR_U8
+            | OP_RSUB_SCALAR_U8
+            | OP_MUL_SCALAR_U8
+            | OP_DIV_SCALAR_U8
+            | OP_REM_SCALAR_U8
+            | OP_SHL_SCALAR_U8
+            | OP_SHR_SCALAR_U8
+            | OP_ROTL_SCALAR_U8
+            | OP_ROTR_SCALAR_U8
+            | OP_ADD_U8
+            | OP_SUB_U8
+            | OP_MUL_U8
+            | OP_DIV_U8
+            | OP_REM_U8
+            | OP_BITAND_U8
+            | OP_BITOR_U8
+            | OP_BITXOR_U8
+            | OP_BITNOT_U8
+            | OP_SHL_U8
+            | OP_SHR_U8
+            | OP_ROTL_U8
+            | OP_ROTR_U8
+            | OP_EQ_U8
+            | OP_NE_U8
+            | OP_LT_U8
+            | OP_LE_U8
+            | OP_GT_U8
+            | OP_GE_U8
+    )
+}
+
+fn operation_uses_scalar(operation: u64) -> bool {
+    matches!(
+        operation,
+        OP_ADD_SCALAR_U8
+            | OP_SUB_SCALAR_U8
+            | OP_RSUB_SCALAR_U8
+            | OP_MUL_SCALAR_U8
+            | OP_DIV_SCALAR_U8
+            | OP_REM_SCALAR_U8
+            | OP_SHL_SCALAR_U8
+            | OP_SHR_SCALAR_U8
+            | OP_ROTL_SCALAR_U8
+            | OP_ROTR_SCALAR_U8
+    )
+}
+
+fn execute_hpu_operation(
+    operation: u64,
+    lhs: &HpuRadixCiphertext,
+    rhs: Option<&HpuRadixCiphertext>,
+    scalar: Option<u8>,
+) -> Result<HpuRadixCiphertext, String> {
+    let rhs = || rhs.ok_or_else(|| format!("operation {} requires a rhs ciphertext", operation));
+    let scalar = || {
+        scalar
+            .map(u128::from)
+            .ok_or_else(|| format!("operation {} requires a plaintext u8 scalar", operation))
+    };
+
+    match operation {
+        OP_ADD_SCALAR_U8 => Ok(lhs + scalar()?),
+        OP_SUB_SCALAR_U8 => Ok(lhs - scalar()?),
+        OP_RSUB_SCALAR_U8 => Ok(scalar()? - lhs.clone()),
+        OP_MUL_SCALAR_U8 => Ok(lhs * scalar()?),
+        OP_DIV_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_DIVS,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_REM_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_MODS,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_SHL_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_SHIFTS_L,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_SHR_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_SHIFTS_R,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_ROTL_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_ROTS_L,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_ROTR_SCALAR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_ROTS_R,
+            std::slice::from_ref(lhs),
+            &[scalar()?],
+        ),
+        OP_ADD_U8 => Ok(lhs + rhs()?),
+        OP_SUB_U8 => Ok(lhs - rhs()?),
+        OP_MUL_U8 => Ok(lhs * rhs()?),
+        OP_DIV_U8 => execute_iop(&hpu_asm::iop::IOP_DIV, &[lhs.clone(), rhs()?.clone()], &[]),
+        OP_REM_U8 => Ok(lhs % rhs()?),
+        OP_BITAND_U8 => Ok(lhs & rhs()?),
+        OP_BITOR_U8 => Ok(lhs | rhs()?),
+        OP_BITXOR_U8 => Ok(lhs ^ rhs()?),
+        OP_BITNOT_U8 => Ok(u128::from(u8::MAX) - lhs.clone()),
+        OP_SHL_U8 => Ok(lhs << rhs()?),
+        OP_SHR_U8 => Ok(lhs >> rhs()?),
+        OP_ROTL_U8 => execute_iop(
+            &hpu_asm::iop::IOP_ROT_L,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_ROTR_U8 => execute_iop(
+            &hpu_asm::iop::IOP_ROT_R,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_EQ_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_EQ,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_NE_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_NEQ,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_LT_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_LT,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_LE_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_LTE,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_GT_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_GT,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        OP_GE_U8 => execute_iop(
+            &hpu_asm::iop::IOP_CMP_GTE,
+            &[lhs.clone(), rhs()?.clone()],
+            &[],
+        ),
+        _ => Err(format!("unsupported HPU operation {operation}")),
+    }
+}
+
+fn execute_iop(
+    iop: &hpu_asm::iop::AsmIOpcode,
+    inputs: &[HpuRadixCiphertext],
+    immediates: &[HpuImm],
+) -> Result<HpuRadixCiphertext, String> {
+    let format = iop
+        .format()
+        .ok_or_else(|| format!("HPU opcode {:?} has no operation format", iop.opcode()))?;
+    let mut outputs = HpuRadixCiphertext::exec(&format.proto, iop.opcode(), inputs, immediates);
+    if outputs.is_empty() {
+        return Err(format!(
+            "HPU operation {} returned no ciphertext",
+            format.name
+        ));
+    }
+    Ok(outputs.remove(0))
+}
+
 fn duration_ns(duration: Duration) -> u64 {
     u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX)
 }
@@ -410,10 +673,41 @@ fn ns_ms(nanoseconds: u64) -> f64 {
 
 fn operation_name(operation: u64) -> &'static str {
     match operation {
+        OP_ADD_SCALAR_U8_HPU_NATIVE => return "adds-hpu-native",
+        OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP => return "adds-hpu-native-roundtrip",
+        _ => {}
+    }
+    match base_operation(operation) {
         OP_ECHO_U8 => "echo",
-        OP_ADD_SCALAR_U8 => "adds",
-        OP_ADD_SCALAR_U8_HPU_NATIVE => "adds-hpu-native",
-        OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP => "adds-hpu-native-roundtrip",
+        OP_ADD_SCALAR_U8 => "add-scalar",
+        OP_SUB_SCALAR_U8 => "sub-scalar",
+        OP_RSUB_SCALAR_U8 => "rsub-scalar",
+        OP_MUL_SCALAR_U8 => "mul-scalar",
+        OP_DIV_SCALAR_U8 => "div-scalar",
+        OP_REM_SCALAR_U8 => "rem-scalar",
+        OP_SHL_SCALAR_U8 => "shl-scalar",
+        OP_SHR_SCALAR_U8 => "shr-scalar",
+        OP_ROTL_SCALAR_U8 => "rotl-scalar",
+        OP_ROTR_SCALAR_U8 => "rotr-scalar",
+        OP_ADD_U8 => "add",
+        OP_SUB_U8 => "sub",
+        OP_MUL_U8 => "mul",
+        OP_DIV_U8 => "div",
+        OP_REM_U8 => "rem",
+        OP_BITAND_U8 => "bitand",
+        OP_BITOR_U8 => "bitor",
+        OP_BITXOR_U8 => "bitxor",
+        OP_BITNOT_U8 => "bitnot",
+        OP_SHL_U8 => "shl",
+        OP_SHR_U8 => "shr",
+        OP_ROTL_U8 => "rotl",
+        OP_ROTR_U8 => "rotr",
+        OP_EQ_U8 => "eq",
+        OP_NE_U8 => "ne",
+        OP_LT_U8 => "lt",
+        OP_LE_U8 => "le",
+        OP_GT_U8 => "gt",
+        OP_GE_U8 => "ge",
         _ => "unknown",
     }
 }

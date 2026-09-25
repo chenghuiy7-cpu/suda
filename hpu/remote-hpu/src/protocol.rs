@@ -6,11 +6,82 @@ pub const OP_ADD_SCALAR_U8: u64 = 1;
 pub const OP_ADD_SCALAR_U8_HPU_NATIVE: u64 = 2;
 pub const OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP: u64 = 3;
 pub const OP_ECHO_U8: u64 = 0;
+
+// Extensible u8 operation space. Layout flags may be ORed with any operation
+// in this range. For binary requests the payload is lhs_batch || rhs_batch;
+// BatchMetadata describes one operand batch, not the concatenated payload.
+pub const OP_ADD_U8: u64 = 0x100;
+pub const OP_SUB_U8: u64 = 0x101;
+pub const OP_MUL_U8: u64 = 0x102;
+pub const OP_DIV_U8: u64 = 0x103;
+pub const OP_REM_U8: u64 = 0x104;
+pub const OP_BITAND_U8: u64 = 0x110;
+pub const OP_BITOR_U8: u64 = 0x111;
+pub const OP_BITXOR_U8: u64 = 0x112;
+pub const OP_BITNOT_U8: u64 = 0x113;
+pub const OP_SHL_U8: u64 = 0x120;
+pub const OP_SHR_U8: u64 = 0x121;
+pub const OP_ROTL_U8: u64 = 0x122;
+pub const OP_ROTR_U8: u64 = 0x123;
+pub const OP_EQ_U8: u64 = 0x130;
+pub const OP_NE_U8: u64 = 0x131;
+pub const OP_LT_U8: u64 = 0x132;
+pub const OP_LE_U8: u64 = 0x133;
+pub const OP_GT_U8: u64 = 0x134;
+pub const OP_GE_U8: u64 = 0x135;
+
+pub const OP_SUB_SCALAR_U8: u64 = 0x200;
+pub const OP_RSUB_SCALAR_U8: u64 = 0x201;
+pub const OP_MUL_SCALAR_U8: u64 = 0x202;
+pub const OP_DIV_SCALAR_U8: u64 = 0x203;
+pub const OP_REM_SCALAR_U8: u64 = 0x204;
+pub const OP_SHL_SCALAR_U8: u64 = 0x210;
+pub const OP_SHR_SCALAR_U8: u64 = 0x211;
+pub const OP_ROTL_SCALAR_U8: u64 = 0x212;
+pub const OP_ROTR_SCALAR_U8: u64 = 0x213;
+
+pub const OP_INPUT_HPU_NATIVE: u64 = 1 << 62;
+pub const OP_OUTPUT_HPU_NATIVE: u64 = 1 << 61;
+pub const OP_LAYOUT_FLAGS: u64 = OP_INPUT_HPU_NATIVE | OP_OUTPUT_HPU_NATIVE;
 pub const FRAME_REQUEST: u64 = 1;
 pub const FRAME_RESPONSE: u64 = 2;
 pub const FRAME_ERROR: u64 = 3;
 pub const VERSION_V1: u64 = 1;
 pub const VERSION_TIMING: u64 = 2;
+
+pub fn base_operation(operation: u64) -> u64 {
+    match operation {
+        OP_ADD_SCALAR_U8_HPU_NATIVE | OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP => OP_ADD_SCALAR_U8,
+        _ => operation & !OP_LAYOUT_FLAGS,
+    }
+}
+
+pub fn input_is_hpu_native(operation: u64) -> bool {
+    matches!(
+        operation,
+        OP_ADD_SCALAR_U8_HPU_NATIVE | OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP
+    ) || operation & OP_INPUT_HPU_NATIVE != 0
+}
+
+pub fn output_is_hpu_native(operation: u64) -> bool {
+    operation == OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP || operation & OP_OUTPUT_HPU_NATIVE != 0
+}
+
+pub fn operation_operand_count(operation: u64) -> usize {
+    match base_operation(operation) {
+        OP_ADD_U8 | OP_SUB_U8 | OP_MUL_U8 | OP_DIV_U8 | OP_REM_U8 | OP_BITAND_U8 | OP_BITOR_U8
+        | OP_BITXOR_U8 | OP_SHL_U8 | OP_SHR_U8 | OP_ROTL_U8 | OP_ROTR_U8 | OP_EQ_U8 | OP_NE_U8
+        | OP_LT_U8 | OP_LE_U8 | OP_GT_U8 | OP_GE_U8 => 2,
+        _ => 1,
+    }
+}
+
+pub fn operation_returns_bool(operation: u64) -> bool {
+    matches!(
+        base_operation(operation),
+        OP_EQ_U8 | OP_NE_U8 | OP_LT_U8 | OP_LE_U8 | OP_GT_U8 | OP_GE_U8
+    )
+}
 
 const MAGIC: &[u8; 8] = b"LWERPC01";
 const HEADER_U64S: usize = 14;
@@ -149,11 +220,21 @@ pub fn write_ciphertext_frame_version(
 ) -> Result<(), String> {
     validate_version(version)?;
     metadata.validate()?;
-    if ciphertext_words.len() != metadata.ciphertext_word_count {
+    let operand_count = if kind == FRAME_REQUEST {
+        operation_operand_count(operation)
+    } else {
+        1
+    };
+    let expected_words = metadata
+        .ciphertext_word_count
+        .checked_mul(operand_count)
+        .ok_or_else(|| "payload word count overflow".to_string())?;
+    if ciphertext_words.len() != expected_words {
         return Err(format!(
-            "payload word count mismatch: payload={}, metadata={}",
+            "payload word count mismatch: payload={}, expected={} ({} operand batch(es))",
             ciphertext_words.len(),
-            metadata.ciphertext_word_count
+            expected_words,
+            operand_count
         ));
     }
     let payload_bytes = ciphertext_words
@@ -309,20 +390,30 @@ pub fn read_frame(
         return Err(format!("unsupported frame kind {kind}"));
     }
     metadata.validate()?;
+    let operand_count = if kind == FRAME_REQUEST {
+        operation_operand_count(operation)
+    } else {
+        1
+    };
     let expected_payload_bytes = metadata
         .ciphertext_word_count
-        .checked_mul(8)
+        .checked_mul(operand_count)
+        .and_then(|words| words.checked_mul(8))
         .ok_or_else(|| "payload byte count overflow".to_string())?;
     if payload_bytes != expected_payload_bytes {
         return Err(format!(
-            "payload byte count mismatch: header={payload_bytes}, expected={expected_payload_bytes}"
+            "payload byte count mismatch: header={payload_bytes}, expected={expected_payload_bytes} for {operand_count} operand batch(es)"
         ));
     }
 
     // Read the ciphertext in one buffered transfer. Calling read_exact once per
     // u64 turns a multi-megabyte native HPU request into millions of socket
     // reads and can keep the single-threaded server from reaching HPU dispatch.
-    let mut payload = vec![0_u8; payload_bytes];
+    let mut payload = Vec::new();
+    payload
+        .try_reserve_exact(payload_bytes)
+        .map_err(|err| format!("unable to reserve ciphertext payload: {err}"))?;
+    payload.resize(payload_bytes, 0_u8);
     stream
         .read_exact(&mut payload)
         .map_err(|err| format!("unable to read ciphertext payload: {err}"))?;
@@ -449,6 +540,40 @@ mod tests {
         assert_eq!(frame.scalar, 7);
         assert_eq!(frame.metadata, metadata);
         assert_eq!(frame.ciphertext_words, words);
+    }
+
+    #[test]
+    fn binary_ciphertext_batches_round_trip() {
+        let metadata = metadata();
+        let words: Vec<u64> = (0..(2 * metadata.ciphertext_word_count) as u64).collect();
+        let mut wire = Vec::new();
+        write_ciphertext_frame_version(
+            &mut wire,
+            VERSION_TIMING,
+            FRAME_REQUEST,
+            45,
+            OP_ADD_U8,
+            0,
+            &metadata,
+            &words,
+        )
+        .unwrap();
+
+        let frame = read_frame(&mut Cursor::new(wire), 4096).unwrap();
+        assert_eq!(operation_operand_count(frame.operation), 2);
+        assert_eq!(frame.metadata, metadata);
+        assert_eq!(frame.ciphertext_words, words);
+    }
+
+    #[test]
+    fn operation_layout_and_result_shape_are_decoded() {
+        let operation = OP_EQ_U8 | OP_INPUT_HPU_NATIVE | OP_OUTPUT_HPU_NATIVE;
+        assert_eq!(base_operation(operation), OP_EQ_U8);
+        assert!(input_is_hpu_native(operation));
+        assert!(output_is_hpu_native(operation));
+        assert!(operation_returns_bool(operation));
+        assert_eq!(operation_operand_count(operation), 2);
+        assert_eq!(operation_operand_count(OP_BITNOT_U8), 1);
     }
 
     #[test]

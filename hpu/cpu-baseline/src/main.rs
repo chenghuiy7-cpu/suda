@@ -23,7 +23,12 @@ mod protocol;
 
 use protocol::{
     read_response_and_timing, write_request, BatchMetadata, ServerTiming, FRAME_RESPONSE,
-    OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP, VERSION_TIMING,
+    OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP, OP_ADD_U8, OP_BITAND_U8, OP_BITNOT_U8, OP_BITOR_U8,
+    OP_BITXOR_U8, OP_DIV_SCALAR_U8, OP_DIV_U8, OP_EQ_U8, OP_GE_U8, OP_GT_U8, OP_INPUT_HPU_NATIVE,
+    OP_LE_U8, OP_LT_U8, OP_MUL_SCALAR_U8, OP_MUL_U8, OP_NE_U8, OP_OUTPUT_HPU_NATIVE,
+    OP_REM_SCALAR_U8, OP_REM_U8, OP_ROTL_SCALAR_U8, OP_ROTL_U8, OP_ROTR_SCALAR_U8, OP_ROTR_U8,
+    OP_RSUB_SCALAR_U8, OP_SHL_SCALAR_U8, OP_SHL_U8, OP_SHR_SCALAR_U8, OP_SHR_U8, OP_SUB_SCALAR_U8,
+    OP_SUB_U8, VERSION_TIMING,
 };
 
 const LBA_BYTES: usize = 4096;
@@ -61,9 +66,178 @@ impl StorageBackend {
     }
 }
 
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum RemoteOperation {
+    AddScalar,
+    SubScalar,
+    RsubScalar,
+    MulScalar,
+    DivScalar,
+    RemScalar,
+    ShlScalar,
+    ShrScalar,
+    RotlScalar,
+    RotrScalar,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
+    Shl,
+    Shr,
+    Rotl,
+    Rotr,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+impl RemoteOperation {
+    fn wire(self) -> u64 {
+        let base = match self {
+            Self::AddScalar => return OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP,
+            Self::SubScalar => OP_SUB_SCALAR_U8,
+            Self::RsubScalar => OP_RSUB_SCALAR_U8,
+            Self::MulScalar => OP_MUL_SCALAR_U8,
+            Self::DivScalar => OP_DIV_SCALAR_U8,
+            Self::RemScalar => OP_REM_SCALAR_U8,
+            Self::ShlScalar => OP_SHL_SCALAR_U8,
+            Self::ShrScalar => OP_SHR_SCALAR_U8,
+            Self::RotlScalar => OP_ROTL_SCALAR_U8,
+            Self::RotrScalar => OP_ROTR_SCALAR_U8,
+            Self::Add => OP_ADD_U8,
+            Self::Sub => OP_SUB_U8,
+            Self::Mul => OP_MUL_U8,
+            Self::Div => OP_DIV_U8,
+            Self::Rem => OP_REM_U8,
+            Self::BitAnd => OP_BITAND_U8,
+            Self::BitOr => OP_BITOR_U8,
+            Self::BitXor => OP_BITXOR_U8,
+            Self::BitNot => OP_BITNOT_U8,
+            Self::Shl => OP_SHL_U8,
+            Self::Shr => OP_SHR_U8,
+            Self::Rotl => OP_ROTL_U8,
+            Self::Rotr => OP_ROTR_U8,
+            Self::Eq => OP_EQ_U8,
+            Self::Ne => OP_NE_U8,
+            Self::Lt => OP_LT_U8,
+            Self::Le => OP_LE_U8,
+            Self::Gt => OP_GT_U8,
+            Self::Ge => OP_GE_U8,
+        };
+        base | OP_INPUT_HPU_NATIVE | OP_OUTPUT_HPU_NATIVE
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::AddScalar => "add-scalar",
+            Self::SubScalar => "sub-scalar",
+            Self::RsubScalar => "rsub-scalar",
+            Self::MulScalar => "mul-scalar",
+            Self::DivScalar => "div-scalar",
+            Self::RemScalar => "rem-scalar",
+            Self::ShlScalar => "shl-scalar",
+            Self::ShrScalar => "shr-scalar",
+            Self::RotlScalar => "rotl-scalar",
+            Self::RotrScalar => "rotr-scalar",
+            Self::Add => "add",
+            Self::Sub => "sub",
+            Self::Mul => "mul",
+            Self::Div => "div",
+            Self::Rem => "rem",
+            Self::BitAnd => "bitand",
+            Self::BitOr => "bitor",
+            Self::BitXor => "bitxor",
+            Self::BitNot => "bitnot",
+            Self::Shl => "shl",
+            Self::Shr => "shr",
+            Self::Rotl => "rotl",
+            Self::Rotr => "rotr",
+            Self::Eq => "eq",
+            Self::Ne => "ne",
+            Self::Lt => "lt",
+            Self::Le => "le",
+            Self::Gt => "gt",
+            Self::Ge => "ge",
+        }
+    }
+
+    fn is_binary(self) -> bool {
+        matches!(
+            self,
+            Self::Add
+                | Self::Sub
+                | Self::Mul
+                | Self::Div
+                | Self::Rem
+                | Self::BitAnd
+                | Self::BitOr
+                | Self::BitXor
+                | Self::Shl
+                | Self::Shr
+                | Self::Rotl
+                | Self::Rotr
+                | Self::Eq
+                | Self::Ne
+                | Self::Lt
+                | Self::Le
+                | Self::Gt
+                | Self::Ge
+        )
+    }
+
+    fn returns_bool(self) -> bool {
+        matches!(
+            self,
+            Self::Eq | Self::Ne | Self::Lt | Self::Le | Self::Gt | Self::Ge
+        )
+    }
+
+    fn evaluate(self, lhs: u8, rhs: u8, scalar: u8) -> u8 {
+        match self {
+            Self::AddScalar => lhs.wrapping_add(scalar),
+            Self::SubScalar => lhs.wrapping_sub(scalar),
+            Self::RsubScalar => scalar.wrapping_sub(lhs),
+            Self::MulScalar => lhs.wrapping_mul(scalar),
+            Self::DivScalar => lhs / scalar,
+            Self::RemScalar => lhs % scalar,
+            Self::ShlScalar => lhs.wrapping_shl(u32::from(scalar)),
+            Self::ShrScalar => lhs.wrapping_shr(u32::from(scalar)),
+            Self::RotlScalar => lhs.rotate_left(u32::from(scalar)),
+            Self::RotrScalar => lhs.rotate_right(u32::from(scalar)),
+            Self::Add => lhs.wrapping_add(rhs),
+            Self::Sub => lhs.wrapping_sub(rhs),
+            Self::Mul => lhs.wrapping_mul(rhs),
+            Self::Div => lhs / rhs,
+            Self::Rem => lhs % rhs,
+            Self::BitAnd => lhs & rhs,
+            Self::BitOr => lhs | rhs,
+            Self::BitXor => lhs ^ rhs,
+            Self::BitNot => !lhs,
+            Self::Shl => lhs.wrapping_shl(u32::from(rhs)),
+            Self::Shr => lhs.wrapping_shr(u32::from(rhs)),
+            Self::Rotl => lhs.rotate_left(u32::from(rhs)),
+            Self::Rotr => lhs.rotate_right(u32::from(rhs)),
+            Self::Eq => u8::from(lhs == rhs),
+            Self::Ne => u8::from(lhs != rhs),
+            Self::Lt => u8::from(lhs < rhs),
+            Self::Le => u8::from(lhs <= rhs),
+            Self::Gt => u8::from(lhs > rhs),
+            Self::Ge => u8::from(lhs >= rhs),
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(
-    long_about = "Read u8 plaintext from an x86-visible SSD, encrypt and decrypt with the tfhe-rs CPU path, execute ADDS on the remote real HPU, and write the clear result back to SSD. The TCP payload uses the same padded HPU-native psi64/V80 layout as the FPGA pipeline."
+    long_about = "Read u8 plaintext from an x86-visible SSD, encrypt and decrypt with the tfhe-rs CPU path, execute the selected operation on the remote real HPU, and write the clear result back to SSD. The TCP payload uses the same padded HPU-native psi64/V80 layout as the FPGA pipeline."
 )]
 struct Args {
     /// Storage source label written to logs and CSV output.
@@ -102,9 +276,17 @@ struct Args {
     #[arg(long, default_value = "10.16.0.129:19090")]
     server: SocketAddr,
 
-    /// Clear u8 scalar evaluated by the remote HPU.
+    /// Remote HPU operation.
+    #[arg(long, value_enum, default_value_t = RemoteOperation::AddScalar)]
+    remote_operation: RemoteOperation,
+
+    /// Clear u8 scalar evaluated by scalar operations.
     #[arg(long, default_value_t = 1)]
     scalar: u8,
+
+    /// For binary operations, encrypt rhs[i] = lhs[i] + rhs_offset.
+    #[arg(long, default_value_t = 1)]
+    rhs_offset: u8,
 
     /// CPU workers used for independent u8 encryption, packing, unpacking and decryption.
     #[arg(long, default_value_t = 1)]
@@ -113,10 +295,10 @@ struct Args {
     #[arg(long, default_value_t = 10_000)]
     connect_timeout_ms: u64,
 
-    #[arg(long, default_value_t = 300)]
+    #[arg(long, default_value_t = 3_600)]
     io_timeout_secs: u64,
 
-    #[arg(long, default_value_t = 512 * 1024 * 1024)]
+    #[arg(long, default_value_t = 4 * 1024 * 1024 * 1024)]
     max_response_bytes: usize,
 
     /// Optional expected first plaintext byte before scalar addition.
@@ -203,14 +385,39 @@ fn run(args: Args) -> Result<(), String> {
         }
     }
 
+    let rhs_plaintext = args.remote_operation.is_binary().then(|| {
+        plaintext
+            .iter()
+            .map(|value| value.wrapping_add(args.rhs_offset))
+            .collect::<Vec<_>>()
+    });
     let encrypt_start = Instant::now();
     let ciphertexts = encrypt_batch(&client_key, &plaintext, args.cpu_threads);
+    let rhs_ciphertexts = rhs_plaintext
+        .as_ref()
+        .map(|values| encrypt_batch(&client_key, values, args.cpu_threads));
     timing.cpu_encrypt = encrypt_start.elapsed();
 
     let metadata = native_metadata(args.plaintext_bytes)?;
+    let operand_count = if args.remote_operation.is_binary() {
+        2
+    } else {
+        1
+    };
+    let request_word_count = metadata
+        .ciphertext_word_count
+        .checked_mul(operand_count)
+        .ok_or_else(|| "multi-operand request size overflow".to_string())?;
     let pack_start = Instant::now();
-    let mut native_words = vec![0_u64; metadata.ciphertext_word_count];
-    pack_batch_hpu_native(&ciphertexts, args.cpu_threads, &mut native_words)?;
+    let mut native_words = vec![0_u64; request_word_count];
+    let (lhs_words, rhs_words) = native_words.split_at_mut(metadata.ciphertext_word_count);
+    pack_batch_hpu_native(&ciphertexts, args.cpu_threads, lhs_words)?;
+    if let (Some(rhs_ciphertexts), Some(rhs_words)) = (
+        rhs_ciphertexts.as_ref(),
+        (!rhs_words.is_empty()).then_some(rhs_words),
+    ) {
+        pack_batch_hpu_native(rhs_ciphertexts, args.cpu_threads, rhs_words)?;
+    }
     timing.cpu_native_pack = pack_start.elapsed();
 
     let request_id = request_id();
@@ -234,6 +441,7 @@ fn run(args: Args) -> Result<(), String> {
     write_request(
         &mut stream,
         request_id,
+        args.remote_operation.wire(),
         args.scalar,
         &metadata,
         &native_words,
@@ -251,6 +459,7 @@ fn run(args: Args) -> Result<(), String> {
         &response,
         &metadata,
         request_id,
+        args.remote_operation,
         args.scalar,
         &server_timing,
     )?;
@@ -259,6 +468,7 @@ fn run(args: Args) -> Result<(), String> {
     let result_ciphertexts = unpack_batch_hpu_native(
         &response.ciphertext_words,
         args.plaintext_bytes,
+        response.metadata.radix_blocks_per_item,
         args.cpu_threads,
         &params,
     )?;
@@ -269,7 +479,11 @@ fn run(args: Args) -> Result<(), String> {
     timing.cpu_decrypt = decrypt_start.elapsed();
     let expected_results: Vec<u8> = plaintext
         .iter()
-        .map(|value| value.wrapping_add(args.scalar))
+        .enumerate()
+        .map(|(index, lhs)| {
+            let rhs = rhs_plaintext.as_ref().map_or(0, |values| values[index]);
+            args.remote_operation.evaluate(*lhs, rhs, args.scalar)
+        })
         .collect();
     if clear_results != expected_results {
         let mismatch = clear_results
@@ -487,35 +701,36 @@ fn pack_radix_hpu_native(ciphertext: &RadixCiphertext, native: &mut [u64]) -> Re
 fn unpack_batch_hpu_native(
     words: &[u64],
     item_count: usize,
+    blocks_per_item: usize,
     threads: usize,
     params: &ShortintParameterSet,
 ) -> Result<Vec<RadixCiphertext>, String> {
-    if words.len() != item_count * HPU_NATIVE_WORDS_PER_U8 {
+    let words_per_item = blocks_per_item
+        .checked_mul(HPU_NATIVE_LWE_WORDS)
+        .ok_or_else(|| "HPU-native result shape overflow".to_string())?;
+    let expected_words = item_count
+        .checked_mul(words_per_item)
+        .ok_or_else(|| "HPU-native result batch overflow".to_string())?;
+    if words.len() != expected_words {
         return Err(format!(
-            "HPU-native response size mismatch: words={}, expected={}",
-            words.len(),
-            item_count * HPU_NATIVE_WORDS_PER_U8
+            "HPU-native response size mismatch: words={}, expected={expected_words}",
+            words.len()
         ));
     }
-    let unpack = |native: &[u64]| unpack_radix_hpu_native(native, params);
+    let unpack = |native: &[u64]| unpack_radix_hpu_native(native, blocks_per_item, params);
     if threads == 1 {
-        words
-            .chunks_exact(HPU_NATIVE_WORDS_PER_U8)
-            .map(unpack)
-            .collect()
+        words.chunks_exact(words_per_item).map(unpack).collect()
     } else {
-        words
-            .par_chunks_exact(HPU_NATIVE_WORDS_PER_U8)
-            .map(unpack)
-            .collect()
+        words.par_chunks_exact(words_per_item).map(unpack).collect()
     }
 }
 
 fn unpack_radix_hpu_native(
     native: &[u64],
+    blocks_per_item: usize,
     params: &ShortintParameterSet,
 ) -> Result<RadixCiphertext, String> {
-    let mut blocks = Vec::with_capacity(RADIX_BLOCKS);
+    let mut blocks = Vec::with_capacity(blocks_per_item);
     for (block_index, native_lwe) in native.chunks_exact(HPU_NATIVE_LWE_WORDS).enumerate() {
         if native_lwe[HPU_PC0_DATA_WORDS..HPU_PC_SLOT_WORDS]
             .iter()
@@ -553,16 +768,25 @@ fn validate_response(
     response: &protocol::CiphertextFrame,
     request_metadata: &BatchMetadata,
     request_id: u64,
+    operation: RemoteOperation,
     scalar: u8,
     timing: &ServerTiming,
 ) -> Result<(), String> {
+    let mut expected_metadata = request_metadata.clone();
+    if operation.returns_bool() {
+        expected_metadata.radix_blocks_per_item = 1;
+        expected_metadata.ciphertext_word_count = expected_metadata
+            .item_count
+            .checked_mul(HPU_NATIVE_LWE_WORDS)
+            .ok_or_else(|| "comparison response size overflow".to_string())?;
+    }
     if response.version != VERSION_TIMING
         || response.kind != FRAME_RESPONSE
         || response.request_id != request_id
-        || response.operation != OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP
+        || response.operation != operation.wire()
         || response.status != 0
         || response.scalar != u64::from(scalar)
-        || response.metadata != *request_metadata
+        || response.metadata != expected_metadata
     {
         return Err(format!("remote response metadata mismatch: {response:?}"));
     }
@@ -683,12 +907,19 @@ fn print_result(
         "cpu_threads={} client_key={} wire_layout=hpu-native-psi64-v80 request_bytes={} result_bytes={}",
         args.cpu_threads,
         args.client_key.display(),
-        args.plaintext_bytes * HPU_NATIVE_WORDS_PER_U8 * 8,
+        args.plaintext_bytes
+            * HPU_NATIVE_WORDS_PER_U8
+            * 8
+            * if args.remote_operation.is_binary() { 2 } else { 1 },
         result_bytes
     );
     println!(
-        "remote_server={} request_id={} operation=adds-hpu-native-roundtrip scalar={}",
-        args.server, request_id, args.scalar
+        "remote_server={} request_id={} operation={} scalar={} rhs_offset={}",
+        args.server,
+        request_id,
+        args.remote_operation.label(),
+        args.scalar,
+        args.rhs_offset
     );
     println!(
         "benchmark_stage_ms key_load={:.3} ssd_read={:.3} cpu_encrypt={:.3} cpu_native_pack={:.3} tcp_connect={:.3} request_send={:.3} wait_response_header={:.3} response_receive={:.3} telemetry_receive={:.3} rpc_round_trip={:.3} cpu_native_unpack={:.3} cpu_decrypt={:.3} ssd_write={:.3} ssd_readback={:.3} online_e2e={:.3} process={:.3}",

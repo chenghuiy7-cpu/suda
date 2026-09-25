@@ -233,16 +233,24 @@ bool validate_metadata(
     }
     uint64_t expected_native_words = block_count * kHpuNativeWordsPerLwe;
     uint64_t expected_words = expected_cpu_words;
-    if (operation == kOperationAddScalarU8HpuNative ||
-        operation == kOperationAddScalarU8HpuNativeRoundTrip) {
+    if (input_is_hpu_native(operation)) {
         expected_words = expected_native_words;
     } else if (operation == kOperationEchoU8 &&
                metadata.ciphertext_word_count == expected_native_words) {
         expected_words = expected_native_words;
     }
+    size_t operand_count = operation_operand_count(operation);
+    if (expected_words >
+        std::numeric_limits<uint64_t>::max() / operand_count) {
+        set_error(error, "multi-operand payload word count overflow");
+        return false;
+    }
+    uint64_t expected_payload_words = expected_words * operand_count;
     if (metadata.ciphertext_word_count != expected_words ||
-        metadata.ciphertext_word_count != payload_words) {
-        set_error(error, "ciphertext metadata/payload word count mismatch");
+        expected_payload_words != payload_words) {
+        set_error(
+            error,
+            "ciphertext metadata/payload word count mismatch for operation arity");
         return false;
     }
     return true;
@@ -295,6 +303,112 @@ bool receive_words(
 
 }  // namespace
 
+uint64_t base_operation(uint64_t operation)
+{
+    if (operation == kOperationAddScalarU8HpuNative ||
+        operation == kOperationAddScalarU8HpuNativeRoundTrip) {
+        return kOperationAddScalarU8;
+    }
+    return operation & ~kOperationLayoutFlags;
+}
+
+bool input_is_hpu_native(uint64_t operation)
+{
+    return operation == kOperationAddScalarU8HpuNative ||
+           operation == kOperationAddScalarU8HpuNativeRoundTrip ||
+           (operation & kOperationInputHpuNative) != 0;
+}
+
+bool output_is_hpu_native(uint64_t operation)
+{
+    return operation == kOperationAddScalarU8HpuNativeRoundTrip ||
+           (operation & kOperationOutputHpuNative) != 0;
+}
+
+size_t operation_operand_count(uint64_t operation)
+{
+    switch (base_operation(operation)) {
+    case kOperationAddU8:
+    case kOperationSubU8:
+    case kOperationMulU8:
+    case kOperationDivU8:
+    case kOperationRemU8:
+    case kOperationBitAndU8:
+    case kOperationBitOrU8:
+    case kOperationBitXorU8:
+    case kOperationShlU8:
+    case kOperationShrU8:
+    case kOperationRotlU8:
+    case kOperationRotrU8:
+    case kOperationEqU8:
+    case kOperationNeU8:
+    case kOperationLtU8:
+    case kOperationLeU8:
+    case kOperationGtU8:
+    case kOperationGeU8:
+        return 2;
+    default:
+        return 1;
+    }
+}
+
+bool operation_returns_bool(uint64_t operation)
+{
+    switch (base_operation(operation)) {
+    case kOperationEqU8:
+    case kOperationNeU8:
+    case kOperationLtU8:
+    case kOperationLeU8:
+    case kOperationGtU8:
+    case kOperationGeU8:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool operation_is_supported(uint64_t operation)
+{
+    uint64_t base = base_operation(operation);
+    if (base == kOperationEchoU8) {
+        return operation == kOperationEchoU8;
+    }
+    switch (base) {
+    case kOperationAddScalarU8:
+    case kOperationSubScalarU8:
+    case kOperationRsubScalarU8:
+    case kOperationMulScalarU8:
+    case kOperationDivScalarU8:
+    case kOperationRemScalarU8:
+    case kOperationShlScalarU8:
+    case kOperationShrScalarU8:
+    case kOperationRotlScalarU8:
+    case kOperationRotrScalarU8:
+    case kOperationAddU8:
+    case kOperationSubU8:
+    case kOperationMulU8:
+    case kOperationDivU8:
+    case kOperationRemU8:
+    case kOperationBitAndU8:
+    case kOperationBitOrU8:
+    case kOperationBitXorU8:
+    case kOperationBitNotU8:
+    case kOperationShlU8:
+    case kOperationShrU8:
+    case kOperationRotlU8:
+    case kOperationRotrU8:
+    case kOperationEqU8:
+    case kOperationNeU8:
+    case kOperationLtU8:
+    case kOperationLeU8:
+    case kOperationGtU8:
+    case kOperationGeU8:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool BatchMetadata::operator==(const BatchMetadata& other) const
 {
     return mask_dimension == other.mask_dimension &&
@@ -328,10 +442,7 @@ bool compute_u8(
     if (!validate_metadata(metadata, ciphertext_words.size(), operation, error)) {
         return false;
     }
-    if (operation != kOperationEchoU8 &&
-        operation != kOperationAddScalarU8 &&
-        operation != kOperationAddScalarU8HpuNative &&
-        operation != kOperationAddScalarU8HpuNativeRoundTrip) {
+    if (!operation_is_supported(operation)) {
         set_error(error, "unsupported remote operation");
         return false;
     }
@@ -464,10 +575,19 @@ bool compute_u8(
         response_fields[13],
     };
     BatchMetadata expected_response_metadata = metadata;
-    if (operation == kOperationAddScalarU8HpuNative) {
-        expected_response_metadata.ciphertext_word_count =
-            metadata.item_count * metadata.radix_blocks_per_item *
-            (metadata.mask_dimension + 1);
+    if (operation_returns_bool(operation)) {
+        expected_response_metadata.radix_blocks_per_item = 1;
+    }
+    uint64_t response_block_count =
+        expected_response_metadata.item_count *
+        expected_response_metadata.radix_blocks_per_item;
+    expected_response_metadata.ciphertext_word_count =
+        output_is_hpu_native(operation)
+            ? response_block_count * kHpuNativeWordsPerLwe
+            : response_block_count *
+                  (expected_response_metadata.mask_dimension + 1);
+    if (operation == kOperationEchoU8) {
+        expected_response_metadata = metadata;
     }
     if (!(response_metadata == expected_response_metadata)) {
         set_error(error, "remote response changed ciphertext metadata");

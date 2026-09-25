@@ -83,6 +83,61 @@ bash hpu/scripts/install_psi64_keyset.sh
 默认生成目录为 `hpu/keys/psi64`，该目录被 Git 忽略。安装脚本把同一套 keyset 同步到
 FPGA Host 应用使用的 `device/operators/hls/lwe_encrypt/testdata`，避免手工复制后混用。
 
+## 批量 u8 RPC 协议
+
+Rust 服务端与两个 Host 应用共享同一套 `LWERPC01` wire contract。C++ 端定义位于
+`host/applications/vscode-lwe-encrypt-remote-offload/lwe_remote_protocol.hpp`，完整回环测试
+位于同目录的 `test_protocol.cpp`。
+
+原有 operation 0–3 保持兼容：
+
+- `0`：echo；
+- `1`：CPU-LWE 输入的 `encrypted_u8 + scalar_u8`；
+- `2`：HPU-native 输入、CPU-LWE 输出的同一标量加法；
+- `3`：HPU-native 输入和输出的同一标量加法。
+
+新增 operation 包括：
+
+- 密文—密文算术：`ADD/SUB/MUL/DIV/REM`（`0x100..0x104`）；
+- 位运算：`AND/OR/XOR/NOT`（`0x110..0x113`）；
+- 密文移位/旋转：`SHL/SHR/ROTL/ROTR`（`0x120..0x123`）；
+- 比较：`EQ/NE/LT/LE/GT/GE`（`0x130..0x135`）；
+- 标量运算：`SUB/RSUB/MUL/DIV/REM` 和标量移位/旋转
+  （`0x200..0x213`；标量加法继续使用 `1`）。
+
+新 operation 可按位组合 `0x4000000000000000`（HPU-native 输入）与
+`0x2000000000000000`（HPU-native 输出）。双密文请求的 payload 固定为
+`lhs_batch || rhs_batch`；header metadata 描述单个操作数批次，因此
+`ciphertext_word_count` 不包含 RHS。两个批次的 item 数和形状必须一致，服务端逐项执行
+`lhs[i] op rhs[i]`。普通运算返回与输入同样的 4 个 radix block；比较每项返回 1 个
+Boolean block。
+
+服务端和两个 C++ Host 应用的默认载荷/响应上限均为 4 GiB，I/O 超时为 3600 秒。服务端
+逐项解码、执行和编码，不让整个批次的中间 TFHE/HPU 对象常驻内存；wire 请求和最终响应
+缓冲区仍需由主机内存容纳。可以分别通过
+`HPU_REMOTE_MAX_REQUEST_BYTES`、`HPU_REMOTE_IO_TIMEOUT_SECS` 和客户端命令行参数覆盖。
+
+## 129 部署与启动
+
+部署包中的启动脚本会显式向服务进程传递上面的请求上限与超时。目标目录为
+`$HOME/suda-remote-hpu` 时，129 上的启动命令为：
+
+```bash
+source $HOME/.config/suda/hpu-server.env
+cd $HOME/suda-remote-hpu
+./scripts/start_remote_server.sh
+```
+
+启动前可用 `HPU_REMOTE_PREFLIGHT_ONLY=1 ./scripts/start_remote_server.sh` 检查二进制、
+HPU archive、ServerKey、Vivado、AMI 与 V80 环境。环境文件至少应包含：
+
+```bash
+export SUDA_HPU_ROOT=$HOME/suda-remote-hpu
+export HPU_REMOTE_BIND=0.0.0.0:19090
+export HPU_REMOTE_MAX_REQUEST_BYTES=4294967296
+export HPU_REMOTE_IO_TIMEOUT_SECS=3600
+```
+
 ## V80 启动边界
 
 验证基线的上游 TFHE-rs 使用 `force_reload="false"`：当前硬件状态有效时直接复用；

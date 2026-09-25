@@ -19,6 +19,8 @@ config=${HPU_REMOTE_CONFIG:-${HPU_BACKEND_DIR}/config_store/v80/hpu_config.toml}
 server_key=${HPU_REMOTE_SERVER_KEY:-${runtime_root}/${HPU_SERVER_KEY_FILE}}
 hpu_archive=${HPU_REMOTE_HPU_ARCHIVE:-${HPU_BACKEND_DIR}/config_store/v80_archives/${HPU_ARCHIVE_FILE}}
 bind_addr=${HPU_REMOTE_BIND:-0.0.0.0:19090}
+max_request_bytes=${HPU_REMOTE_MAX_REQUEST_BYTES:-4294967296}
+io_timeout_secs=${HPU_REMOTE_IO_TIMEOUT_SECS:-3600}
 expected_server_key_sha256=${HPU_REMOTE_SERVER_KEY_SHA256:-${HPU_SERVER_KEY_SHA256}}
 expected_server_key_size=${HPU_REMOTE_SERVER_KEY_SIZE:-${HPU_SERVER_KEY_SIZE}}
 
@@ -96,7 +98,9 @@ printf '%s\n' \
     "HPU_REMOTE_CONFIG=${config}" \
     "HPU_REMOTE_HPU_ARCHIVE=${hpu_archive}" \
     "HPU_REMOTE_SERVER_KEY=${server_key}" \
-    "HPU_REMOTE_BIND=${bind_addr}"
+    "HPU_REMOTE_BIND=${bind_addr}" \
+    "HPU_REMOTE_MAX_REQUEST_BYTES=${max_request_bytes}" \
+    "HPU_REMOTE_IO_TIMEOUT_SECS=${io_timeout_secs}"
 
 printf '%s\n' \
     'warning: upstream force_reload=false may recover invalid hardware by reloading it;' \
@@ -122,4 +126,6 @@ exec sudo -E env RUST_BACKTRACE=1 RUST_LOG="${RUST_LOG}" \
     "${binary}" \
     --bind "${bind_addr}" \
     --config "${config}" \
-    --server-key "${server_key}"
+    --server-key "${server_key}" \
+    --max-request-bytes "${max_request_bytes}" \
+    --io-timeout-secs "${io_timeout_secs}"

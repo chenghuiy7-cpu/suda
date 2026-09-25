@@ -6,7 +6,46 @@ pub const FRAME_REQUEST: u64 = 1;
 pub const FRAME_RESPONSE: u64 = 2;
 pub const FRAME_ERROR: u64 = 3;
 pub const OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP: u64 = 3;
+pub const OP_ADD_U8: u64 = 0x100;
+pub const OP_SUB_U8: u64 = 0x101;
+pub const OP_MUL_U8: u64 = 0x102;
+pub const OP_DIV_U8: u64 = 0x103;
+pub const OP_REM_U8: u64 = 0x104;
+pub const OP_BITAND_U8: u64 = 0x110;
+pub const OP_BITOR_U8: u64 = 0x111;
+pub const OP_BITXOR_U8: u64 = 0x112;
+pub const OP_BITNOT_U8: u64 = 0x113;
+pub const OP_SHL_U8: u64 = 0x120;
+pub const OP_SHR_U8: u64 = 0x121;
+pub const OP_ROTL_U8: u64 = 0x122;
+pub const OP_ROTR_U8: u64 = 0x123;
+pub const OP_EQ_U8: u64 = 0x130;
+pub const OP_NE_U8: u64 = 0x131;
+pub const OP_LT_U8: u64 = 0x132;
+pub const OP_LE_U8: u64 = 0x133;
+pub const OP_GT_U8: u64 = 0x134;
+pub const OP_GE_U8: u64 = 0x135;
+pub const OP_SUB_SCALAR_U8: u64 = 0x200;
+pub const OP_RSUB_SCALAR_U8: u64 = 0x201;
+pub const OP_MUL_SCALAR_U8: u64 = 0x202;
+pub const OP_DIV_SCALAR_U8: u64 = 0x203;
+pub const OP_REM_SCALAR_U8: u64 = 0x204;
+pub const OP_SHL_SCALAR_U8: u64 = 0x210;
+pub const OP_SHR_SCALAR_U8: u64 = 0x211;
+pub const OP_ROTL_SCALAR_U8: u64 = 0x212;
+pub const OP_ROTR_SCALAR_U8: u64 = 0x213;
+pub const OP_INPUT_HPU_NATIVE: u64 = 1 << 62;
+pub const OP_OUTPUT_HPU_NATIVE: u64 = 1 << 61;
 pub const VERSION_TIMING: u64 = 2;
+
+pub fn operation_operand_count(operation: u64) -> usize {
+    match operation & !(OP_INPUT_HPU_NATIVE | OP_OUTPUT_HPU_NATIVE) {
+        OP_ADD_U8 | OP_SUB_U8 | OP_MUL_U8 | OP_DIV_U8 | OP_REM_U8 | OP_BITAND_U8 | OP_BITOR_U8
+        | OP_BITXOR_U8 | OP_SHL_U8 | OP_SHR_U8 | OP_ROTL_U8 | OP_ROTR_U8 | OP_EQ_U8 | OP_NE_U8
+        | OP_LT_U8 | OP_LE_U8 | OP_GT_U8 | OP_GE_U8 => 2,
+        _ => 1,
+    }
+}
 
 const MAGIC: &[u8; 8] = b"LWERPC01";
 const HEADER_U64S: usize = 14;
@@ -91,16 +130,20 @@ pub struct ReceiveTiming {
 pub fn write_request(
     stream: &mut impl Write,
     request_id: u64,
+    operation: u64,
     scalar: u8,
     metadata: &BatchMetadata,
     words: &[u64],
 ) -> Result<(), String> {
     metadata.validate_hpu_native()?;
-    if words.len() != metadata.ciphertext_word_count {
+    let expected_words = metadata
+        .ciphertext_word_count
+        .checked_mul(operation_operand_count(operation))
+        .ok_or_else(|| "request payload word count overflow".to_string())?;
+    if words.len() != expected_words {
         return Err(format!(
-            "request payload word count mismatch: payload={}, metadata={}",
-            words.len(),
-            metadata.ciphertext_word_count
+            "request payload word count mismatch: payload={}, expected={expected_words}",
+            words.len()
         ));
     }
     let payload_bytes = words
@@ -111,7 +154,7 @@ pub fn write_request(
         VERSION_TIMING,
         FRAME_REQUEST,
         request_id,
-        OP_ADD_SCALAR_U8_HPU_NATIVE_ROUNDTRIP,
+        operation,
         0,
         u64::from(scalar),
         as_u64(metadata.mask_dimension, "mask_dimension")?,

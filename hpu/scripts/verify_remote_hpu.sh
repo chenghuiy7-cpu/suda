@@ -71,6 +71,7 @@ done < <(find "${hpu_root}" \
     -path "${hpu_root}/artifacts" -prune -o \
     -path "${hpu_root}/runtime" -prune -o \
     -path "${hpu_root}/remote-hpu/target" -prune -o \
+    -path "${hpu_root}/cpu-baseline/target" -prune -o \
     -type f -print0)
 
 if rg -n '/home/yangchenghui|BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY|XFL[[:alnum:]]{8,}' \

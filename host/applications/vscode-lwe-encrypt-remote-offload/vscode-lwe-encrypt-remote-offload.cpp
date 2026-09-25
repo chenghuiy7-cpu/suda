@@ -52,7 +52,7 @@ constexpr size_t kHpuPcSlotBytes = 3 * kLbaSize;
 constexpr size_t kHpuPcSlotWords = kHpuPcSlotBytes / sizeof(uint64_t);
 constexpr size_t kHpuNativeLweBytes = kHpuPcCount * kHpuPcSlotBytes;
 constexpr size_t kHpuNativeOutputBytes = kRadixBlockCount * kHpuNativeLweBytes;
-constexpr size_t kDefaultMaxResponseBytes = 512ULL * 1024 * 1024;
+constexpr size_t kDefaultMaxResponseBytes = 4ULL * 1024 * 1024 * 1024;
 
 const char* kDefaultKeyPath =
     "../../../device/operators/hls/lwe_encrypt/testdata/"
@@ -82,7 +82,7 @@ struct Options {
     uint16_t remote_port = 19090;
     uint8_t scalar = 1;
     uint32_t connect_timeout_ms = 10000;
-    uint32_t io_timeout_secs = 300;
+    uint32_t io_timeout_secs = 3600;
     size_t max_response_bytes = kDefaultMaxResponseBytes;
     size_t slm_read_chunk_bytes = kDefaultSlmReadChunkBytes;
     uint64_t remote_operation = lwe_remote::kOperationAddScalarU8HpuNative;
@@ -111,8 +111,8 @@ void print_usage(const char* argv0)
         "                      echo measures same-size TCP/protocol cost without HPU\n"
         "  --slm-read-chunk-bytes N 4096..134217728, 4KB aligned (default: 131072)\n"
         "  --connect-timeout-ms N TCP connect timeout (default: 10000)\n"
-        "  --io-timeout-secs N TCP send/receive timeout (default: 300)\n"
-        "  --max-response-bytes N response allocation limit (default: 512MiB)\n"
+        "  --io-timeout-secs N TCP send/receive timeout (default: 3600)\n"
+        "  --max-response-bytes N response allocation limit (default: 4GiB)\n"
         "  --operator-type N  SUDA operator type id (default: 2)\n"
         "  --program-id N     compute program slot (default: 11)\n"
         "  --admin DEV        NVMe admin device (default: nvmq0)\n"
