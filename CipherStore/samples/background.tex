@@ -1,0 +1,60 @@
+% Keep line-breaking flexibility local to this section.
+\begingroup
+\setlength{\emergencystretch}{1em}
+\section{Background}
+\label{sec:background}
+
+Ciphertext generation connects application data to the encrypted representations consumed by an FHE back end. In a TFHE-based system, its cost depends on the LWE encryption procedure and the number of ciphertexts used to represent each application value. The surrounding execution path determines how data reach the encryption engine and how the resulting ciphertexts are delivered.
+
+\subsection{TFHE Encryption and Ciphertext Expansion}
+\label{subsec:lwe-background}
+
+TFHE uses LWE ciphertexts as one of its basic encrypted representations~\cite{tfhe}. In the discrete-torus representation used here, coefficients are $w$ bits wide and arithmetic is performed modulo $q=2^w$. An LWE ciphertext $\mathbf{c}=(\mathbf{a},b)$ comprises a mask $\mathbf{a}\in\mathbb{Z}_q^n$ and a body $b\in\mathbb{Z}_q$. Given a message $m$, an encoding scale $\Delta$, and a binary secret $\mathbf{s}\in\{0,1\}^n$, encryption samples $\mathbf{a}$ uniformly and an error $e$ from the prescribed noise distribution, then computes
+\begin{equation}
+b=\left(\sum_{j=0}^{n-1}a_js_j+\Delta m+e\right)\bmod q.
+\label{eq:lwe-encryption}
+\end{equation}
+Here, $\Delta m$ is the torus encoding of $m$; the encoding scale and noise distribution are determined by the parameter set.
+
+Decryption removes the mask--key inner product to obtain the phase
+\begin{equation}
+\phi=\left(b-\sum_{j=0}^{n-1}a_js_j\right)\bmod q
+     =(\Delta m+e)\bmod q,
+\label{eq:lwe-decryption}
+\end{equation}
+which is decoded to the nearest valid message encoding. Recovery succeeds when the error remains within the decoding interval. Unlike decryption, encryption must also generate the random mask and noise.
+
+In our prototype, each LWE ciphertext encrypts one 2-bit message block. An 8-bit unsigned value $x$ is represented by four such blocks, ordered from least to most significant:
+\begin{equation}
+x=m_0+4m_1+16m_2+64m_3,
+\qquad m_r\in\{0,1,2,3\}.
+\label{eq:radix-representation}
+\end{equation}
+Encrypting the blocks independently produces four LWE ciphertexts for each input byte. Because each ciphertext contains $n+1$ coefficients, their combined uncompressed coefficient payload is
+\begin{equation}
+B_{\mathrm{raw}}=4(n+1)\frac{w}{8}\ \text{bytes}.
+\label{eq:radix-cipher-size}
+\end{equation}
+This raw size excludes serialized metadata, transfer alignment, and allocated buffer capacity; compressed or seeded ciphertext representations may have different sizes. The expansion from one byte to four LWE ciphertexts makes output buffering and transfer bandwidth part of the ciphertext-generation cost.
+
+\subsection{Prior TFHE Accelerators}
+\label{subsec:tfhe-acceleration-background}
+
+Much TFHE hardware work targets programmable bootstrapping, the costly step used to refresh ciphertexts during homomorphic evaluation. Ye et al. examine bootstrapping-key unrolling and customize ciphertext layout to improve FPGA data access and reuse~\cite{ye-tfhe-fpga}. MATCHA accelerates TFHE gate evaluation with a pipelined datapath and integer FFT/IFFT kernels~\cite{matcha}. FPT maps programmable bootstrapping to a fixed-point streaming FPGA pipeline, while Strix uses two-level ciphertext batching and streaming to improve bootstrapping throughput~\cite{fpt,strix}. These designs make different choices about data layout, arithmetic representation, and execution parallelism, but their datapaths accept existing ciphertexts and produce ciphertexts for further evaluation. They do not perform the initial LWE encryption of application data described in Section~\ref{subsec:lwe-background}.
+
+The distinction persists when TFHE evaluation hardware is integrated with storage. Ohba et al. combine an NVMe SSD, an FPGA TFHE accelerator, and host middleware that communicates ciphertexts, keys, and secure-computing instructions through NVMe commands~\cite{ohba-nvme-tfhe}. Their reported acceleration centers on gate bootstrapping. This work establishes a precedent for a storage-connected TFHE execution platform, while leaving the path from stored plaintext to initial ciphertexts outside its principal optimization target.
+
+Hardware support for that input path has been explored at the cryptographic-kernel level: Feryputri et al. implement TFHE LWE encryption and decryption on an FPGA~\cite{feryputri-lwe-fpga}. As Equation~\eqref{eq:lwe-encryption} shows, encryption generates a mask and noise and computes a mask--key inner product for every message block. Each block is a small plaintext value, but its ciphertext contains $n+1$ torus coefficients. Thus, moving encryption hardware close to persistent data also requires an execution path that identifies and reads the requested data, applies any required selection or preprocessing, and transfers the expanded ciphertexts. The encryption operator and the path that feeds and drains it are related but distinct design problems.
+
+\subsection{Computational Storage Architecture and Programming Model}
+\label{subsec:csd-background}
+
+Computational storage integrates processing resources with or near persistent storage so that data can be processed without first moving the complete input to the host. The SNIA reference architecture distinguishes storage-integrated drives, separate computational storage processors, and storage arrays. Across these configurations, computational storage engines (CSEs) execute computational storage functions (CSFs) within execution environments, using function data memory (FDM) for data consumed or produced by those functions~\cite{sniacs}. These components provide a common vocabulary for device-side execution, data reduction, and host--device programming.
+
+\emph{Near-storage execution.} Programmable SSD and CSD prototypes have placed application processing on embedded processors or FPGA logic within the storage system~\cite{kang-smartssd,willow,biscuit,insider}. Despite differences in hardware and runtime organization, these systems allow host-initiated functions to operate on stored data through a device-side execution path, reducing the need to materialize the full input in host memory.
+
+\emph{Storage-side data reduction.} Database-oriented systems push predicates, filtering, selection, and projection toward stored records or columns~\cite{do-smartssd,biscuit,skyhook,upp}. When an operation discards data, executing it before host transfer can reduce both host-side processing and the amount of data returned; the benefit depends on the selectivity of the operation. In-storage processing also supports other functions, including string matching and decompression~\cite{insider}. Thus, the operations that a storage system can offload are broader than data-reducing database queries, while their effects on data movement depend on the size of their outputs.
+
+\emph{Application-to-device programming interface.} A host needs a way to identify available functions, configure their parameters, invoke them, and specify where input data are read and results are written. The SNIA programming model separates resource discovery, function configuration, and function use; its CSF commands identify source and destination locations, while direct and indirect use models differ in how computation is associated with data access~\cite{sniacs}. Research systems expose complementary interfaces through application-defined SSD functions, host--device dataflow tasks, and file-oriented invocation~\cite{willow,biscuit,insider}. These interfaces connect application requests to storage-side execution without requiring the application to control every internal data transfer.
+\par
+\endgroup

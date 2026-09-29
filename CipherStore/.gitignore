@@ -1,0 +1,12 @@
+# Local LaTeX build products and editor backups.
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.tex.orig

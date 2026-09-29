@@ -1,0 +1,131 @@
+\documentclass[sigconf,anonymous]{acmart}
+\usepackage{amsmath}
+
+% Visible draft marker; replace each occurrence with a verified \cite{...}.
+\newcommand{\citationneeded}{\textit{[citation needed]}}
+
+\AtBeginDocument{%
+  \providecommand\BibTeX{{Bib\TeX}}}
+
+\begin{document}
+
+\title{CipherStore: A Computational Storage Architecture for FHE Ciphertext Generation}
+
+\author{Anonymous Author(s)}
+
+\begin{abstract}
+% 摘要最后再写
+This paper presents ...
+\end{abstract}
+
+\keywords{fully homomorphic encryption, TFHE, LWE, FPGA, computational storage}
+
+\maketitle
+
+% Allow modest extra flexibility when breaking long English lines in two columns.
+\begingroup
+\setlength{\emergencystretch}{1em}
+\section{Introduction}
+\label{sec:introduction}
+Fully homomorphic encryption (FHE) enables computation directly on encrypted data without requiring decryption, making it a promising foundation for privacy-preserving remote computing. Its practical adoption, however, remains constrained by computation and data overheads that are substantially higher than those of plaintext processing. Recent studies have therefore explored GPUs, FPGAs, and ASICs to accelerate the core operations of FHE. Architectures such as F1, BTS, and CraterLake have demonstrated that specialized hardware can substantially improve the performance of both FHE primitives and complete encrypted programs~\cite{f1,bts,craterlake}.
+
+An end-to-end FHE workflow, however, involves more than ciphertext computation. Any data involved in subsequent homomorphic computation must first undergo ciphertext generation, which transforms source data into the corresponding FHE ciphertexts. Accelerating back-end ciphertext computation does not eliminate this front-end process. For large datasets, ciphertext generation not only performs nontrivial cryptographic computation but also produces representations substantially larger than the original plaintext. Consequently, it continuously consumes host computing resources while increasing memory footprint, buffering requirements, and the cost of subsequent data movement. Prior FHE system studies have identified large ciphertext volumes as an important source of memory and data-movement overhead~\cite{f1,craterlake,hera}. Meanwhile, an FPGA implementation of LWE/TFHE encryption and decryption has shown that ciphertext generation itself offers opportunities for hardware acceleration~\cite{feryputri-lwe-fpga}. As ciphertext computation becomes increasingly accelerated by specialized hardware, improving the throughput of ciphertext generation while reducing its sustained demand on host CPU and memory resources becomes a distinct end-to-end systems problem.
+
+Existing work has not yet treated FHE ciphertext generation as a complete systems problem. On the hardware side, prior studies have demonstrated the potential of accelerating FHE encryption and decryption, but they have focused primarily on the implementation and performance of individual cryptographic kernels. In practical systems, however, ciphertext generation is not an isolated cryptographic operation. In data-driven applications, the source data typically reside in persistent objects such as files, tables, or records. Transforming these objects into ciphertexts that can be consumed by an FHE back end requires a complete path that includes data access, application-specific preprocessing, and cryptographic generation. How to organize this path efficiently around persistent data therefore remains an architectural question.
+
+On the software side, existing FHE stacks generally expose encryption as an operation over plaintext objects that have already been prepared in memory, implicitly assuming that data retrieval and preprocessing are handled by the application beforehand. \citationneeded{} Although this abstraction is suitable for conventional memory-resident workflows, it does not directly capture ciphertext-generation tasks over persistent data. When the target data remain in storage, an application must specify which data should be processed, what preprocessing should be performed, and how the resulting values should be converted into ciphertexts. FHE ciphertext generation therefore requires not only an appropriate compute architecture but also an application model that connects high-level data requirements to the underlying storage access, preprocessing, and encryption operations.
+
+Computational storage (CS) provides a natural design point for addressing these requirements. By placing computing capabilities close to stored data, CS enables selected operations to execute on the storage side, thereby reducing host processing and data-movement overheads. Database analytics, compression, conventional encryption, and encoding have all been studied as representative computational-storage workloads. \citationneeded{} In an FHE system, this model allows ciphertext generation to be elevated from host-side preprocessing to a storage-side service. An FPGA-based computational storage device (CSD) can accelerate ciphertext generation while applying application-specific preprocessing before the data enter the encrypted domain. For data-driven FHE workloads that access only selected records or fields, the CSD can first identify the relevant data and then generate ciphertexts only for the selected values. This approach avoids encrypting irrelevant data and reduces the associated storage, buffering, and downstream processing overheads. Moreover, computational storage already provides architectural, programming-model, and API abstractions for mapping application requests to device-side computation. \citationneeded{} It therefore offers both a new execution location for TFHE ciphertext generation and a systems foundation for building a ciphertext-generation application model over persistent data.
+
+This work uses TFHE (Fast Fully Homomorphic Encryption over the Torus) as a concrete instance of this design. TFHE is an LWE-family FHE scheme that supports fine-grained encrypted computation through bootstrapping. Its fresh encryption and decryption procedures have well-defined computational structures and are amenable to FPGA acceleration. \citationneeded{} Based on these properties, we propose a computational-storage architecture for FHE ciphertext generation and implement it for TFHE. The proposed design integrates hardware-accelerated TFHE encryption and decryption with the necessary data-processing capabilities on a CSD FPGA. We further define a computational-storage application model for ciphertext generation that connects application-level data requirements to device-side storage access, preprocessing, and encryption. Finally, we implement a prototype on a SoC-FPGA-based CSD and evaluate it through system-level experiments.
+
+The main contributions of this work are as follows:
+\begin{itemize}
+  \item \textbf{A computational-storage architecture for FHE ciphertext generation.}
+  We establish ciphertext generation as a first-class computational-storage capability. The architecture integrates TFHE encryption and decryption operators implemented using high-level synthesis (HLS) with data-filtering operators and the corresponding data paths on a CSD FPGA, enabling a near-storage hardware pipeline from persistent data to FHE ciphertexts.
+
+  \item \textbf{A computational-storage application model for TFHE ciphertext generation.}
+  The model maps application-level data requirements to device-side ciphertext-generation tasks. It allows applications to specify the storage-resident data to be processed together with the required preprocessing and encryption operations, which the system translates into storage access, data processing, and TFHE ciphertext generation.
+
+  \item \textbf{A client interface and prototype system for producing TFHE ciphertexts.}
+  We implement a client-side interface and an end-to-end prototype on a SoC-FPGA-based CSD. We compare the FPGA implementation with a CPU-based software implementation to evaluate ciphertext-generation performance and system overhead. We further connect the ciphertexts produced by the CSD to an existing homomorphic-computing back end, validating the correctness and practicality of the proposed architecture and application model within a complete FHE workflow.
+\end{itemize}
+\endgroup
+
+\input{background}
+
+\section{Streaming TFHE Encryption and Decryption}
+\label{sec:datapath}
+
+We implement the TFHE LWE encryption and decryption operators in HLS and integrate them into the CSD FPGA data path. This section describes their streaming representation and the data-path requirements arising from the different input and output volumes of encryption and decryption.
+
+\subsection{Data Representation and Design Requirements}
+\label{subsec:data-representation}
+
+The prototype processes 8-bit unsigned integers using four radix blocks, each carrying two message bits. Encryption generates one LWE ciphertext per block; decryption recovers the blocks and reconstructs the integer in increasing radix order. The prototype uses an LWE dimension of $n=2048$ and a coefficient width of $w=64$. Thus, each LWE ciphertext contains 2,049 coefficients and has a raw coefficient payload of 16,392~B.
+
+The data path uses a 512-bit streaming interface, corresponding to 64~B per transfer beat. Each LWE record is aligned independently, giving a transfer length of
+\begin{equation}
+B_{\mathrm{record}}
+=\left\lceil\frac{16{,}392}{64}\right\rceil
+\times64
+=16{,}448~\mathrm{B}.
+\end{equation}
+The four blocks of an 8-bit integer therefore occupy
+\begin{equation}
+B_{\mathrm{stream}}
+=4\times16{,}448
+=65{,}792~\mathrm{B}.
+\label{eq:u8-stream-size}
+\end{equation}
+The raw coefficient payload excludes padding, whereas the streaming transfer length includes the unused bytes in the final beat of each record. Both quantities must be distinguished from allocated device-buffer capacity. Encryption converts a 1~B application value into a 65,792~B stream in this configuration; decryption performs the reverse conversion. This asymmetry determines the buffering and flow-control requirements of the two data paths.
+
+\subsection{Natural-Order LWE Stream Format}
+
+\subsection{Fused Streaming Encryption Datapath}
+
+\subsection{Online Streaming Decryption Datapath}
+
+\subsection{Control and Backpressure}
+
+\section{Integration with SoC-FPGA Computational Storage}
+% 第四章：CSD集成
+
+\subsection{System Overview}
+
+\subsection{Host Interface and Device Runtime}
+
+\subsection{SLM-Based Data Management}
+
+\subsection{Task Execution and Completion}
+
+\subsection{End-to-End Protected Data Path}
+
+\section{Evaluation}
+% 第五章：实验
+
+\subsection{Experimental Setup}
+
+\subsection{Correctness}
+
+\subsection{FPGA Performance and Resource Utilization}
+
+\subsection{Comparison with CPU and Prior Hardware}
+
+\subsection{CSD Stage Breakdown}
+
+\subsection{End-to-End Application}
+
+\section{Related Work}
+
+\subsection{TFHE Bootstrapping Accelerators}
+
+\subsection{LWE Encryption and Decryption Hardware}
+
+\subsection{FPGA Computational Storage}
+
+\section{Conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+\end{document}
