@@ -13,8 +13,8 @@ module lwe_decrypt_start_for_pack_clear_stream_U0_shiftReg (
     q);
 
 parameter DATA_WIDTH = 32'd1;
-parameter ADDR_WIDTH = 32'd3;
-parameter DEPTH = 4'd5;
+parameter ADDR_WIDTH = 32'd4;
+parameter DEPTH = 5'd9;
 
 input clk;
 input [DATA_WIDTH-1:0] data;
@@ -53,8 +53,8 @@ module lwe_decrypt_start_for_pack_clear_stream_U0 (
 
 parameter MEM_STYLE   = "shiftreg";
 parameter DATA_WIDTH  = 32'd1;
-parameter ADDR_WIDTH  = 32'd3;
-parameter DEPTH       = 4'd5;
+parameter ADDR_WIDTH  = 32'd4;
+parameter DEPTH       = 5'd9;
 
 input clk;
 input reset;
@@ -90,17 +90,17 @@ always @ (posedge clk) begin
         if (((if_read & if_read_ce) == 1 & internal_empty_n == 1) && 
             ((if_write & if_write_ce) == 0 | internal_full_n == 0))
         begin
-            mOutPtr <= mOutPtr - 4'd1;
-            if (mOutPtr == 4'd0)
+            mOutPtr <= mOutPtr - 5'd1;
+            if (mOutPtr == 5'd0)
                 internal_empty_n <= 1'b0;
             internal_full_n <= 1'b1;
         end 
         else if (((if_read & if_read_ce) == 0 | internal_empty_n == 0) && 
             ((if_write & if_write_ce) == 1 & internal_full_n == 1))
         begin
-            mOutPtr <= mOutPtr + 4'd1;
+            mOutPtr <= mOutPtr + 5'd1;
             internal_empty_n <= 1'b1;
-            if (mOutPtr == DEPTH - 4'd2)
+            if (mOutPtr == DEPTH - 5'd2)
                 internal_full_n <= 1'b0;
         end 
     end

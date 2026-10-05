@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Writing"
+  short_description: "Evidence-grounded manuscript drafting"
+  default_prompt: "Use $paper-writing to draft or revise this section using the supplied evidence and requested scope."

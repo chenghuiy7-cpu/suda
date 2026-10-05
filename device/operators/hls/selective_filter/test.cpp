@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
+#include "../../../../host/applications/vscode-selective-lwe-full-pipeline/selection_manifest.hpp"
 
 namespace {
 
@@ -307,10 +308,74 @@ bool test_filter_lwe_pipeline()
     return verify_status(status, records.size(), selected_count) && encrypted.empty();
 }
 
+
+bool test_device_manifest() {
+    // Partial/all/no matches, bad config, truncated rows, partial TKEEP, and
+    // extra LBA padding must all produce the deterministic receive length.
+    for (unsigned scenario = 0; scenario < 7; ++scenario) {
+        ap_uint<512> context[256];
+        configure_filter_v2(context, 3);
+        auto &cfg = context[SELECTIVE_FILTER_STATIC_CONTEXT_BASE];
+        cfg.range(191, 160) = SELECTIVE_FILTER_OUTPUT_MANIFEST;
+        std::vector<RecordSpec> records = {{1, 11, 100, 0}, {2, 5, 100, 0}, {3, 12, 100, 0}};
+        if (scenario == 1) records[1].quantity = 20;
+        if (scenario == 2) for (auto &r : records) r.quantity = 1;
+        if (scenario == 3) cfg.range(255, 224) = 99;
+        if (scenario == 4) records.pop_back();
+        if (scenario == 6) records.push_back({4, 99, 100, 0});
+        Acc_Data source, input, output;
+        append_records(source, records);
+        unsigned beat = 0;
+        while (!source.empty()) {
+            Acc_Data_Pkt pkt = source.read();
+            if (scenario == 5 && beat == 0) pkt.keep[4] = 0;
+            input.write(pkt); ++beat;
+        }
+        selective_filter(input, output, context);
+        std::vector<uint8_t> raw;
+        bool finished = false;
+        while (!output.empty()) {
+            Acc_Data_Pkt pkt = output.read();
+            if (pkt.user != 0) {
+                if (!output.empty() || finished) return false;
+                finished = true; continue;
+            }
+            if (finished || pkt.keep != ap_uint<64>(-1)) return false;
+            for (unsigned lane = 0; lane < 64; ++lane)
+                raw.push_back(pkt.data.range(lane * 8 + 7, lane * 8).to_uint());
+        }
+        if (!finished || raw.size() != selection_manifest::payload_bytes(3)) return false;
+        std::vector<uint32_t> ids;
+        std::vector<uint8_t> values;
+        std::string error;
+        bool valid = selection_manifest::parse(raw.data(), raw.size(), 3, 512, 4, &ids, &values, &error);
+        if (scenario >= 3 && scenario <= 5) {
+            if (valid) return false;
+        } else {
+            if (!valid) { fprintf(stderr, "%s\n", error.c_str()); return false; }
+            const std::vector<uint32_t> expected = scenario == 1 ? std::vector<uint32_t>{0,1,2}
+                : scenario == 2 ? std::vector<uint32_t>{} : std::vector<uint32_t>{0,2};
+            if (ids != expected) return false;
+            for (size_t i = 0; i < ids.size(); ++i)
+                if (values[i] != records[ids[i]].quantity) return false;
+            // Reject corrupt row IDs/counts and truncated payloads.
+            auto corrupt = raw; corrupt[0] = 1;
+            if (selection_manifest::parse(corrupt.data(), corrupt.size(), 3, 512, 4, &ids, &values, &error)) return false;
+            corrupt = raw; corrupt[3 * 64 + 16] ^= 1;
+            if (selection_manifest::parse(corrupt.data(), corrupt.size(), 3, 512, 4, &ids, &values, &error)) return false;
+            if (selection_manifest::parse(raw.data(), raw.size() - 1, 3, 512, 4, &ids, &values, &error)) return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main()
 {
+    if (!test_device_manifest()) {
+        fprintf(stderr, "device manifest contract test failed\n"); return 1;
+    }
     if (!test_runtime_sql_metadata()) {
         fprintf(stderr, "selective_filter runtime SQL metadata test failed\n");
         return 1;

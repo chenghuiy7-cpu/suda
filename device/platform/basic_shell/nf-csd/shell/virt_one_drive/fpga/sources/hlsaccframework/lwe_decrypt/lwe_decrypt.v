@@ -7,7 +7,7 @@
 
 `timescale 1 ns / 1 ps 
 
-(* CORE_GENERATION_INFO="lwe_decrypt_lwe_decrypt,hls_ip_2020_2,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=0,HLS_INPUT_PART=xczu19eg-ffvc1760-2-e,HLS_INPUT_CLOCK=4.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=2.894571,HLS_SYN_LAT=-1,HLS_SYN_TPT=none,HLS_SYN_MEM=16,HLS_SYN_DSP=0,HLS_SYN_FF=4652,HLS_SYN_LUT=13666,HLS_VERSION=2020_2}" *)
+(* CORE_GENERATION_INFO="lwe_decrypt_lwe_decrypt,hls_ip_2020_2,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=0,HLS_INPUT_PART=xczu19eg-ffvc1760-2-e,HLS_INPUT_CLOCK=4.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=2.920000,HLS_SYN_LAT=-1,HLS_SYN_TPT=none,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=13124,HLS_SYN_LUT=21723,HLS_VERSION=2020_2}" *)
 
 module lwe_decrypt (
         ap_clk,
@@ -43,13 +43,15 @@ module lwe_decrypt (
         context_Rst_A
 );
 
-parameter    ap_ST_fsm_state1 = 7'd1;
-parameter    ap_ST_fsm_state2 = 7'd2;
-parameter    ap_ST_fsm_state3 = 7'd4;
-parameter    ap_ST_fsm_state4 = 7'd8;
-parameter    ap_ST_fsm_state5 = 7'd16;
-parameter    ap_ST_fsm_state6 = 7'd32;
-parameter    ap_ST_fsm_state7 = 7'd64;
+parameter    ap_ST_fsm_state1 = 9'd1;
+parameter    ap_ST_fsm_state2 = 9'd2;
+parameter    ap_ST_fsm_state3 = 9'd4;
+parameter    ap_ST_fsm_state4 = 9'd8;
+parameter    ap_ST_fsm_state5 = 9'd16;
+parameter    ap_ST_fsm_state6 = 9'd32;
+parameter    ap_ST_fsm_state7 = 9'd64;
+parameter    ap_ST_fsm_state8 = 9'd128;
+parameter    ap_ST_fsm_state9 = 9'd256;
 
 input   ap_clk;
 input   ap_rst_n;
@@ -100,139 +102,364 @@ reg context_EN_A;
 reg context_Rst_A;
 
  reg    ap_rst_n_inv;
-(* fsm_encoding = "none" *) reg   [6:0] ap_CS_fsm;
+(* fsm_encoding = "none" *) reg   [8:0] ap_CS_fsm;
 wire    ap_CS_fsm_state1;
 reg    data_out_TDATA_blk_n;
 wire    ap_CS_fsm_state3;
-wire   [0:0] icmp_ln874_13_fu_407_p2;
-reg   [511:0] cfg_V_reg_442;
+wire   [0:0] icmp_ln874_33_fu_462_p2;
+reg   [511:0] cfg_V_reg_497;
 wire    ap_CS_fsm_state2;
-wire   [31:0] count_V_fu_217_p1;
-reg   [31:0] count_V_reg_447;
-wire   [0:0] icmp_ln874_fu_271_p2;
-reg   [0:0] icmp_ln874_reg_452;
-wire   [0:0] xor_ln383_fu_289_p2;
-reg   [0:0] xor_ln383_reg_459;
-wire   [0:0] xor_ln385_fu_307_p2;
-reg   [0:0] xor_ln385_reg_465;
-wire   [0:0] icmp_ln874_11_fu_313_p2;
-reg   [0:0] icmp_ln874_11_reg_471;
-wire   [0:0] icmp_ln874_12_fu_319_p2;
-reg   [0:0] icmp_ln874_12_reg_476;
-wire   [0:0] icmp_ln886_fu_325_p2;
-reg   [0:0] icmp_ln886_reg_481;
-reg   [0:0] icmp_ln874_13_reg_486;
-reg   [1:0] agg_tmp_reg_490;
-reg   [10:0] key_V_address0;
-reg    key_V_ce0;
-reg    key_V_we0;
-wire   [0:0] key_V_q0;
-wire   [511:0] grp_decrypt_dataflow_fu_175_data_out_TDATA;
-wire   [63:0] grp_decrypt_dataflow_fu_175_data_out_TKEEP;
-wire   [63:0] grp_decrypt_dataflow_fu_175_data_out_TSTRB;
-wire   [7:0] grp_decrypt_dataflow_fu_175_data_out_TUSER;
-wire   [0:0] grp_decrypt_dataflow_fu_175_data_out_TLAST;
-wire   [7:0] grp_decrypt_dataflow_fu_175_data_out_TID;
-wire   [7:0] grp_decrypt_dataflow_fu_175_data_out_TDEST;
-wire   [10:0] grp_decrypt_dataflow_fu_175_key_address0;
-wire    grp_decrypt_dataflow_fu_175_key_ce0;
-wire   [0:0] grp_decrypt_dataflow_fu_175_key_d0;
-wire    grp_decrypt_dataflow_fu_175_key_we0;
-wire    grp_decrypt_dataflow_fu_175_data_in_TREADY;
-wire    grp_decrypt_dataflow_fu_175_ap_start;
-wire    grp_decrypt_dataflow_fu_175_data_out_TVALID;
-wire    grp_decrypt_dataflow_fu_175_data_out_TREADY;
-wire    grp_decrypt_dataflow_fu_175_ap_done;
-wire    grp_decrypt_dataflow_fu_175_ap_ready;
-wire    grp_decrypt_dataflow_fu_175_ap_idle;
-reg    grp_decrypt_dataflow_fu_175_ap_continue;
-wire    grp_load_secret_key_fu_210_ap_start;
-wire    grp_load_secret_key_fu_210_ap_done;
-wire    grp_load_secret_key_fu_210_ap_idle;
-wire    grp_load_secret_key_fu_210_ap_ready;
-wire   [31:0] grp_load_secret_key_fu_210_context_Addr_A;
-wire    grp_load_secret_key_fu_210_context_EN_A;
-wire   [63:0] grp_load_secret_key_fu_210_context_WEN_A;
-wire   [511:0] grp_load_secret_key_fu_210_context_Din_A;
-wire   [10:0] grp_load_secret_key_fu_210_key_address0;
-wire    grp_load_secret_key_fu_210_key_ce0;
-wire    grp_load_secret_key_fu_210_key_we0;
-wire   [0:0] grp_load_secret_key_fu_210_key_d0;
-reg    grp_decrypt_dataflow_fu_175_ap_start_reg;
-wire    ap_CS_fsm_state6;
-wire    ap_CS_fsm_state7;
-wire    ap_sync_grp_decrypt_dataflow_fu_175_ap_ready;
-wire    ap_sync_grp_decrypt_dataflow_fu_175_ap_done;
-reg    ap_block_state7_on_subcall_done;
-reg    ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready;
-reg    ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done;
-reg    grp_load_secret_key_fu_210_ap_start_reg;
+wire   [31:0] count_V_fu_272_p1;
+reg   [31:0] count_V_reg_502;
+wire   [0:0] icmp_ln874_fu_326_p2;
+reg   [0:0] icmp_ln874_reg_507;
+wire   [0:0] xor_ln627_fu_344_p2;
+reg   [0:0] xor_ln627_reg_514;
+wire   [0:0] xor_ln629_fu_362_p2;
+reg   [0:0] xor_ln629_reg_520;
+wire   [0:0] icmp_ln874_31_fu_368_p2;
+reg   [0:0] icmp_ln874_31_reg_526;
+wire   [0:0] icmp_ln874_32_fu_374_p2;
+reg   [0:0] icmp_ln874_32_reg_531;
+wire   [0:0] icmp_ln886_fu_380_p2;
+reg   [0:0] icmp_ln886_reg_536;
+reg   [0:0] icmp_ln874_33_reg_541;
+reg   [1:0] agg_tmp_reg_545;
+reg    key_V_0_ce0;
+wire   [7:0] key_V_0_q0;
+reg    key_V_0_ce1;
+reg    key_V_0_we1;
+reg    key_V_1_ce0;
+wire   [7:0] key_V_1_q0;
+reg    key_V_1_ce1;
+reg    key_V_1_we1;
+reg    key_V_2_ce0;
+wire   [7:0] key_V_2_q0;
+reg    key_V_2_ce1;
+reg    key_V_2_we1;
+reg    key_V_3_ce0;
+wire   [7:0] key_V_3_q0;
+reg    key_V_3_ce1;
+reg    key_V_3_we1;
+reg    key_V_4_ce0;
+wire   [7:0] key_V_4_q0;
+reg    key_V_4_ce1;
+reg    key_V_4_we1;
+reg    key_V_5_ce0;
+wire   [7:0] key_V_5_q0;
+reg    key_V_5_ce1;
+reg    key_V_5_we1;
+reg    key_V_6_ce0;
+wire   [7:0] key_V_6_q0;
+reg    key_V_6_ce1;
+reg    key_V_6_we1;
+reg    key_V_7_ce0;
+wire   [7:0] key_V_7_q0;
+reg    key_V_7_ce1;
+reg    key_V_7_we1;
+reg    groups_V_ce0;
+wire   [7:0] groups_V_q0;
+reg   [7:0] groups_V_address1;
+reg    groups_V_ce1;
+reg    groups_V_we1;
+wire   [7:0] groups_V_q1;
+wire   [511:0] grp_decrypt_dataflow_fu_209_data_out_TDATA;
+wire   [63:0] grp_decrypt_dataflow_fu_209_data_out_TKEEP;
+wire   [63:0] grp_decrypt_dataflow_fu_209_data_out_TSTRB;
+wire   [7:0] grp_decrypt_dataflow_fu_209_data_out_TUSER;
+wire   [0:0] grp_decrypt_dataflow_fu_209_data_out_TLAST;
+wire   [7:0] grp_decrypt_dataflow_fu_209_data_out_TID;
+wire   [7:0] grp_decrypt_dataflow_fu_209_data_out_TDEST;
+wire   [7:0] grp_decrypt_dataflow_fu_209_groups_address0;
+wire    grp_decrypt_dataflow_fu_209_groups_ce0;
+wire   [7:0] grp_decrypt_dataflow_fu_209_groups_d0;
+wire    grp_decrypt_dataflow_fu_209_groups_we0;
+wire   [7:0] grp_decrypt_dataflow_fu_209_groups_address1;
+wire    grp_decrypt_dataflow_fu_209_groups_ce1;
+wire   [7:0] grp_decrypt_dataflow_fu_209_groups_d1;
+wire    grp_decrypt_dataflow_fu_209_groups_we1;
+wire    grp_decrypt_dataflow_fu_209_data_in_TREADY;
+wire    grp_decrypt_dataflow_fu_209_ap_start;
+wire    grp_decrypt_dataflow_fu_209_data_out_TVALID;
+wire    grp_decrypt_dataflow_fu_209_data_out_TREADY;
+wire    grp_decrypt_dataflow_fu_209_ap_done;
+wire    grp_decrypt_dataflow_fu_209_ap_ready;
+wire    grp_decrypt_dataflow_fu_209_ap_idle;
+reg    grp_decrypt_dataflow_fu_209_ap_continue;
+wire    grp_load_secret_key_fu_244_ap_start;
+wire    grp_load_secret_key_fu_244_ap_done;
+wire    grp_load_secret_key_fu_244_ap_idle;
+wire    grp_load_secret_key_fu_244_ap_ready;
+wire   [31:0] grp_load_secret_key_fu_244_context_Addr_A;
+wire    grp_load_secret_key_fu_244_context_EN_A;
+wire   [63:0] grp_load_secret_key_fu_244_context_WEN_A;
+wire   [511:0] grp_load_secret_key_fu_244_context_Din_A;
+wire   [4:0] grp_load_secret_key_fu_244_key_address1;
+wire    grp_load_secret_key_fu_244_key_ce1;
+wire    grp_load_secret_key_fu_244_key_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key1_address1;
+wire    grp_load_secret_key_fu_244_key1_ce1;
+wire    grp_load_secret_key_fu_244_key1_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key1_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key2_address1;
+wire    grp_load_secret_key_fu_244_key2_ce1;
+wire    grp_load_secret_key_fu_244_key2_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key2_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key3_address1;
+wire    grp_load_secret_key_fu_244_key3_ce1;
+wire    grp_load_secret_key_fu_244_key3_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key3_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key4_address1;
+wire    grp_load_secret_key_fu_244_key4_ce1;
+wire    grp_load_secret_key_fu_244_key4_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key4_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key5_address1;
+wire    grp_load_secret_key_fu_244_key5_ce1;
+wire    grp_load_secret_key_fu_244_key5_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key5_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key6_address1;
+wire    grp_load_secret_key_fu_244_key6_ce1;
+wire    grp_load_secret_key_fu_244_key6_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key6_d1;
+wire   [4:0] grp_load_secret_key_fu_244_key7_address1;
+wire    grp_load_secret_key_fu_244_key7_ce1;
+wire    grp_load_secret_key_fu_244_key7_we1;
+wire   [7:0] grp_load_secret_key_fu_244_key7_d1;
+wire    grp_prepare_key_groups_fu_258_ap_start;
+wire    grp_prepare_key_groups_fu_258_ap_done;
+wire    grp_prepare_key_groups_fu_258_ap_idle;
+wire    grp_prepare_key_groups_fu_258_ap_ready;
+wire   [4:0] grp_prepare_key_groups_fu_258_key_address0;
+wire    grp_prepare_key_groups_fu_258_key_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key1_address0;
+wire    grp_prepare_key_groups_fu_258_key1_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key2_address0;
+wire    grp_prepare_key_groups_fu_258_key2_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key3_address0;
+wire    grp_prepare_key_groups_fu_258_key3_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key4_address0;
+wire    grp_prepare_key_groups_fu_258_key4_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key5_address0;
+wire    grp_prepare_key_groups_fu_258_key5_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key6_address0;
+wire    grp_prepare_key_groups_fu_258_key6_ce0;
+wire   [4:0] grp_prepare_key_groups_fu_258_key7_address0;
+wire    grp_prepare_key_groups_fu_258_key7_ce0;
+wire   [7:0] grp_prepare_key_groups_fu_258_groups_address1;
+wire    grp_prepare_key_groups_fu_258_groups_ce1;
+wire    grp_prepare_key_groups_fu_258_groups_we1;
+wire   [7:0] grp_prepare_key_groups_fu_258_groups_d1;
+reg    grp_decrypt_dataflow_fu_209_ap_start_reg;
+wire    ap_CS_fsm_state8;
+wire    ap_CS_fsm_state9;
+wire    ap_sync_grp_decrypt_dataflow_fu_209_ap_ready;
+wire    ap_sync_grp_decrypt_dataflow_fu_209_ap_done;
+reg    ap_block_state9_on_subcall_done;
+reg    ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready;
+reg    ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done;
+reg    grp_load_secret_key_fu_244_ap_start_reg;
 wire    ap_CS_fsm_state4;
 wire    ap_CS_fsm_state5;
-wire   [511:0] p_Result_s_fu_417_p4;
+reg    grp_prepare_key_groups_fu_258_ap_start_reg;
+wire    ap_CS_fsm_state6;
+wire    ap_CS_fsm_state7;
+wire   [511:0] p_Result_s_fu_472_p4;
 reg    ap_block_state3;
 reg    ap_block_state3_io;
 wire   [31:0] context_Addr_A_orig;
-wire   [31:0] dimension_fu_221_p4;
-wire   [63:0] delta_fu_231_p4;
-wire   [0:0] icmp_ln874_7_fu_277_p2;
-wire   [0:0] icmp_ln874_8_fu_283_p2;
-wire   [31:0] message_width_fu_241_p4;
-wire   [0:0] icmp_ln874_9_fu_295_p2;
-wire   [0:0] icmp_ln874_10_fu_301_p2;
-wire   [31:0] radix_blocks_fu_251_p4;
-wire   [31:0] layout_fu_261_p4;
-wire   [2:0] error_V_fu_335_p3;
-wire   [0:0] xor_ln383_1_fu_353_p2;
-wire   [0:0] xor_ln386_fu_331_p2;
-wire   [0:0] xor_ln385_1_fu_363_p2;
-wire   [0:0] and_ln386_fu_368_p2;
-wire   [0:0] or_ln386_fu_374_p2;
-wire   [0:0] and_ln383_1_fu_358_p2;
-wire   [0:0] and_ln386_1_fu_379_p2;
-wire   [0:0] and_ln383_fu_349_p2;
-wire   [0:0] or_ln386_1_fu_393_p2;
-wire   [2:0] select_ln386_fu_385_p3;
-wire   [2:0] select_ln874_fu_342_p3;
-wire   [2:0] error_V_1_fu_399_p3;
-wire   [31:0] zext_ln215_fu_413_p1;
-reg   [6:0] ap_NS_fsm;
+wire   [31:0] dimension_fu_276_p4;
+wire   [63:0] delta_fu_286_p4;
+wire   [0:0] icmp_ln874_27_fu_332_p2;
+wire   [0:0] icmp_ln874_28_fu_338_p2;
+wire   [31:0] message_width_fu_296_p4;
+wire   [0:0] icmp_ln874_29_fu_350_p2;
+wire   [0:0] icmp_ln874_30_fu_356_p2;
+wire   [31:0] radix_blocks_fu_306_p4;
+wire   [31:0] layout_fu_316_p4;
+wire   [2:0] error_V_fu_390_p3;
+wire   [0:0] xor_ln627_1_fu_408_p2;
+wire   [0:0] xor_ln630_fu_386_p2;
+wire   [0:0] xor_ln629_1_fu_418_p2;
+wire   [0:0] and_ln630_fu_423_p2;
+wire   [0:0] or_ln630_fu_429_p2;
+wire   [0:0] and_ln627_1_fu_413_p2;
+wire   [0:0] and_ln630_1_fu_434_p2;
+wire   [0:0] and_ln627_fu_404_p2;
+wire   [0:0] or_ln630_1_fu_448_p2;
+wire   [2:0] select_ln630_fu_440_p3;
+wire   [2:0] select_ln874_fu_397_p3;
+wire   [2:0] error_V_2_fu_454_p3;
+wire   [31:0] zext_ln215_fu_468_p1;
+reg   [8:0] ap_NS_fsm;
 wire    ap_ce_reg;
 
 // power-on initialization
 initial begin
-#0 ap_CS_fsm = 7'd1;
-#0 cfg_V_reg_442 = 512'd0;
-#0 count_V_reg_447 = 32'd0;
-#0 icmp_ln874_reg_452 = 1'd0;
-#0 xor_ln383_reg_459 = 1'd0;
-#0 xor_ln385_reg_465 = 1'd0;
-#0 icmp_ln874_11_reg_471 = 1'd0;
-#0 icmp_ln874_12_reg_476 = 1'd0;
-#0 icmp_ln886_reg_481 = 1'd0;
-#0 icmp_ln874_13_reg_486 = 1'd0;
-#0 agg_tmp_reg_490 = 2'd0;
-#0 grp_decrypt_dataflow_fu_175_ap_start_reg = 1'b0;
-#0 ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready = 1'b0;
-#0 ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done = 1'b0;
-#0 grp_load_secret_key_fu_210_ap_start_reg = 1'b0;
+#0 ap_CS_fsm = 9'd1;
+#0 cfg_V_reg_497 = 512'd0;
+#0 count_V_reg_502 = 32'd0;
+#0 icmp_ln874_reg_507 = 1'd0;
+#0 xor_ln627_reg_514 = 1'd0;
+#0 xor_ln629_reg_520 = 1'd0;
+#0 icmp_ln874_31_reg_526 = 1'd0;
+#0 icmp_ln874_32_reg_531 = 1'd0;
+#0 icmp_ln886_reg_536 = 1'd0;
+#0 icmp_ln874_33_reg_541 = 1'd0;
+#0 agg_tmp_reg_545 = 2'd0;
+#0 grp_decrypt_dataflow_fu_209_ap_start_reg = 1'b0;
+#0 ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready = 1'b0;
+#0 ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done = 1'b0;
+#0 grp_load_secret_key_fu_244_ap_start_reg = 1'b0;
+#0 grp_prepare_key_groups_fu_258_ap_start_reg = 1'b0;
 end
 
-lwe_decrypt_key_V #(
-    .DataWidth( 1 ),
-    .AddressRange( 2048 ),
-    .AddressWidth( 11 ))
-key_V_U(
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_0_U(
     .clk(ap_clk),
     .reset(ap_rst_n_inv),
-    .address0(key_V_address0),
-    .ce0(key_V_ce0),
-    .we0(key_V_we0),
-    .d0(grp_load_secret_key_fu_210_key_d0),
-    .q0(key_V_q0)
+    .address0(grp_prepare_key_groups_fu_258_key_address0),
+    .ce0(key_V_0_ce0),
+    .q0(key_V_0_q0),
+    .address1(grp_load_secret_key_fu_244_key_address1),
+    .ce1(key_V_0_ce1),
+    .we1(key_V_0_we1),
+    .d1(grp_load_secret_key_fu_244_key_d1)
 );
 
-lwe_decrypt_decrypt_dataflow grp_decrypt_dataflow_fu_175(
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_1_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key1_address0),
+    .ce0(key_V_1_ce0),
+    .q0(key_V_1_q0),
+    .address1(grp_load_secret_key_fu_244_key1_address1),
+    .ce1(key_V_1_ce1),
+    .we1(key_V_1_we1),
+    .d1(grp_load_secret_key_fu_244_key1_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_2_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key2_address0),
+    .ce0(key_V_2_ce0),
+    .q0(key_V_2_q0),
+    .address1(grp_load_secret_key_fu_244_key2_address1),
+    .ce1(key_V_2_ce1),
+    .we1(key_V_2_we1),
+    .d1(grp_load_secret_key_fu_244_key2_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_3_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key3_address0),
+    .ce0(key_V_3_ce0),
+    .q0(key_V_3_q0),
+    .address1(grp_load_secret_key_fu_244_key3_address1),
+    .ce1(key_V_3_ce1),
+    .we1(key_V_3_we1),
+    .d1(grp_load_secret_key_fu_244_key3_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_4_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key4_address0),
+    .ce0(key_V_4_ce0),
+    .q0(key_V_4_q0),
+    .address1(grp_load_secret_key_fu_244_key4_address1),
+    .ce1(key_V_4_ce1),
+    .we1(key_V_4_we1),
+    .d1(grp_load_secret_key_fu_244_key4_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_5_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key5_address0),
+    .ce0(key_V_5_ce0),
+    .q0(key_V_5_q0),
+    .address1(grp_load_secret_key_fu_244_key5_address1),
+    .ce1(key_V_5_ce1),
+    .we1(key_V_5_we1),
+    .d1(grp_load_secret_key_fu_244_key5_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_6_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key6_address0),
+    .ce0(key_V_6_ce0),
+    .q0(key_V_6_q0),
+    .address1(grp_load_secret_key_fu_244_key6_address1),
+    .ce1(key_V_6_ce1),
+    .we1(key_V_6_we1),
+    .d1(grp_load_secret_key_fu_244_key6_d1)
+);
+
+lwe_decrypt_key_V_0 #(
+    .DataWidth( 8 ),
+    .AddressRange( 32 ),
+    .AddressWidth( 5 ))
+key_V_7_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_prepare_key_groups_fu_258_key7_address0),
+    .ce0(key_V_7_ce0),
+    .q0(key_V_7_q0),
+    .address1(grp_load_secret_key_fu_244_key7_address1),
+    .ce1(key_V_7_ce1),
+    .we1(key_V_7_we1),
+    .d1(grp_load_secret_key_fu_244_key7_d1)
+);
+
+lwe_decrypt_groups_V #(
+    .DataWidth( 8 ),
+    .AddressRange( 256 ),
+    .AddressWidth( 8 ))
+groups_V_U(
+    .clk(ap_clk),
+    .reset(ap_rst_n_inv),
+    .address0(grp_decrypt_dataflow_fu_209_groups_address0),
+    .ce0(groups_V_ce0),
+    .q0(groups_V_q0),
+    .address1(groups_V_address1),
+    .ce1(groups_V_ce1),
+    .we1(groups_V_we1),
+    .d1(grp_prepare_key_groups_fu_258_groups_d1),
+    .q1(groups_V_q1)
+);
+
+lwe_decrypt_decrypt_dataflow grp_decrypt_dataflow_fu_209(
     .data_in_TDATA(data_in_TDATA),
     .data_in_TKEEP(data_in_TKEEP),
     .data_in_TSTRB(data_in_TSTRB),
@@ -240,59 +467,130 @@ lwe_decrypt_decrypt_dataflow grp_decrypt_dataflow_fu_175(
     .data_in_TLAST(data_in_TLAST),
     .data_in_TID(data_in_TID),
     .data_in_TDEST(data_in_TDEST),
-    .data_out_TDATA(grp_decrypt_dataflow_fu_175_data_out_TDATA),
-    .data_out_TKEEP(grp_decrypt_dataflow_fu_175_data_out_TKEEP),
-    .data_out_TSTRB(grp_decrypt_dataflow_fu_175_data_out_TSTRB),
-    .data_out_TUSER(grp_decrypt_dataflow_fu_175_data_out_TUSER),
-    .data_out_TLAST(grp_decrypt_dataflow_fu_175_data_out_TLAST),
-    .data_out_TID(grp_decrypt_dataflow_fu_175_data_out_TID),
-    .data_out_TDEST(grp_decrypt_dataflow_fu_175_data_out_TDEST),
-    .key_address0(grp_decrypt_dataflow_fu_175_key_address0),
-    .key_ce0(grp_decrypt_dataflow_fu_175_key_ce0),
-    .key_d0(grp_decrypt_dataflow_fu_175_key_d0),
-    .key_q0(key_V_q0),
-    .key_we0(grp_decrypt_dataflow_fu_175_key_we0),
-    .count(count_V_reg_447),
-    .layout(agg_tmp_reg_490),
+    .data_out_TDATA(grp_decrypt_dataflow_fu_209_data_out_TDATA),
+    .data_out_TKEEP(grp_decrypt_dataflow_fu_209_data_out_TKEEP),
+    .data_out_TSTRB(grp_decrypt_dataflow_fu_209_data_out_TSTRB),
+    .data_out_TUSER(grp_decrypt_dataflow_fu_209_data_out_TUSER),
+    .data_out_TLAST(grp_decrypt_dataflow_fu_209_data_out_TLAST),
+    .data_out_TID(grp_decrypt_dataflow_fu_209_data_out_TID),
+    .data_out_TDEST(grp_decrypt_dataflow_fu_209_data_out_TDEST),
+    .groups_address0(grp_decrypt_dataflow_fu_209_groups_address0),
+    .groups_ce0(grp_decrypt_dataflow_fu_209_groups_ce0),
+    .groups_d0(grp_decrypt_dataflow_fu_209_groups_d0),
+    .groups_q0(groups_V_q0),
+    .groups_we0(grp_decrypt_dataflow_fu_209_groups_we0),
+    .groups_address1(grp_decrypt_dataflow_fu_209_groups_address1),
+    .groups_ce1(grp_decrypt_dataflow_fu_209_groups_ce1),
+    .groups_d1(grp_decrypt_dataflow_fu_209_groups_d1),
+    .groups_q1(groups_V_q1),
+    .groups_we1(grp_decrypt_dataflow_fu_209_groups_we1),
+    .count(count_V_reg_502),
+    .layout(agg_tmp_reg_545),
     .ap_clk(ap_clk),
     .ap_rst(ap_rst_n_inv),
     .data_in_TVALID(data_in_TVALID),
-    .data_in_TREADY(grp_decrypt_dataflow_fu_175_data_in_TREADY),
-    .count_ap_vld(1'b1),
+    .data_in_TREADY(grp_decrypt_dataflow_fu_209_data_in_TREADY),
     .layout_ap_vld(1'b1),
-    .ap_start(grp_decrypt_dataflow_fu_175_ap_start),
-    .data_out_TVALID(grp_decrypt_dataflow_fu_175_data_out_TVALID),
-    .data_out_TREADY(grp_decrypt_dataflow_fu_175_data_out_TREADY),
-    .ap_done(grp_decrypt_dataflow_fu_175_ap_done),
-    .ap_ready(grp_decrypt_dataflow_fu_175_ap_ready),
-    .ap_idle(grp_decrypt_dataflow_fu_175_ap_idle),
-    .ap_continue(grp_decrypt_dataflow_fu_175_ap_continue)
+    .count_ap_vld(1'b1),
+    .ap_start(grp_decrypt_dataflow_fu_209_ap_start),
+    .data_out_TVALID(grp_decrypt_dataflow_fu_209_data_out_TVALID),
+    .data_out_TREADY(grp_decrypt_dataflow_fu_209_data_out_TREADY),
+    .ap_done(grp_decrypt_dataflow_fu_209_ap_done),
+    .ap_ready(grp_decrypt_dataflow_fu_209_ap_ready),
+    .ap_idle(grp_decrypt_dataflow_fu_209_ap_idle),
+    .ap_continue(grp_decrypt_dataflow_fu_209_ap_continue)
 );
 
-lwe_decrypt_load_secret_key grp_load_secret_key_fu_210(
+lwe_decrypt_load_secret_key grp_load_secret_key_fu_244(
     .ap_clk(ap_clk),
     .ap_rst(ap_rst_n_inv),
-    .ap_start(grp_load_secret_key_fu_210_ap_start),
-    .ap_done(grp_load_secret_key_fu_210_ap_done),
-    .ap_idle(grp_load_secret_key_fu_210_ap_idle),
-    .ap_ready(grp_load_secret_key_fu_210_ap_ready),
-    .context_Addr_A(grp_load_secret_key_fu_210_context_Addr_A),
-    .context_EN_A(grp_load_secret_key_fu_210_context_EN_A),
-    .context_WEN_A(grp_load_secret_key_fu_210_context_WEN_A),
-    .context_Din_A(grp_load_secret_key_fu_210_context_Din_A),
+    .ap_start(grp_load_secret_key_fu_244_ap_start),
+    .ap_done(grp_load_secret_key_fu_244_ap_done),
+    .ap_idle(grp_load_secret_key_fu_244_ap_idle),
+    .ap_ready(grp_load_secret_key_fu_244_ap_ready),
+    .context_Addr_A(grp_load_secret_key_fu_244_context_Addr_A),
+    .context_EN_A(grp_load_secret_key_fu_244_context_EN_A),
+    .context_WEN_A(grp_load_secret_key_fu_244_context_WEN_A),
+    .context_Din_A(grp_load_secret_key_fu_244_context_Din_A),
     .context_Dout_A(context_Dout_A),
-    .key_address0(grp_load_secret_key_fu_210_key_address0),
-    .key_ce0(grp_load_secret_key_fu_210_key_ce0),
-    .key_we0(grp_load_secret_key_fu_210_key_we0),
-    .key_d0(grp_load_secret_key_fu_210_key_d0)
+    .key_address1(grp_load_secret_key_fu_244_key_address1),
+    .key_ce1(grp_load_secret_key_fu_244_key_ce1),
+    .key_we1(grp_load_secret_key_fu_244_key_we1),
+    .key_d1(grp_load_secret_key_fu_244_key_d1),
+    .key1_address1(grp_load_secret_key_fu_244_key1_address1),
+    .key1_ce1(grp_load_secret_key_fu_244_key1_ce1),
+    .key1_we1(grp_load_secret_key_fu_244_key1_we1),
+    .key1_d1(grp_load_secret_key_fu_244_key1_d1),
+    .key2_address1(grp_load_secret_key_fu_244_key2_address1),
+    .key2_ce1(grp_load_secret_key_fu_244_key2_ce1),
+    .key2_we1(grp_load_secret_key_fu_244_key2_we1),
+    .key2_d1(grp_load_secret_key_fu_244_key2_d1),
+    .key3_address1(grp_load_secret_key_fu_244_key3_address1),
+    .key3_ce1(grp_load_secret_key_fu_244_key3_ce1),
+    .key3_we1(grp_load_secret_key_fu_244_key3_we1),
+    .key3_d1(grp_load_secret_key_fu_244_key3_d1),
+    .key4_address1(grp_load_secret_key_fu_244_key4_address1),
+    .key4_ce1(grp_load_secret_key_fu_244_key4_ce1),
+    .key4_we1(grp_load_secret_key_fu_244_key4_we1),
+    .key4_d1(grp_load_secret_key_fu_244_key4_d1),
+    .key5_address1(grp_load_secret_key_fu_244_key5_address1),
+    .key5_ce1(grp_load_secret_key_fu_244_key5_ce1),
+    .key5_we1(grp_load_secret_key_fu_244_key5_we1),
+    .key5_d1(grp_load_secret_key_fu_244_key5_d1),
+    .key6_address1(grp_load_secret_key_fu_244_key6_address1),
+    .key6_ce1(grp_load_secret_key_fu_244_key6_ce1),
+    .key6_we1(grp_load_secret_key_fu_244_key6_we1),
+    .key6_d1(grp_load_secret_key_fu_244_key6_d1),
+    .key7_address1(grp_load_secret_key_fu_244_key7_address1),
+    .key7_ce1(grp_load_secret_key_fu_244_key7_ce1),
+    .key7_we1(grp_load_secret_key_fu_244_key7_we1),
+    .key7_d1(grp_load_secret_key_fu_244_key7_d1)
+);
+
+lwe_decrypt_prepare_key_groups grp_prepare_key_groups_fu_258(
+    .ap_clk(ap_clk),
+    .ap_rst(ap_rst_n_inv),
+    .ap_start(grp_prepare_key_groups_fu_258_ap_start),
+    .ap_done(grp_prepare_key_groups_fu_258_ap_done),
+    .ap_idle(grp_prepare_key_groups_fu_258_ap_idle),
+    .ap_ready(grp_prepare_key_groups_fu_258_ap_ready),
+    .key_address0(grp_prepare_key_groups_fu_258_key_address0),
+    .key_ce0(grp_prepare_key_groups_fu_258_key_ce0),
+    .key_q0(key_V_0_q0),
+    .key1_address0(grp_prepare_key_groups_fu_258_key1_address0),
+    .key1_ce0(grp_prepare_key_groups_fu_258_key1_ce0),
+    .key1_q0(key_V_1_q0),
+    .key2_address0(grp_prepare_key_groups_fu_258_key2_address0),
+    .key2_ce0(grp_prepare_key_groups_fu_258_key2_ce0),
+    .key2_q0(key_V_2_q0),
+    .key3_address0(grp_prepare_key_groups_fu_258_key3_address0),
+    .key3_ce0(grp_prepare_key_groups_fu_258_key3_ce0),
+    .key3_q0(key_V_3_q0),
+    .key4_address0(grp_prepare_key_groups_fu_258_key4_address0),
+    .key4_ce0(grp_prepare_key_groups_fu_258_key4_ce0),
+    .key4_q0(key_V_4_q0),
+    .key5_address0(grp_prepare_key_groups_fu_258_key5_address0),
+    .key5_ce0(grp_prepare_key_groups_fu_258_key5_ce0),
+    .key5_q0(key_V_5_q0),
+    .key6_address0(grp_prepare_key_groups_fu_258_key6_address0),
+    .key6_ce0(grp_prepare_key_groups_fu_258_key6_ce0),
+    .key6_q0(key_V_6_q0),
+    .key7_address0(grp_prepare_key_groups_fu_258_key7_address0),
+    .key7_ce0(grp_prepare_key_groups_fu_258_key7_ce0),
+    .key7_q0(key_V_7_q0),
+    .groups_address1(grp_prepare_key_groups_fu_258_groups_address1),
+    .groups_ce1(grp_prepare_key_groups_fu_258_groups_ce1),
+    .groups_we1(grp_prepare_key_groups_fu_258_groups_we1),
+    .groups_d1(grp_prepare_key_groups_fu_258_groups_d1),
+    .layout(agg_tmp_reg_545)
 );
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        agg_tmp_reg_490 <= 2'd0;
+        agg_tmp_reg_545 <= 2'd0;
     end else begin
-        if (((icmp_ln874_13_fu_407_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state3))) begin
-            agg_tmp_reg_490 <= {{cfg_V_reg_442[193:192]}};
+        if (((icmp_ln874_33_fu_462_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state3))) begin
+            agg_tmp_reg_545 <= {{cfg_V_reg_497[193:192]}};
         end
     end
 end
@@ -307,144 +605,156 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done <= 1'b0;
+        ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done <= 1'b0;
     end else begin
-        if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
-            ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done <= 1'b0;
-        end else if ((grp_decrypt_dataflow_fu_175_ap_done == 1'b1)) begin
-            ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done <= 1'b1;
+        if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
+            ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done <= 1'b0;
+        end else if ((grp_decrypt_dataflow_fu_209_ap_done == 1'b1)) begin
+            ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done <= 1'b1;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready <= 1'b0;
+        ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready <= 1'b0;
     end else begin
-        if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
-            ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready <= 1'b0;
-        end else if ((grp_decrypt_dataflow_fu_175_ap_ready == 1'b1)) begin
-            ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready <= 1'b1;
+        if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
+            ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready <= 1'b0;
+        end else if ((grp_decrypt_dataflow_fu_209_ap_ready == 1'b1)) begin
+            ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready <= 1'b1;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        cfg_V_reg_442 <= 512'd0;
-    end else begin
-        if ((1'b1 == ap_CS_fsm_state2)) begin
-            cfg_V_reg_442 <= context_Dout_A;
-        end
-    end
-end
-
-always @ (posedge ap_clk) begin
-    if (ap_rst_n_inv == 1'b1) begin
-        count_V_reg_447 <= 32'd0;
+        cfg_V_reg_497 <= 512'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            count_V_reg_447 <= count_V_fu_217_p1;
+            cfg_V_reg_497 <= context_Dout_A;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        grp_decrypt_dataflow_fu_175_ap_start_reg <= 1'b0;
+        count_V_reg_502 <= 32'd0;
     end else begin
-        if (((1'b1 == ap_CS_fsm_state6) | ((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (ap_sync_grp_decrypt_dataflow_fu_175_ap_ready == 1'b0)))) begin
-            grp_decrypt_dataflow_fu_175_ap_start_reg <= 1'b1;
-        end else if ((grp_decrypt_dataflow_fu_175_ap_ready == 1'b1)) begin
-            grp_decrypt_dataflow_fu_175_ap_start_reg <= 1'b0;
+        if ((1'b1 == ap_CS_fsm_state2)) begin
+            count_V_reg_502 <= count_V_fu_272_p1;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        grp_load_secret_key_fu_210_ap_start_reg <= 1'b0;
+        grp_decrypt_dataflow_fu_209_ap_start_reg <= 1'b0;
+    end else begin
+        if (((1'b1 == ap_CS_fsm_state8) | ((icmp_ln874_33_reg_541 == 1'd1) & (ap_sync_grp_decrypt_dataflow_fu_209_ap_ready == 1'b0) & (1'b1 == ap_CS_fsm_state9)))) begin
+            grp_decrypt_dataflow_fu_209_ap_start_reg <= 1'b1;
+        end else if ((grp_decrypt_dataflow_fu_209_ap_ready == 1'b1)) begin
+            grp_decrypt_dataflow_fu_209_ap_start_reg <= 1'b0;
+        end
+    end
+end
+
+always @ (posedge ap_clk) begin
+    if (ap_rst_n_inv == 1'b1) begin
+        grp_load_secret_key_fu_244_ap_start_reg <= 1'b0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state4)) begin
-            grp_load_secret_key_fu_210_ap_start_reg <= 1'b1;
-        end else if ((grp_load_secret_key_fu_210_ap_ready == 1'b1)) begin
-            grp_load_secret_key_fu_210_ap_start_reg <= 1'b0;
+            grp_load_secret_key_fu_244_ap_start_reg <= 1'b1;
+        end else if ((grp_load_secret_key_fu_244_ap_ready == 1'b1)) begin
+            grp_load_secret_key_fu_244_ap_start_reg <= 1'b0;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        icmp_ln874_11_reg_471 <= 1'd0;
+        grp_prepare_key_groups_fu_258_ap_start_reg <= 1'b0;
+    end else begin
+        if ((1'b1 == ap_CS_fsm_state6)) begin
+            grp_prepare_key_groups_fu_258_ap_start_reg <= 1'b1;
+        end else if ((grp_prepare_key_groups_fu_258_ap_ready == 1'b1)) begin
+            grp_prepare_key_groups_fu_258_ap_start_reg <= 1'b0;
+        end
+    end
+end
+
+always @ (posedge ap_clk) begin
+    if (ap_rst_n_inv == 1'b1) begin
+        icmp_ln874_31_reg_526 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            icmp_ln874_11_reg_471 <= icmp_ln874_11_fu_313_p2;
+            icmp_ln874_31_reg_526 <= icmp_ln874_31_fu_368_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        icmp_ln874_12_reg_476 <= 1'd0;
+        icmp_ln874_32_reg_531 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            icmp_ln874_12_reg_476 <= icmp_ln874_12_fu_319_p2;
+            icmp_ln874_32_reg_531 <= icmp_ln874_32_fu_374_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        icmp_ln874_13_reg_486 <= 1'd0;
+        icmp_ln874_33_reg_541 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state3)) begin
-            icmp_ln874_13_reg_486 <= icmp_ln874_13_fu_407_p2;
+            icmp_ln874_33_reg_541 <= icmp_ln874_33_fu_462_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        icmp_ln874_reg_452 <= 1'd0;
+        icmp_ln874_reg_507 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            icmp_ln874_reg_452 <= icmp_ln874_fu_271_p2;
+            icmp_ln874_reg_507 <= icmp_ln874_fu_326_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        icmp_ln886_reg_481 <= 1'd0;
+        icmp_ln886_reg_536 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            icmp_ln886_reg_481 <= icmp_ln886_fu_325_p2;
+            icmp_ln886_reg_536 <= icmp_ln886_fu_380_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        xor_ln383_reg_459 <= 1'd0;
+        xor_ln627_reg_514 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            xor_ln383_reg_459 <= xor_ln383_fu_289_p2;
+            xor_ln627_reg_514 <= xor_ln627_fu_344_p2;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        xor_ln385_reg_465 <= 1'd0;
+        xor_ln629_reg_520 <= 1'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            xor_ln385_reg_465 <= xor_ln385_fu_307_p2;
+            xor_ln629_reg_520 <= xor_ln629_fu_362_p2;
         end
     end
 end
 
 always @ (*) begin
-    if (((1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
+    if (((1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
         ap_done = 1'b1;
     end else begin
         ap_done = 1'b0;
@@ -460,7 +770,7 @@ always @ (*) begin
 end
 
 always @ (*) begin
-    if (((1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
+    if (((1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
         ap_ready = 1'b1;
     end else begin
         ap_ready = 1'b0;
@@ -469,7 +779,7 @@ end
 
 always @ (*) begin
     if ((1'b1 == ap_CS_fsm_state5)) begin
-        context_Addr_A = grp_load_secret_key_fu_210_context_Addr_A;
+        context_Addr_A = grp_load_secret_key_fu_244_context_Addr_A;
     end else begin
         context_Addr_A = context_Addr_A_orig << 32'd6;
     end
@@ -479,32 +789,32 @@ always @ (*) begin
     if (((1'b1 == ap_CS_fsm_state1) & (ap_start == 1'b1))) begin
         context_EN_A = 1'b1;
     end else if ((1'b1 == ap_CS_fsm_state5)) begin
-        context_EN_A = grp_load_secret_key_fu_210_context_EN_A;
+        context_EN_A = grp_load_secret_key_fu_244_context_EN_A;
     end else begin
         context_EN_A = 1'b0;
     end
 end
 
 always @ (*) begin
-    if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7))) begin
-        data_in_TREADY = grp_decrypt_dataflow_fu_175_data_in_TREADY;
+    if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_in_TREADY = grp_decrypt_dataflow_fu_209_data_in_TREADY;
     end else begin
         data_in_TREADY = 1'b0;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
-        data_out_TDATA = p_Result_s_fu_417_p4;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TDATA = grp_decrypt_dataflow_fu_175_data_out_TDATA;
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+        data_out_TDATA = p_Result_s_fu_472_p4;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TDATA = grp_decrypt_dataflow_fu_209_data_out_TDATA;
     end else begin
         data_out_TDATA = 'bx;
     end
 end
 
 always @ (*) begin
-    if (((icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if (((icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TDATA_blk_n = data_out_TREADY;
     end else begin
         data_out_TDATA_blk_n = 1'b1;
@@ -512,108 +822,308 @@ always @ (*) begin
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TDEST = 8'd0;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TDEST = grp_decrypt_dataflow_fu_175_data_out_TDEST;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TDEST = grp_decrypt_dataflow_fu_209_data_out_TDEST;
     end else begin
         data_out_TDEST = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TID = 8'd0;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TID = grp_decrypt_dataflow_fu_175_data_out_TID;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TID = grp_decrypt_dataflow_fu_209_data_out_TID;
     end else begin
         data_out_TID = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TKEEP = 64'd18446744073709551615;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TKEEP = grp_decrypt_dataflow_fu_175_data_out_TKEEP;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TKEEP = grp_decrypt_dataflow_fu_209_data_out_TKEEP;
     end else begin
         data_out_TKEEP = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TLAST = 1'd1;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TLAST = grp_decrypt_dataflow_fu_175_data_out_TLAST;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TLAST = grp_decrypt_dataflow_fu_209_data_out_TLAST;
     end else begin
         data_out_TLAST = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TSTRB = 64'd18446744073709551615;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TSTRB = grp_decrypt_dataflow_fu_175_data_out_TSTRB;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TSTRB = grp_decrypt_dataflow_fu_209_data_out_TSTRB;
     end else begin
         data_out_TSTRB = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0)) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TUSER = 8'd255;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (grp_decrypt_dataflow_fu_175_data_out_TVALID == 1'b1))) begin
-        data_out_TUSER = grp_decrypt_dataflow_fu_175_data_out_TUSER;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (grp_decrypt_dataflow_fu_209_data_out_TVALID == 1'b1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TUSER = grp_decrypt_dataflow_fu_209_data_out_TUSER;
     end else begin
         data_out_TUSER = 'bx;
     end
 end
 
 always @ (*) begin
-    if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+    if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
         data_out_TVALID = 1'b1;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7))) begin
-        data_out_TVALID = grp_decrypt_dataflow_fu_175_data_out_TVALID;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b1 == ap_CS_fsm_state9))) begin
+        data_out_TVALID = grp_decrypt_dataflow_fu_209_data_out_TVALID;
     end else begin
         data_out_TVALID = 1'b0;
     end
 end
 
 always @ (*) begin
-    if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
-        grp_decrypt_dataflow_fu_175_ap_continue = 1'b1;
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        groups_V_address1 = grp_prepare_key_groups_fu_258_groups_address1;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b1 == ap_CS_fsm_state9))) begin
+        groups_V_address1 = grp_decrypt_dataflow_fu_209_groups_address1;
     end else begin
-        grp_decrypt_dataflow_fu_175_ap_continue = 1'b0;
+        groups_V_address1 = 'bx;
+    end
+end
+
+always @ (*) begin
+    if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b1 == ap_CS_fsm_state9))) begin
+        groups_V_ce0 = grp_decrypt_dataflow_fu_209_groups_ce0;
+    end else begin
+        groups_V_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        groups_V_ce1 = grp_prepare_key_groups_fu_258_groups_ce1;
+    end else if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b1 == ap_CS_fsm_state9))) begin
+        groups_V_ce1 = grp_decrypt_dataflow_fu_209_groups_ce1;
+    end else begin
+        groups_V_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        groups_V_we1 = grp_prepare_key_groups_fu_258_groups_we1;
+    end else begin
+        groups_V_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if (((icmp_ln874_33_reg_541 == 1'd1) & (1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
+        grp_decrypt_dataflow_fu_209_ap_continue = 1'b1;
+    end else begin
+        grp_decrypt_dataflow_fu_209_ap_continue = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_0_ce0 = grp_prepare_key_groups_fu_258_key_ce0;
+    end else begin
+        key_V_0_ce0 = 1'b0;
     end
 end
 
 always @ (*) begin
     if ((1'b1 == ap_CS_fsm_state5)) begin
-        key_V_address0 = grp_load_secret_key_fu_210_key_address0;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7))) begin
-        key_V_address0 = grp_decrypt_dataflow_fu_175_key_address0;
+        key_V_0_ce1 = grp_load_secret_key_fu_244_key_ce1;
     end else begin
-        key_V_address0 = 'bx;
+        key_V_0_ce1 = 1'b0;
     end
 end
 
 always @ (*) begin
     if ((1'b1 == ap_CS_fsm_state5)) begin
-        key_V_ce0 = grp_load_secret_key_fu_210_key_ce0;
-    end else if (((icmp_ln874_13_reg_486 == 1'd1) & (1'b1 == ap_CS_fsm_state7))) begin
-        key_V_ce0 = grp_decrypt_dataflow_fu_175_key_ce0;
+        key_V_0_we1 = grp_load_secret_key_fu_244_key_we1;
     end else begin
-        key_V_ce0 = 1'b0;
+        key_V_0_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_1_ce0 = grp_prepare_key_groups_fu_258_key1_ce0;
+    end else begin
+        key_V_1_ce0 = 1'b0;
     end
 end
 
 always @ (*) begin
     if ((1'b1 == ap_CS_fsm_state5)) begin
-        key_V_we0 = grp_load_secret_key_fu_210_key_we0;
+        key_V_1_ce1 = grp_load_secret_key_fu_244_key1_ce1;
     end else begin
-        key_V_we0 = 1'b0;
+        key_V_1_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_1_we1 = grp_load_secret_key_fu_244_key1_we1;
+    end else begin
+        key_V_1_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_2_ce0 = grp_prepare_key_groups_fu_258_key2_ce0;
+    end else begin
+        key_V_2_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_2_ce1 = grp_load_secret_key_fu_244_key2_ce1;
+    end else begin
+        key_V_2_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_2_we1 = grp_load_secret_key_fu_244_key2_we1;
+    end else begin
+        key_V_2_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_3_ce0 = grp_prepare_key_groups_fu_258_key3_ce0;
+    end else begin
+        key_V_3_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_3_ce1 = grp_load_secret_key_fu_244_key3_ce1;
+    end else begin
+        key_V_3_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_3_we1 = grp_load_secret_key_fu_244_key3_we1;
+    end else begin
+        key_V_3_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_4_ce0 = grp_prepare_key_groups_fu_258_key4_ce0;
+    end else begin
+        key_V_4_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_4_ce1 = grp_load_secret_key_fu_244_key4_ce1;
+    end else begin
+        key_V_4_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_4_we1 = grp_load_secret_key_fu_244_key4_we1;
+    end else begin
+        key_V_4_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_5_ce0 = grp_prepare_key_groups_fu_258_key5_ce0;
+    end else begin
+        key_V_5_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_5_ce1 = grp_load_secret_key_fu_244_key5_ce1;
+    end else begin
+        key_V_5_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_5_we1 = grp_load_secret_key_fu_244_key5_we1;
+    end else begin
+        key_V_5_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_6_ce0 = grp_prepare_key_groups_fu_258_key6_ce0;
+    end else begin
+        key_V_6_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_6_ce1 = grp_load_secret_key_fu_244_key6_ce1;
+    end else begin
+        key_V_6_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_6_we1 = grp_load_secret_key_fu_244_key6_we1;
+    end else begin
+        key_V_6_we1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state7)) begin
+        key_V_7_ce0 = grp_prepare_key_groups_fu_258_key7_ce0;
+    end else begin
+        key_V_7_ce0 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_7_ce1 = grp_load_secret_key_fu_244_key7_ce1;
+    end else begin
+        key_V_7_ce1 = 1'b0;
+    end
+end
+
+always @ (*) begin
+    if ((1'b1 == ap_CS_fsm_state5)) begin
+        key_V_7_we1 = grp_load_secret_key_fu_244_key7_we1;
+    end else begin
+        key_V_7_we1 = 1'b0;
     end
 end
 
@@ -630,9 +1140,9 @@ always @ (*) begin
             ap_NS_fsm = ap_ST_fsm_state3;
         end
         ap_ST_fsm_state3 : begin
-            if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_13_fu_407_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
-                ap_NS_fsm = ap_ST_fsm_state7;
-            end else if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_13_fu_407_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state3))) begin
+            if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_33_fu_462_p2 == 1'd0) & (1'b1 == ap_CS_fsm_state3))) begin
+                ap_NS_fsm = ap_ST_fsm_state9;
+            end else if ((~((1'b1 == ap_block_state3_io) | ((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0))) & (icmp_ln874_33_fu_462_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state3))) begin
                 ap_NS_fsm = ap_ST_fsm_state4;
             end else begin
                 ap_NS_fsm = ap_ST_fsm_state3;
@@ -642,7 +1152,7 @@ always @ (*) begin
             ap_NS_fsm = ap_ST_fsm_state5;
         end
         ap_ST_fsm_state5 : begin
-            if (((1'b1 == ap_CS_fsm_state5) & (grp_load_secret_key_fu_210_ap_done == 1'b1))) begin
+            if (((grp_load_secret_key_fu_244_ap_done == 1'b1) & (1'b1 == ap_CS_fsm_state5))) begin
                 ap_NS_fsm = ap_ST_fsm_state6;
             end else begin
                 ap_NS_fsm = ap_ST_fsm_state5;
@@ -652,10 +1162,20 @@ always @ (*) begin
             ap_NS_fsm = ap_ST_fsm_state7;
         end
         ap_ST_fsm_state7 : begin
-            if (((1'b1 == ap_CS_fsm_state7) & (1'b0 == ap_block_state7_on_subcall_done))) begin
-                ap_NS_fsm = ap_ST_fsm_state1;
+            if (((grp_prepare_key_groups_fu_258_ap_done == 1'b1) & (1'b1 == ap_CS_fsm_state7))) begin
+                ap_NS_fsm = ap_ST_fsm_state8;
             end else begin
                 ap_NS_fsm = ap_ST_fsm_state7;
+            end
+        end
+        ap_ST_fsm_state8 : begin
+            ap_NS_fsm = ap_ST_fsm_state9;
+        end
+        ap_ST_fsm_state9 : begin
+            if (((1'b0 == ap_block_state9_on_subcall_done) & (1'b1 == ap_CS_fsm_state9))) begin
+                ap_NS_fsm = ap_ST_fsm_state1;
+            end else begin
+                ap_NS_fsm = ap_ST_fsm_state9;
             end
         end
         default : begin
@@ -664,13 +1184,13 @@ always @ (*) begin
     endcase
 end
 
-assign and_ln383_1_fu_358_p2 = (xor_ln383_1_fu_353_p2 & icmp_ln874_reg_452);
+assign and_ln627_1_fu_413_p2 = (xor_ln627_1_fu_408_p2 & icmp_ln874_reg_507);
 
-assign and_ln383_fu_349_p2 = (xor_ln383_reg_459 & icmp_ln874_reg_452);
+assign and_ln627_fu_404_p2 = (xor_ln627_reg_514 & icmp_ln874_reg_507);
 
-assign and_ln386_1_fu_379_p2 = (or_ln386_fu_374_p2 & and_ln383_1_fu_358_p2);
+assign and_ln630_1_fu_434_p2 = (or_ln630_fu_429_p2 & and_ln627_1_fu_413_p2);
 
-assign and_ln386_fu_368_p2 = (xor_ln386_fu_331_p2 & xor_ln385_1_fu_363_p2);
+assign and_ln630_fu_423_p2 = (xor_ln630_fu_386_p2 & xor_ln629_1_fu_418_p2);
 
 assign ap_CS_fsm_state1 = ap_CS_fsm[32'd0];
 
@@ -686,25 +1206,29 @@ assign ap_CS_fsm_state6 = ap_CS_fsm[32'd5];
 
 assign ap_CS_fsm_state7 = ap_CS_fsm[32'd6];
 
+assign ap_CS_fsm_state8 = ap_CS_fsm[32'd7];
+
+assign ap_CS_fsm_state9 = ap_CS_fsm[32'd8];
+
 always @ (*) begin
-    ap_block_state3 = ((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0));
+    ap_block_state3 = ((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0));
 end
 
 always @ (*) begin
-    ap_block_state3_io = ((icmp_ln874_13_fu_407_p2 == 1'd0) & (data_out_TREADY == 1'b0));
+    ap_block_state3_io = ((icmp_ln874_33_fu_462_p2 == 1'd0) & (data_out_TREADY == 1'b0));
 end
 
 always @ (*) begin
-    ap_block_state7_on_subcall_done = ((icmp_ln874_13_reg_486 == 1'd1) & ((ap_sync_grp_decrypt_dataflow_fu_175_ap_ready & ap_sync_grp_decrypt_dataflow_fu_175_ap_done) == 1'b0));
+    ap_block_state9_on_subcall_done = ((icmp_ln874_33_reg_541 == 1'd1) & ((ap_sync_grp_decrypt_dataflow_fu_209_ap_ready & ap_sync_grp_decrypt_dataflow_fu_209_ap_done) == 1'b0));
 end
 
 always @ (*) begin
     ap_rst_n_inv = ~ap_rst_n;
 end
 
-assign ap_sync_grp_decrypt_dataflow_fu_175_ap_done = (grp_decrypt_dataflow_fu_175_ap_done | ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_done);
+assign ap_sync_grp_decrypt_dataflow_fu_209_ap_done = (grp_decrypt_dataflow_fu_209_ap_done | ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_done);
 
-assign ap_sync_grp_decrypt_dataflow_fu_175_ap_ready = (grp_decrypt_dataflow_fu_175_ap_ready | ap_sync_reg_grp_decrypt_dataflow_fu_175_ap_ready);
+assign ap_sync_grp_decrypt_dataflow_fu_209_ap_ready = (grp_decrypt_dataflow_fu_209_ap_ready | ap_sync_reg_grp_decrypt_dataflow_fu_209_ap_ready);
 
 assign context_Addr_A_orig = 64'd3;
 
@@ -718,66 +1242,68 @@ end
 
 assign context_WEN_A = 64'd0;
 
-assign count_V_fu_217_p1 = context_Dout_A[31:0];
+assign count_V_fu_272_p1 = context_Dout_A[31:0];
 
-assign delta_fu_231_p4 = {{context_Dout_A[127:64]}};
+assign delta_fu_286_p4 = {{context_Dout_A[127:64]}};
 
-assign dimension_fu_221_p4 = {{context_Dout_A[63:32]}};
+assign dimension_fu_276_p4 = {{context_Dout_A[63:32]}};
 
-assign error_V_1_fu_399_p3 = ((or_ln386_1_fu_393_p2[0:0] == 1'b1) ? select_ln386_fu_385_p3 : select_ln874_fu_342_p3);
+assign error_V_2_fu_454_p3 = ((or_ln630_1_fu_448_p2[0:0] == 1'b1) ? select_ln630_fu_440_p3 : select_ln874_fu_397_p3);
 
-assign error_V_fu_335_p3 = ((icmp_ln886_reg_481[0:0] == 1'b1) ? 3'd4 : 3'd0);
+assign error_V_fu_390_p3 = ((icmp_ln886_reg_536[0:0] == 1'b1) ? 3'd4 : 3'd0);
 
-assign grp_decrypt_dataflow_fu_175_ap_start = grp_decrypt_dataflow_fu_175_ap_start_reg;
+assign grp_decrypt_dataflow_fu_209_ap_start = grp_decrypt_dataflow_fu_209_ap_start_reg;
 
-assign grp_decrypt_dataflow_fu_175_data_out_TREADY = (data_out_TREADY & ap_CS_fsm_state7);
+assign grp_decrypt_dataflow_fu_209_data_out_TREADY = (data_out_TREADY & ap_CS_fsm_state9);
 
-assign grp_load_secret_key_fu_210_ap_start = grp_load_secret_key_fu_210_ap_start_reg;
+assign grp_load_secret_key_fu_244_ap_start = grp_load_secret_key_fu_244_ap_start_reg;
 
-assign icmp_ln874_10_fu_301_p2 = ((message_width_fu_241_p4 != 32'd2) ? 1'b1 : 1'b0);
+assign grp_prepare_key_groups_fu_258_ap_start = grp_prepare_key_groups_fu_258_ap_start_reg;
 
-assign icmp_ln874_11_fu_313_p2 = ((radix_blocks_fu_251_p4 == 32'd0) ? 1'b1 : 1'b0);
+assign icmp_ln874_27_fu_332_p2 = ((delta_fu_286_p4 == 64'd0) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_12_fu_319_p2 = ((radix_blocks_fu_251_p4 != 32'd4) ? 1'b1 : 1'b0);
+assign icmp_ln874_28_fu_338_p2 = ((delta_fu_286_p4 != 64'd576460752303423488) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_13_fu_407_p2 = ((error_V_1_fu_399_p3 == 3'd0) ? 1'b1 : 1'b0);
+assign icmp_ln874_29_fu_350_p2 = ((message_width_fu_296_p4 == 32'd0) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_7_fu_277_p2 = ((delta_fu_231_p4 == 64'd0) ? 1'b1 : 1'b0);
+assign icmp_ln874_30_fu_356_p2 = ((message_width_fu_296_p4 != 32'd2) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_8_fu_283_p2 = ((delta_fu_231_p4 != 64'd576460752303423488) ? 1'b1 : 1'b0);
+assign icmp_ln874_31_fu_368_p2 = ((radix_blocks_fu_306_p4 == 32'd0) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_9_fu_295_p2 = ((message_width_fu_241_p4 == 32'd0) ? 1'b1 : 1'b0);
+assign icmp_ln874_32_fu_374_p2 = ((radix_blocks_fu_306_p4 != 32'd4) ? 1'b1 : 1'b0);
 
-assign icmp_ln874_fu_271_p2 = ((dimension_fu_221_p4 == 32'd2048) ? 1'b1 : 1'b0);
+assign icmp_ln874_33_fu_462_p2 = ((error_V_2_fu_454_p3 == 3'd0) ? 1'b1 : 1'b0);
 
-assign icmp_ln886_fu_325_p2 = ((layout_fu_261_p4 > 32'd2) ? 1'b1 : 1'b0);
+assign icmp_ln874_fu_326_p2 = ((dimension_fu_276_p4 == 32'd2048) ? 1'b1 : 1'b0);
 
-assign layout_fu_261_p4 = {{context_Dout_A[223:192]}};
+assign icmp_ln886_fu_380_p2 = ((layout_fu_316_p4 > 32'd2) ? 1'b1 : 1'b0);
 
-assign message_width_fu_241_p4 = {{context_Dout_A[159:128]}};
+assign layout_fu_316_p4 = {{context_Dout_A[223:192]}};
 
-assign or_ln386_1_fu_393_p2 = (and_ln386_1_fu_379_p2 | and_ln383_fu_349_p2);
+assign message_width_fu_296_p4 = {{context_Dout_A[159:128]}};
 
-assign or_ln386_fu_374_p2 = (xor_ln385_reg_465 | and_ln386_fu_368_p2);
+assign or_ln630_1_fu_448_p2 = (and_ln630_1_fu_434_p2 | and_ln627_fu_404_p2);
 
-assign p_Result_s_fu_417_p4 = {{{{416'd0}, {zext_ln215_fu_413_p1}}}, {64'd5500941629378482770}};
+assign or_ln630_fu_429_p2 = (xor_ln629_reg_520 | and_ln630_fu_423_p2);
 
-assign radix_blocks_fu_251_p4 = {{context_Dout_A[191:160]}};
+assign p_Result_s_fu_472_p4 = {{{{416'd0}, {zext_ln215_fu_468_p1}}}, {64'd5500941629378482770}};
 
-assign select_ln386_fu_385_p3 = ((and_ln386_1_fu_379_p2[0:0] == 1'b1) ? 3'd3 : 3'd2);
+assign radix_blocks_fu_306_p4 = {{context_Dout_A[191:160]}};
 
-assign select_ln874_fu_342_p3 = ((icmp_ln874_reg_452[0:0] == 1'b1) ? error_V_fu_335_p3 : 3'd1);
+assign select_ln630_fu_440_p3 = ((and_ln630_1_fu_434_p2[0:0] == 1'b1) ? 3'd3 : 3'd2);
 
-assign xor_ln383_1_fu_353_p2 = (xor_ln383_reg_459 ^ 1'd1);
+assign select_ln874_fu_397_p3 = ((icmp_ln874_reg_507[0:0] == 1'b1) ? error_V_fu_390_p3 : 3'd1);
 
-assign xor_ln383_fu_289_p2 = (icmp_ln874_8_fu_283_p2 ^ icmp_ln874_7_fu_277_p2);
+assign xor_ln627_1_fu_408_p2 = (xor_ln627_reg_514 ^ 1'd1);
 
-assign xor_ln385_1_fu_363_p2 = (xor_ln385_reg_465 ^ 1'd1);
+assign xor_ln627_fu_344_p2 = (icmp_ln874_28_fu_338_p2 ^ icmp_ln874_27_fu_332_p2);
 
-assign xor_ln385_fu_307_p2 = (icmp_ln874_9_fu_295_p2 ^ icmp_ln874_10_fu_301_p2);
+assign xor_ln629_1_fu_418_p2 = (xor_ln629_reg_520 ^ 1'd1);
 
-assign xor_ln386_fu_331_p2 = (icmp_ln874_12_reg_476 ^ icmp_ln874_11_reg_471);
+assign xor_ln629_fu_362_p2 = (icmp_ln874_30_fu_356_p2 ^ icmp_ln874_29_fu_350_p2);
 
-assign zext_ln215_fu_413_p1 = error_V_1_fu_399_p3;
+assign xor_ln630_fu_386_p2 = (icmp_ln874_32_reg_531 ^ icmp_ln874_31_reg_526);
+
+assign zext_ln215_fu_468_p1 = error_V_2_fu_454_p3;
 
 endmodule //lwe_decrypt

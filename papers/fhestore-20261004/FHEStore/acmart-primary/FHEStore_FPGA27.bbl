@@ -1,0 +1,305 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{18}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{} and \showURL{}.  The latter does
+%%% not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showURL}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showURL #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+\makeatletter
+\@ifundefined{NAT@parse@date}{}{\let\NAT@parse@date@orig\NAT@parse@date}
+\@ifundefined{NAT@parse@date}{}{\def\NAT@parse@date#1#2#3#4#5#6@@{\NAT@parse@date@orig#1#2#3#4#5#6@@\def\NAT@tempyear{0000}\def\NAT@tempexlab{{?}}\ifx\NAT@year\NAT@tempyear\ifx\NAT@exlab\NAT@tempexlab\def\NAT@date{[n.\,d.]}\else\edef\NAT@date{[n.\,d.]\NAT@exlab}\fi\fi}}
+\makeatother
+
+\bibitem[Chillotti et~al\mbox{.}(2020)]%
+        {chillotti2020tfhe}
+\bibfield{author}{\bibinfo{person}{Ilaria Chillotti}, \bibinfo{person}{Nicolas
+  Gama}, \bibinfo{person}{Mariya Georgieva}, {and} \bibinfo{person}{Malika
+  Izabach{\`e}ne}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{{TFHE}: Fast Fully Homomorphic Encryption Over the
+  Torus}.
+\newblock \bibinfo{journal}{\emph{Journal of Cryptology}}  \bibinfo{volume}{33}
+  (\bibinfo{year}{2020}), \bibinfo{pages}{34--91}.
+\newblock
+\href{https://doi.org/10.1007/s00145-019-09319-x}{doi:\nolinkurl{10.1007/s00145-019-09319-x}}
+
+
+\bibitem[Feryputri et~al\mbox{.}(2025)]%
+        {feryputri2025lwe}
+\bibfield{author}{\bibinfo{person}{Najmi~Azzahra Feryputri},
+  \bibinfo{person}{Infall Syafalni}, \bibinfo{person}{Nana Sutisna},
+  \bibinfo{person}{Nur Ahmadi}, \bibinfo{person}{Rahmat Mulyawan}, {and}
+  \bibinfo{person}{Trio Adiono}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{{FPGA}-Based Hardware Accelerator for {LWE}
+  Encryption and Decryption with {TFHE} Scheme}. In
+  \bibinfo{booktitle}{\emph{2025 IEEE 38th International System-on-Chip
+  Conference (SOCC)}}. \bibinfo{publisher}{IEEE}, \bibinfo{pages}{1--6}.
+\newblock
+\href{https://doi.org/10.1109/SOCC66126.2025.11235379}{doi:\nolinkurl{10.1109/SOCC66126.2025.11235379}}
+
+
+\bibitem[Gentry(2009)]%
+        {gentry2009fhe}
+\bibfield{author}{\bibinfo{person}{Craig Gentry}.}
+  \bibinfo{year}{2009}\natexlab{}.
+\newblock \showarticletitle{Fully Homomorphic Encryption Using Ideal Lattices}.
+  In \bibinfo{booktitle}{\emph{Proceedings of the Forty-First Annual ACM
+  Symposium on Theory of Computing}} \emph{(\bibinfo{series}{STOC '09})}.
+  \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}, \bibinfo{pages}{169--178}.
+\newblock
+\href{https://doi.org/10.1145/1536414.1536440}{doi:\nolinkurl{10.1145/1536414.1536440}}
+
+
+\bibitem[Gupta et~al\mbox{.}(2024)]%
+        {gupta2024memfhe}
+\bibfield{author}{\bibinfo{person}{Saransh Gupta}, \bibinfo{person}{Rosario
+  Cammarota}, {and} \bibinfo{person}{Tajana {\v S}imuni{\'c}}.}
+  \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{MemFHE}: End-to-end Computing with Fully
+  Homomorphic Encryption in Memory}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Embedded Computing
+  Systems}} \bibinfo{volume}{23}, \bibinfo{number}{2}, Article
+  \bibinfo{articleno}{28} (\bibinfo{year}{2024}), \bibinfo{numpages}{23}~pages.
+\newblock
+\href{https://doi.org/10.1145/3569955}{doi:\nolinkurl{10.1145/3569955}}
+
+
+\bibitem[Kim et~al\mbox{.}(2022b)]%
+        {kim2022ark}
+\bibfield{author}{\bibinfo{person}{Jongmin Kim}, \bibinfo{person}{Gwangho Lee},
+  \bibinfo{person}{Sangpyo Kim}, \bibinfo{person}{Gina Sohn},
+  \bibinfo{person}{Minsoo Rhu}, \bibinfo{person}{John Kim}, {and}
+  \bibinfo{person}{Jung~Ho Ahn}.} \bibinfo{year}{2022}\natexlab{b}.
+\newblock \showarticletitle{{ARK}: Fully Homomorphic Encryption Accelerator
+  with Runtime Data Generation and Inter-Operation Key Reuse}. In
+  \bibinfo{booktitle}{\emph{2022 55th IEEE/ACM International Symposium on
+  Microarchitecture (MICRO)}}. \bibinfo{publisher}{IEEE},
+  \bibinfo{pages}{1237--1254}.
+\newblock
+\href{https://doi.org/10.1109/MICRO56248.2022.00086}{doi:\nolinkurl{10.1109/MICRO56248.2022.00086}}
+
+
+\bibitem[Kim et~al\mbox{.}(2022a)]%
+        {kim2022bts}
+\bibfield{author}{\bibinfo{person}{Sangpyo Kim}, \bibinfo{person}{Jongmin Kim},
+  \bibinfo{person}{Michael~Jaemin Kim}, \bibinfo{person}{Wonkyung Jung},
+  \bibinfo{person}{John Kim}, \bibinfo{person}{Minsoo Rhu}, {and}
+  \bibinfo{person}{Jung~Ho Ahn}.} \bibinfo{year}{2022}\natexlab{a}.
+\newblock \showarticletitle{{BTS}: An Accelerator for Bootstrappable Fully
+  Homomorphic Encryption}. In \bibinfo{booktitle}{\emph{Proceedings of the 49th
+  Annual International Symposium on Computer Architecture}}
+  \emph{(\bibinfo{series}{ISCA '22})}. \bibinfo{publisher}{Association for
+  Computing Machinery}, \bibinfo{address}{New York, NY, USA},
+  \bibinfo{pages}{711--725}.
+\newblock
+\href{https://doi.org/10.1145/3470496.3527415}{doi:\nolinkurl{10.1145/3470496.3527415}}
+
+
+\bibitem[Krieger et~al\mbox{.}(2024)]%
+        {krieger2024aloha}
+\bibfield{author}{\bibinfo{person}{Florian Krieger}, \bibinfo{person}{Florian
+  Hirner}, \bibinfo{person}{Ahmet~Can Mert}, {and} \bibinfo{person}{Sujoy~Sinha
+  Roy}.} \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{Aloha-HE}: A Low-Area Hardware Accelerator for
+  Client-Side Operations in Homomorphic Encryption}. In
+  \bibinfo{booktitle}{\emph{2024 Design, Automation \& Test in Europe
+  Conference \& Exhibition (DATE)}}. \bibinfo{publisher}{IEEE},
+  \bibinfo{pages}{1--6}.
+\newblock
+\href{https://doi.org/10.23919/DATE58400.2024.10546608}{doi:\nolinkurl{10.23919/DATE58400.2024.10546608}}
+
+
+\bibitem[Lee et~al\mbox{.}(2023)]%
+        {lee2023ckks}
+\bibfield{author}{\bibinfo{person}{Jaehyeok Lee}, \bibinfo{person}{Phap~Ngoc
+  Duong}, {and} \bibinfo{person}{Hanho Lee}.} \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{Configurable Encryption and Decryption
+  Architectures for {CKKS}-Based Homomorphic Encryption}.
+\newblock \bibinfo{journal}{\emph{Sensors}} \bibinfo{volume}{23},
+  \bibinfo{number}{17} (\bibinfo{year}{2023}), \bibinfo{pages}{7389}.
+\newblock
+\href{https://doi.org/10.3390/s23177389}{doi:\nolinkurl{10.3390/s23177389}}
+
+
+\bibitem[Mert et~al\mbox{.}(2020)]%
+        {mert2020bfv}
+\bibfield{author}{\bibinfo{person}{Ahmet~Can Mert}, \bibinfo{person}{Erdin{\c
+  c} {\"O}zt{\"u}rk}, {and} \bibinfo{person}{Erkay Sava{\c s}}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Design and Implementation of Encryption/Decryption
+  Architectures for {BFV} Homomorphic Encryption Scheme}.
+\newblock \bibinfo{journal}{\emph{IEEE Transactions on Very Large Scale
+  Integration (VLSI) Systems}} \bibinfo{volume}{28}, \bibinfo{number}{2}
+  (\bibinfo{year}{2020}), \bibinfo{pages}{353--362}.
+\newblock
+\href{https://doi.org/10.1109/TVLSI.2019.2943127}{doi:\nolinkurl{10.1109/TVLSI.2019.2943127}}
+
+
+\bibitem[Ruan et~al\mbox{.}(2019)]%
+        {ruan2019insider}
+\bibfield{author}{\bibinfo{person}{Zhenyuan Ruan}, \bibinfo{person}{Tong He},
+  {and} \bibinfo{person}{Jason Cong}.} \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{{INSIDER}: Designing In-Storage Computing System
+  for Emerging High-Performance Drive}. In \bibinfo{booktitle}{\emph{2019
+  USENIX Annual Technical Conference (USENIX ATC 19)}}.
+  \bibinfo{publisher}{USENIX Association}, \bibinfo{address}{Renton, WA},
+  \bibinfo{pages}{379--394}.
+\newblock
+\urldef\tempurl%
+\url{https://www.usenix.org/conference/atc19/presentation/ruan}
+\showURL{%
+\tempurl}
+
+
+\bibitem[{SNIA}(2025)]%
+        {snia2025csmodel}
+\bibfield{author}{\bibinfo{person}{{SNIA}}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{Computational Storage Architecture and
+  Programming Model} (\bibinfo{edition}{version 1.1} ed.)}.
+\newblock SNIA.
+\newblock
+\urldef\tempurl%
+\url{https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf}
+\showURL{%
+\tempurl}
+\newblock
+\shownote{Released May 31, 2025}.
+
+
+\bibitem[Syafalni et~al\mbox{.}(2026)]%
+        {syafalni2026multicore}
+\bibfield{author}{\bibinfo{person}{Infall Syafalni},
+  \bibinfo{person}{Najmi~Azzahra Feryputri}, \bibinfo{person}{Nana Sutisna},
+  \bibinfo{person}{Nur Ahmadi}, \bibinfo{person}{Rahmat Mulyawan},
+  \bibinfo{person}{Tutun Juhana}, {and} \bibinfo{person}{Trio Adiono}.}
+  \bibinfo{year}{2026}\natexlab{}.
+\newblock \showarticletitle{Multicore Encryption-Decryption Hardware
+  Accelerator for Torus-Based {RLWE} {FHE}}. In \bibinfo{booktitle}{\emph{2026
+  IEEE Symposium on Low-Power and High-Speed Chips and Systems (COOL CHIPS)}}.
+  \bibinfo{publisher}{IEEE}, \bibinfo{pages}{1--3}.
+\newblock
+\href{https://doi.org/10.1109/COOLCHIPS68842.2026.11556998}{doi:\nolinkurl{10.1109/COOLCHIPS68842.2026.11556998}}
+
+
+\bibitem[Van~Beirendonck et~al\mbox{.}(2023)]%
+        {vanbeirendonck2023fpt}
+\bibfield{author}{\bibinfo{person}{Michiel Van~Beirendonck},
+  \bibinfo{person}{Jan-Pieter D'Anvers}, \bibinfo{person}{Furkan Turan}, {and}
+  \bibinfo{person}{Ingrid Verbauwhede}.} \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{{FPT}: A Fixed-Point Accelerator for Torus Fully
+  Homomorphic Encryption}. In \bibinfo{booktitle}{\emph{Proceedings of the 2023
+  ACM SIGSAC Conference on Computer and Communications Security}}
+  \emph{(\bibinfo{series}{CCS '23})}. \bibinfo{publisher}{Association for
+  Computing Machinery}, \bibinfo{address}{New York, NY, USA},
+  \bibinfo{pages}{741--755}.
+\newblock
+\href{https://doi.org/10.1145/3576915.3623159}{doi:\nolinkurl{10.1145/3576915.3623159}}
+
+
+\bibitem[van~der Hagen and Lucia(2022)]%
+        {vanderhagen2022choco}
+\bibfield{author}{\bibinfo{person}{McKenzie van~der Hagen} {and}
+  \bibinfo{person}{Brandon Lucia}.} \bibinfo{year}{2022}\natexlab{}.
+\newblock \showarticletitle{Client-Optimized Algorithms and Acceleration for
+  Encrypted Compute Offloading}. In \bibinfo{booktitle}{\emph{Proceedings of
+  the 27th ACM International Conference on Architectural Support for
+  Programming Languages and Operating Systems}} \emph{(\bibinfo{series}{ASPLOS
+  '22})}. \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}, \bibinfo{pages}{683--696}.
+\newblock
+\href{https://doi.org/10.1145/3503222.3507737}{doi:\nolinkurl{10.1145/3503222.3507737}}
+
+
+\bibitem[Wong et~al\mbox{.}(2024)]%
+        {wong2024dongle}
+\bibfield{author}{\bibinfo{person}{Linus~Y. Wong}, \bibinfo{person}{Jialiang
+  Zhang}, {and} \bibinfo{person}{Jing~(Jane) Li}.}
+  \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{DONGLE} 2.0: Direct {FPGA}-Orchestrated {NVMe}
+  Storage for {HLS}}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Reconfigurable Technology
+  and Systems}} \bibinfo{volume}{17}, \bibinfo{number}{3}, Article
+  \bibinfo{articleno}{45} (\bibinfo{year}{2024}), \bibinfo{numpages}{32}~pages.
+\newblock
+\href{https://doi.org/10.1145/3650038}{doi:\nolinkurl{10.1145/3650038}}
+
+
+\bibitem[Xu et~al\mbox{.}(2026)]%
+        {xu2026hera}
+\bibfield{author}{\bibinfo{person}{Zhihan Xu}, \bibinfo{person}{Rajgopal
+  Kannan}, {and} \bibinfo{person}{Viktor Prasanna}.}
+  \bibinfo{year}{2026}\natexlab{}.
+\newblock \showarticletitle{{HERA}: A Bandwidth-efficient Accelerator for Fully
+  Homomorphic Encryption on {HBM}-enabled {FPGA}}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 2026 ACM/SIGDA International
+  Symposium on Field Programmable Gate Arrays}} \emph{(\bibinfo{series}{FPGA
+  '26})}. \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}, \bibinfo{pages}{265--276}.
+\newblock
+\href{https://doi.org/10.1145/3748173.3779201}{doi:\nolinkurl{10.1145/3748173.3779201}}
+
+
+\bibitem[Yune et~al\mbox{.}(2025)]%
+        {yune2025abcfhe}
+\bibfield{author}{\bibinfo{person}{Sungwoong Yune}, \bibinfo{person}{Hyojeong
+  Lee}, \bibinfo{person}{Adiwena Putra}, \bibinfo{person}{Hyunjun Cho},
+  \bibinfo{person}{Cuong~Duong Manh}, \bibinfo{person}{Jaeho Jeon}, {and}
+  \bibinfo{person}{Joo-Young Kim}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{{ABC-FHE}: A Resource-Efficient Accelerator
+  Enabling Bootstrappable Parameters for Client-Side Fully Homomorphic
+  Encryption}. In \bibinfo{booktitle}{\emph{2025 62nd ACM/IEEE Design
+  Automation Conference (DAC)}}. \bibinfo{publisher}{IEEE},
+  \bibinfo{pages}{1--7}.
+\newblock
+\href{https://doi.org/10.1109/DAC63849.2025.11132592}{doi:\nolinkurl{10.1109/DAC63849.2025.11132592}}
+
+
+\bibitem[Zhou et~al\mbox{.}(2023)]%
+        {zhou2023fhemem}
+\bibfield{author}{\bibinfo{person}{Minxuan Zhou}, \bibinfo{person}{Yujin Nam},
+  \bibinfo{person}{Pranav Gangwar}, \bibinfo{person}{Weihong Xu},
+  \bibinfo{person}{Arpan Dutta}, \bibinfo{person}{Kartikeyan Subramanyam},
+  \bibinfo{person}{Chris Wilkerson}, \bibinfo{person}{Rosario Cammarota},
+  \bibinfo{person}{Saransh Gupta}, {and} \bibinfo{person}{Tajana Rosing}.}
+  \bibinfo{year}{2023}\natexlab{}.
+\newblock \bibinfo{title}{{FHEmem}: A Processing In-Memory Accelerator for
+  Fully Homomorphic Encryption}.
+\newblock \bibinfo{howpublished}{arXiv preprint arXiv:2311.16293}.
+\newblock
+\urldef\tempurl%
+\url{https://arxiv.org/abs/2311.16293v1}
+\showURL{%
+\tempurl}
+
+
+\end{thebibliography}

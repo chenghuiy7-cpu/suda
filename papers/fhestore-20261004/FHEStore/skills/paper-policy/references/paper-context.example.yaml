@@ -1,0 +1,50 @@
+version: 1
+paper_type: empirical
+domain: machine_learning
+venue: ExampleConf 2027
+submission_stage: draft
+language: en
+double_blind: true
+task_scope: multi_section
+task_mode: writing
+artifact_mode:
+- final_figure
+- final_table
+experiment_type: stochastic
+measurement_bias_status: known_systematic
+evidence_structure: multi_role
+scopes:
+- writing
+artifacts:
+- prose
+- tex
+features:
+- paper_prose
+- latex_manuscript
+- threats_to_validity
+approved_citation_sources:
+- local_bib
+- user_notes
+primary_tex: paper.tex
+additional_tex:
+- supplement/SupplementaryMaterial.tex
+venue_sources:
+- id: official-submission-rules
+  kind: official
+  locator: https://example.org/cfp
+  as_of: 2026-07-11
+  constraints:
+  - page_limit
+  - anonymity
+  - appendix
+- id: supplied-template
+  kind: template
+  locator: templates/exampleconf2027.sty
+  as_of: 2026-07-11
+  constraints:
+  - formatting
+  - section_numbering
+provenance:
+  venue: official
+  submission_stage: user
+  double_blind: template

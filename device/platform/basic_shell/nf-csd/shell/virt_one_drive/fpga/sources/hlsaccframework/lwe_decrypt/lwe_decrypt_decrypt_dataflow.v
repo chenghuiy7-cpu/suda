@@ -22,19 +22,24 @@ module lwe_decrypt_decrypt_dataflow (
         data_out_TLAST,
         data_out_TID,
         data_out_TDEST,
-        key_address0,
-        key_ce0,
-        key_d0,
-        key_q0,
-        key_we0,
+        groups_address0,
+        groups_ce0,
+        groups_d0,
+        groups_q0,
+        groups_we0,
+        groups_address1,
+        groups_ce1,
+        groups_d1,
+        groups_q1,
+        groups_we1,
         count,
         layout,
         ap_clk,
         ap_rst,
         data_in_TVALID,
         data_in_TREADY,
-        count_ap_vld,
         layout_ap_vld,
+        count_ap_vld,
         ap_start,
         data_out_TVALID,
         data_out_TREADY,
@@ -59,19 +64,24 @@ output  [7:0] data_out_TUSER;
 output  [0:0] data_out_TLAST;
 output  [7:0] data_out_TID;
 output  [7:0] data_out_TDEST;
-output  [10:0] key_address0;
-output   key_ce0;
-output  [0:0] key_d0;
-input  [0:0] key_q0;
-output   key_we0;
+output  [7:0] groups_address0;
+output   groups_ce0;
+output  [7:0] groups_d0;
+input  [7:0] groups_q0;
+output   groups_we0;
+output  [7:0] groups_address1;
+output   groups_ce1;
+output  [7:0] groups_d1;
+input  [7:0] groups_q1;
+output   groups_we1;
 input  [31:0] count;
 input  [1:0] layout;
 input   ap_clk;
 input   ap_rst;
 input   data_in_TVALID;
 output   data_in_TREADY;
-input   count_ap_vld;
 input   layout_ap_vld;
+input   count_ap_vld;
 input   ap_start;
 output   data_out_TVALID;
 input   data_out_TREADY;
@@ -80,46 +90,93 @@ output   ap_ready;
 output   ap_idle;
 input   ap_continue;
 
-wire    serialize_input_stream8_U0_ap_start;
-wire    serialize_input_stream8_U0_ap_done;
-wire    serialize_input_stream8_U0_ap_continue;
-wire    serialize_input_stream8_U0_ap_idle;
-wire    serialize_input_stream8_U0_ap_ready;
-wire    serialize_input_stream8_U0_start_out;
-wire    serialize_input_stream8_U0_start_write;
-wire   [127:0] serialize_input_stream8_U0_words_din;
-wire    serialize_input_stream8_U0_words_write;
-wire   [1023:0] serialize_input_stream8_U0_finish_packets_din;
-wire    serialize_input_stream8_U0_finish_packets_write;
-wire    serialize_input_stream8_U0_data_in_TREADY;
-wire   [31:0] serialize_input_stream8_U0_count_out_din;
-wire    serialize_input_stream8_U0_count_out_write;
-wire   [1:0] serialize_input_stream8_U0_layout_out_din;
-wire    serialize_input_stream8_U0_layout_out_write;
-wire    parse_mask_stream_U0_ap_start;
-wire    parse_mask_stream_U0_ap_done;
-wire    parse_mask_stream_U0_ap_continue;
-wire    parse_mask_stream_U0_ap_idle;
-wire    parse_mask_stream_U0_ap_ready;
-wire    parse_mask_stream_U0_start_out;
-wire    parse_mask_stream_U0_start_write;
-wire    parse_mask_stream_U0_words_read;
-wire   [127:0] parse_mask_stream_U0_terms_din;
-wire    parse_mask_stream_U0_terms_write;
-wire   [10:0] parse_mask_stream_U0_key_address0;
-wire    parse_mask_stream_U0_key_ce0;
-wire    parse_mask_stream_U0_input_count_read;
-wire    parse_mask_stream_U0_layout_read;
-wire    accumulate_mask_stream_U0_ap_start;
-wire    accumulate_mask_stream_U0_ap_done;
-wire    accumulate_mask_stream_U0_ap_continue;
-wire    accumulate_mask_stream_U0_ap_idle;
-wire    accumulate_mask_stream_U0_ap_ready;
-wire    accumulate_mask_stream_U0_start_out;
-wire    accumulate_mask_stream_U0_start_write;
-wire    accumulate_mask_stream_U0_terms_read;
-wire   [191:0] accumulate_mask_stream_U0_blocks_din;
-wire    accumulate_mask_stream_U0_blocks_write;
+wire    read_input_beats17_U0_ap_start;
+wire    read_input_beats17_U0_start_full_n;
+wire    read_input_beats17_U0_ap_done;
+wire    read_input_beats17_U0_ap_continue;
+wire    read_input_beats17_U0_ap_idle;
+wire    read_input_beats17_U0_ap_ready;
+wire    read_input_beats17_U0_start_out;
+wire    read_input_beats17_U0_start_write;
+wire   [1023:0] read_input_beats17_U0_beats_din;
+wire    read_input_beats17_U0_beats_write;
+wire   [1023:0] read_input_beats17_U0_finish_packets_din;
+wire    read_input_beats17_U0_finish_packets_write;
+wire    read_input_beats17_U0_data_in_TREADY;
+wire   [1:0] read_input_beats17_U0_layout_out_din;
+wire    read_input_beats17_U0_layout_out_write;
+wire   [31:0] read_input_beats17_U0_count_out_din;
+wire    read_input_beats17_U0_count_out_write;
+wire    frame_input_beats_U0_ap_start;
+wire    frame_input_beats_U0_ap_done;
+wire    frame_input_beats_U0_ap_continue;
+wire    frame_input_beats_U0_ap_idle;
+wire    frame_input_beats_U0_ap_ready;
+wire    frame_input_beats_U0_start_out;
+wire    frame_input_beats_U0_start_write;
+wire    frame_input_beats_U0_beats_read;
+wire   [1535:0] frame_input_beats_U0_frames_din;
+wire    frame_input_beats_U0_frames_write;
+wire    frame_input_beats_U0_input_count_read;
+wire    frame_input_beats_U0_layout_read;
+wire   [1:0] frame_input_beats_U0_layout_out_din;
+wire    frame_input_beats_U0_layout_out_write;
+wire    address_mask_beats_U0_ap_start;
+wire    address_mask_beats_U0_ap_done;
+wire    address_mask_beats_U0_ap_continue;
+wire    address_mask_beats_U0_ap_idle;
+wire    address_mask_beats_U0_ap_ready;
+wire    address_mask_beats_U0_frames_read;
+wire   [1023:0] address_mask_beats_U0_addresses_din;
+wire    address_mask_beats_U0_addresses_write;
+wire    address_mask_beats_U0_layout_read;
+wire   [1:0] address_mask_beats_U0_layout_out_din;
+wire    address_mask_beats_U0_layout_out_write;
+wire    fetch_key_beats_U0_ap_start;
+wire    fetch_key_beats_U0_ap_done;
+wire    fetch_key_beats_U0_ap_continue;
+wire    fetch_key_beats_U0_ap_idle;
+wire    fetch_key_beats_U0_ap_ready;
+wire    fetch_key_beats_U0_start_out;
+wire    fetch_key_beats_U0_start_write;
+wire    fetch_key_beats_U0_addresses_read;
+wire   [1535:0] fetch_key_beats_U0_keyed_din;
+wire    fetch_key_beats_U0_keyed_write;
+wire   [7:0] fetch_key_beats_U0_groups_address0;
+wire    fetch_key_beats_U0_groups_ce0;
+wire   [7:0] fetch_key_beats_U0_groups_address1;
+wire    fetch_key_beats_U0_groups_ce1;
+wire    select_mask_beats_U0_ap_start;
+wire    select_mask_beats_U0_ap_done;
+wire    select_mask_beats_U0_ap_continue;
+wire    select_mask_beats_U0_ap_idle;
+wire    select_mask_beats_U0_ap_ready;
+wire    select_mask_beats_U0_start_out;
+wire    select_mask_beats_U0_start_write;
+wire    select_mask_beats_U0_keyed_read;
+wire   [639:0] select_mask_beats_U0_terms_din;
+wire    select_mask_beats_U0_terms_write;
+wire    select_mask_beats_U0_layout_read;
+wire    reduce_mask_beats_U0_ap_start;
+wire    reduce_mask_beats_U0_ap_done;
+wire    reduce_mask_beats_U0_ap_continue;
+wire    reduce_mask_beats_U0_ap_idle;
+wire    reduce_mask_beats_U0_ap_ready;
+wire    reduce_mask_beats_U0_start_out;
+wire    reduce_mask_beats_U0_start_write;
+wire    reduce_mask_beats_U0_terms_read;
+wire   [255:0] reduce_mask_beats_U0_sums_din;
+wire    reduce_mask_beats_U0_sums_write;
+wire    accumulate_mask_beats_U0_ap_start;
+wire    accumulate_mask_beats_U0_ap_done;
+wire    accumulate_mask_beats_U0_ap_continue;
+wire    accumulate_mask_beats_U0_ap_idle;
+wire    accumulate_mask_beats_U0_ap_ready;
+wire    accumulate_mask_beats_U0_start_out;
+wire    accumulate_mask_beats_U0_start_write;
+wire    accumulate_mask_beats_U0_sums_read;
+wire   [191:0] accumulate_mask_beats_U0_blocks_din;
+wire    accumulate_mask_beats_U0_blocks_write;
 wire    decode_block_stream_U0_ap_start;
 wire    decode_block_stream_U0_ap_done;
 wire    decode_block_stream_U0_ap_continue;
@@ -144,21 +201,39 @@ wire   [0:0] pack_clear_stream_U0_data_out_TLAST;
 wire   [7:0] pack_clear_stream_U0_data_out_TID;
 wire   [7:0] pack_clear_stream_U0_data_out_TDEST;
 wire    ap_sync_continue;
-wire    words_full_n;
-wire   [127:0] words_dout;
-wire    words_empty_n;
+wire    beats_full_n;
+wire   [1023:0] beats_dout;
+wire    beats_empty_n;
 wire    finish_packets_full_n;
 wire   [1023:0] finish_packets_dout;
 wire    finish_packets_empty_n;
-wire    count_c_full_n;
-wire   [31:0] count_c_dout;
-wire    count_c_empty_n;
 wire    layout_c_full_n;
 wire   [1:0] layout_c_dout;
 wire    layout_c_empty_n;
+wire    count_c_full_n;
+wire   [31:0] count_c_dout;
+wire    count_c_empty_n;
+wire    frames_full_n;
+wire   [1535:0] frames_dout;
+wire    frames_empty_n;
+wire    layout_c21_full_n;
+wire   [1:0] layout_c21_dout;
+wire    layout_c21_empty_n;
+wire    addresses_full_n;
+wire   [1023:0] addresses_dout;
+wire    addresses_empty_n;
+wire    layout_c22_full_n;
+wire   [1:0] layout_c22_dout;
+wire    layout_c22_empty_n;
+wire    keyed_full_n;
+wire   [1535:0] keyed_dout;
+wire    keyed_empty_n;
 wire    terms_full_n;
-wire   [127:0] terms_dout;
+wire   [639:0] terms_dout;
 wire    terms_empty_n;
+wire    sums_full_n;
+wire   [255:0] sums_dout;
+wire    sums_empty_n;
 wire    blocks_full_n;
 wire   [191:0] blocks_dout;
 wire    blocks_empty_n;
@@ -167,18 +242,36 @@ wire   [23:0] clear_dout;
 wire    clear_empty_n;
 wire    ap_sync_done;
 wire    ap_sync_ready;
-reg    ap_sync_reg_serialize_input_stream8_U0_ap_ready;
-wire    ap_sync_serialize_input_stream8_U0_ap_ready;
-reg    ap_sync_reg_parse_mask_stream_U0_ap_ready;
-wire    ap_sync_parse_mask_stream_U0_ap_ready;
+reg    ap_sync_reg_read_input_beats17_U0_ap_ready;
+wire    ap_sync_read_input_beats17_U0_ap_ready;
+reg    ap_sync_reg_fetch_key_beats_U0_ap_ready;
+wire    ap_sync_fetch_key_beats_U0_ap_ready;
+wire   [0:0] start_for_frame_input_beats_U0_din;
+wire    start_for_frame_input_beats_U0_full_n;
+wire   [0:0] start_for_frame_input_beats_U0_dout;
+wire    start_for_frame_input_beats_U0_empty_n;
 wire   [0:0] start_for_pack_clear_stream_U0_din;
 wire    start_for_pack_clear_stream_U0_full_n;
 wire   [0:0] start_for_pack_clear_stream_U0_dout;
 wire    start_for_pack_clear_stream_U0_empty_n;
-wire   [0:0] start_for_accumulate_mask_stream_U0_din;
-wire    start_for_accumulate_mask_stream_U0_full_n;
-wire   [0:0] start_for_accumulate_mask_stream_U0_dout;
-wire    start_for_accumulate_mask_stream_U0_empty_n;
+wire   [0:0] start_for_address_mask_beats_U0_din;
+wire    start_for_address_mask_beats_U0_full_n;
+wire   [0:0] start_for_address_mask_beats_U0_dout;
+wire    start_for_address_mask_beats_U0_empty_n;
+wire    address_mask_beats_U0_start_full_n;
+wire    address_mask_beats_U0_start_write;
+wire   [0:0] start_for_select_mask_beats_U0_din;
+wire    start_for_select_mask_beats_U0_full_n;
+wire   [0:0] start_for_select_mask_beats_U0_dout;
+wire    start_for_select_mask_beats_U0_empty_n;
+wire   [0:0] start_for_reduce_mask_beats_U0_din;
+wire    start_for_reduce_mask_beats_U0_full_n;
+wire   [0:0] start_for_reduce_mask_beats_U0_dout;
+wire    start_for_reduce_mask_beats_U0_empty_n;
+wire   [0:0] start_for_accumulate_mask_beats_U0_din;
+wire    start_for_accumulate_mask_beats_U0_full_n;
+wire   [0:0] start_for_accumulate_mask_beats_U0_dout;
+wire    start_for_accumulate_mask_beats_U0_empty_n;
 wire   [0:0] start_for_decode_block_stream_U0_din;
 wire    start_for_decode_block_stream_U0_full_n;
 wire   [0:0] start_for_decode_block_stream_U0_dout;
@@ -191,91 +284,179 @@ wire    ap_ce_reg;
 
 // power-on initialization
 initial begin
-#0 ap_sync_reg_serialize_input_stream8_U0_ap_ready = 1'b0;
-#0 ap_sync_reg_parse_mask_stream_U0_ap_ready = 1'b0;
+#0 ap_sync_reg_read_input_beats17_U0_ap_ready = 1'b0;
+#0 ap_sync_reg_fetch_key_beats_U0_ap_ready = 1'b0;
 end
 
-lwe_decrypt_serialize_input_stream8 serialize_input_stream8_U0(
+lwe_decrypt_read_input_beats17 read_input_beats17_U0(
     .ap_clk(ap_clk),
     .ap_rst(ap_rst),
-    .ap_start(serialize_input_stream8_U0_ap_start),
-    .start_full_n(start_for_pack_clear_stream_U0_full_n),
-    .ap_done(serialize_input_stream8_U0_ap_done),
-    .ap_continue(serialize_input_stream8_U0_ap_continue),
-    .ap_idle(serialize_input_stream8_U0_ap_idle),
-    .ap_ready(serialize_input_stream8_U0_ap_ready),
-    .start_out(serialize_input_stream8_U0_start_out),
-    .start_write(serialize_input_stream8_U0_start_write),
-    .words_din(serialize_input_stream8_U0_words_din),
-    .words_full_n(words_full_n),
-    .words_write(serialize_input_stream8_U0_words_write),
-    .finish_packets_din(serialize_input_stream8_U0_finish_packets_din),
+    .ap_start(read_input_beats17_U0_ap_start),
+    .start_full_n(read_input_beats17_U0_start_full_n),
+    .ap_done(read_input_beats17_U0_ap_done),
+    .ap_continue(read_input_beats17_U0_ap_continue),
+    .ap_idle(read_input_beats17_U0_ap_idle),
+    .ap_ready(read_input_beats17_U0_ap_ready),
+    .start_out(read_input_beats17_U0_start_out),
+    .start_write(read_input_beats17_U0_start_write),
+    .beats_din(read_input_beats17_U0_beats_din),
+    .beats_full_n(beats_full_n),
+    .beats_write(read_input_beats17_U0_beats_write),
+    .finish_packets_din(read_input_beats17_U0_finish_packets_din),
     .finish_packets_full_n(finish_packets_full_n),
-    .finish_packets_write(serialize_input_stream8_U0_finish_packets_write),
+    .finish_packets_write(read_input_beats17_U0_finish_packets_write),
     .data_in_TDATA(data_in_TDATA),
     .data_in_TVALID(data_in_TVALID),
-    .data_in_TREADY(serialize_input_stream8_U0_data_in_TREADY),
+    .data_in_TREADY(read_input_beats17_U0_data_in_TREADY),
     .data_in_TKEEP(data_in_TKEEP),
     .data_in_TSTRB(data_in_TSTRB),
     .data_in_TUSER(data_in_TUSER),
     .data_in_TLAST(data_in_TLAST),
     .data_in_TID(data_in_TID),
     .data_in_TDEST(data_in_TDEST),
-    .count(count),
     .layout(layout),
-    .count_out_din(serialize_input_stream8_U0_count_out_din),
-    .count_out_full_n(count_c_full_n),
-    .count_out_write(serialize_input_stream8_U0_count_out_write),
-    .layout_out_din(serialize_input_stream8_U0_layout_out_din),
+    .count(count),
+    .layout_out_din(read_input_beats17_U0_layout_out_din),
     .layout_out_full_n(layout_c_full_n),
-    .layout_out_write(serialize_input_stream8_U0_layout_out_write)
+    .layout_out_write(read_input_beats17_U0_layout_out_write),
+    .count_out_din(read_input_beats17_U0_count_out_din),
+    .count_out_full_n(count_c_full_n),
+    .count_out_write(read_input_beats17_U0_count_out_write)
 );
 
-lwe_decrypt_parse_mask_stream parse_mask_stream_U0(
+lwe_decrypt_frame_input_beats frame_input_beats_U0(
     .ap_clk(ap_clk),
     .ap_rst(ap_rst),
-    .ap_start(parse_mask_stream_U0_ap_start),
-    .start_full_n(start_for_accumulate_mask_stream_U0_full_n),
-    .ap_done(parse_mask_stream_U0_ap_done),
-    .ap_continue(parse_mask_stream_U0_ap_continue),
-    .ap_idle(parse_mask_stream_U0_ap_idle),
-    .ap_ready(parse_mask_stream_U0_ap_ready),
-    .start_out(parse_mask_stream_U0_start_out),
-    .start_write(parse_mask_stream_U0_start_write),
-    .words_dout(words_dout),
-    .words_empty_n(words_empty_n),
-    .words_read(parse_mask_stream_U0_words_read),
-    .terms_din(parse_mask_stream_U0_terms_din),
-    .terms_full_n(terms_full_n),
-    .terms_write(parse_mask_stream_U0_terms_write),
-    .key_address0(parse_mask_stream_U0_key_address0),
-    .key_ce0(parse_mask_stream_U0_key_ce0),
-    .key_q0(key_q0),
+    .ap_start(frame_input_beats_U0_ap_start),
+    .start_full_n(start_for_address_mask_beats_U0_full_n),
+    .ap_done(frame_input_beats_U0_ap_done),
+    .ap_continue(frame_input_beats_U0_ap_continue),
+    .ap_idle(frame_input_beats_U0_ap_idle),
+    .ap_ready(frame_input_beats_U0_ap_ready),
+    .start_out(frame_input_beats_U0_start_out),
+    .start_write(frame_input_beats_U0_start_write),
+    .beats_dout(beats_dout),
+    .beats_empty_n(beats_empty_n),
+    .beats_read(frame_input_beats_U0_beats_read),
+    .frames_din(frame_input_beats_U0_frames_din),
+    .frames_full_n(frames_full_n),
+    .frames_write(frame_input_beats_U0_frames_write),
     .input_count_dout(count_c_dout),
     .input_count_empty_n(count_c_empty_n),
-    .input_count_read(parse_mask_stream_U0_input_count_read),
+    .input_count_read(frame_input_beats_U0_input_count_read),
     .layout_dout(layout_c_dout),
     .layout_empty_n(layout_c_empty_n),
-    .layout_read(parse_mask_stream_U0_layout_read)
+    .layout_read(frame_input_beats_U0_layout_read),
+    .layout_out_din(frame_input_beats_U0_layout_out_din),
+    .layout_out_full_n(layout_c21_full_n),
+    .layout_out_write(frame_input_beats_U0_layout_out_write)
 );
 
-lwe_decrypt_accumulate_mask_stream accumulate_mask_stream_U0(
+lwe_decrypt_address_mask_beats address_mask_beats_U0(
     .ap_clk(ap_clk),
     .ap_rst(ap_rst),
-    .ap_start(accumulate_mask_stream_U0_ap_start),
-    .start_full_n(start_for_decode_block_stream_U0_full_n),
-    .ap_done(accumulate_mask_stream_U0_ap_done),
-    .ap_continue(accumulate_mask_stream_U0_ap_continue),
-    .ap_idle(accumulate_mask_stream_U0_ap_idle),
-    .ap_ready(accumulate_mask_stream_U0_ap_ready),
-    .start_out(accumulate_mask_stream_U0_start_out),
-    .start_write(accumulate_mask_stream_U0_start_write),
+    .ap_start(address_mask_beats_U0_ap_start),
+    .ap_done(address_mask_beats_U0_ap_done),
+    .ap_continue(address_mask_beats_U0_ap_continue),
+    .ap_idle(address_mask_beats_U0_ap_idle),
+    .ap_ready(address_mask_beats_U0_ap_ready),
+    .frames_dout(frames_dout),
+    .frames_empty_n(frames_empty_n),
+    .frames_read(address_mask_beats_U0_frames_read),
+    .addresses_din(address_mask_beats_U0_addresses_din),
+    .addresses_full_n(addresses_full_n),
+    .addresses_write(address_mask_beats_U0_addresses_write),
+    .layout_dout(layout_c21_dout),
+    .layout_empty_n(layout_c21_empty_n),
+    .layout_read(address_mask_beats_U0_layout_read),
+    .layout_out_din(address_mask_beats_U0_layout_out_din),
+    .layout_out_full_n(layout_c22_full_n),
+    .layout_out_write(address_mask_beats_U0_layout_out_write)
+);
+
+lwe_decrypt_fetch_key_beats fetch_key_beats_U0(
+    .ap_clk(ap_clk),
+    .ap_rst(ap_rst),
+    .ap_start(fetch_key_beats_U0_ap_start),
+    .start_full_n(start_for_select_mask_beats_U0_full_n),
+    .ap_done(fetch_key_beats_U0_ap_done),
+    .ap_continue(fetch_key_beats_U0_ap_continue),
+    .ap_idle(fetch_key_beats_U0_ap_idle),
+    .ap_ready(fetch_key_beats_U0_ap_ready),
+    .start_out(fetch_key_beats_U0_start_out),
+    .start_write(fetch_key_beats_U0_start_write),
+    .addresses_dout(addresses_dout),
+    .addresses_empty_n(addresses_empty_n),
+    .addresses_read(fetch_key_beats_U0_addresses_read),
+    .keyed_din(fetch_key_beats_U0_keyed_din),
+    .keyed_full_n(keyed_full_n),
+    .keyed_write(fetch_key_beats_U0_keyed_write),
+    .groups_address0(fetch_key_beats_U0_groups_address0),
+    .groups_ce0(fetch_key_beats_U0_groups_ce0),
+    .groups_q0(groups_q0),
+    .groups_address1(fetch_key_beats_U0_groups_address1),
+    .groups_ce1(fetch_key_beats_U0_groups_ce1),
+    .groups_q1(groups_q1)
+);
+
+lwe_decrypt_select_mask_beats select_mask_beats_U0(
+    .ap_clk(ap_clk),
+    .ap_rst(ap_rst),
+    .ap_start(select_mask_beats_U0_ap_start),
+    .start_full_n(start_for_reduce_mask_beats_U0_full_n),
+    .ap_done(select_mask_beats_U0_ap_done),
+    .ap_continue(select_mask_beats_U0_ap_continue),
+    .ap_idle(select_mask_beats_U0_ap_idle),
+    .ap_ready(select_mask_beats_U0_ap_ready),
+    .start_out(select_mask_beats_U0_start_out),
+    .start_write(select_mask_beats_U0_start_write),
+    .keyed_dout(keyed_dout),
+    .keyed_empty_n(keyed_empty_n),
+    .keyed_read(select_mask_beats_U0_keyed_read),
+    .terms_din(select_mask_beats_U0_terms_din),
+    .terms_full_n(terms_full_n),
+    .terms_write(select_mask_beats_U0_terms_write),
+    .layout_dout(layout_c22_dout),
+    .layout_empty_n(layout_c22_empty_n),
+    .layout_read(select_mask_beats_U0_layout_read)
+);
+
+lwe_decrypt_reduce_mask_beats reduce_mask_beats_U0(
+    .ap_clk(ap_clk),
+    .ap_rst(ap_rst),
+    .ap_start(reduce_mask_beats_U0_ap_start),
+    .start_full_n(start_for_accumulate_mask_beats_U0_full_n),
+    .ap_done(reduce_mask_beats_U0_ap_done),
+    .ap_continue(reduce_mask_beats_U0_ap_continue),
+    .ap_idle(reduce_mask_beats_U0_ap_idle),
+    .ap_ready(reduce_mask_beats_U0_ap_ready),
+    .start_out(reduce_mask_beats_U0_start_out),
+    .start_write(reduce_mask_beats_U0_start_write),
     .terms_dout(terms_dout),
     .terms_empty_n(terms_empty_n),
-    .terms_read(accumulate_mask_stream_U0_terms_read),
-    .blocks_din(accumulate_mask_stream_U0_blocks_din),
+    .terms_read(reduce_mask_beats_U0_terms_read),
+    .sums_din(reduce_mask_beats_U0_sums_din),
+    .sums_full_n(sums_full_n),
+    .sums_write(reduce_mask_beats_U0_sums_write)
+);
+
+lwe_decrypt_accumulate_mask_beats accumulate_mask_beats_U0(
+    .ap_clk(ap_clk),
+    .ap_rst(ap_rst),
+    .ap_start(accumulate_mask_beats_U0_ap_start),
+    .start_full_n(start_for_decode_block_stream_U0_full_n),
+    .ap_done(accumulate_mask_beats_U0_ap_done),
+    .ap_continue(accumulate_mask_beats_U0_ap_continue),
+    .ap_idle(accumulate_mask_beats_U0_ap_idle),
+    .ap_ready(accumulate_mask_beats_U0_ap_ready),
+    .start_out(accumulate_mask_beats_U0_start_out),
+    .start_write(accumulate_mask_beats_U0_start_write),
+    .sums_dout(sums_dout),
+    .sums_empty_n(sums_empty_n),
+    .sums_read(accumulate_mask_beats_U0_sums_read),
+    .blocks_din(accumulate_mask_beats_U0_blocks_din),
     .blocks_full_n(blocks_full_n),
-    .blocks_write(accumulate_mask_stream_U0_blocks_write)
+    .blocks_write(accumulate_mask_beats_U0_blocks_write)
 );
 
 lwe_decrypt_decode_block_stream decode_block_stream_U0(
@@ -319,43 +500,30 @@ lwe_decrypt_pack_clear_stream pack_clear_stream_U0(
     .data_out_TDEST(pack_clear_stream_U0_data_out_TDEST)
 );
 
-lwe_decrypt_fifo_w128_d16_A words_U(
+lwe_decrypt_fifo_w1024_d4_S beats_U(
     .clk(ap_clk),
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(serialize_input_stream8_U0_words_din),
-    .if_full_n(words_full_n),
-    .if_write(serialize_input_stream8_U0_words_write),
-    .if_dout(words_dout),
-    .if_empty_n(words_empty_n),
-    .if_read(parse_mask_stream_U0_words_read)
+    .if_din(read_input_beats17_U0_beats_din),
+    .if_full_n(beats_full_n),
+    .if_write(read_input_beats17_U0_beats_write),
+    .if_dout(beats_dout),
+    .if_empty_n(beats_empty_n),
+    .if_read(frame_input_beats_U0_beats_read)
 );
 
-lwe_decrypt_fifo_w1024_d4_S finish_packets_U(
+lwe_decrypt_fifo_w1024_d9_S finish_packets_U(
     .clk(ap_clk),
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(serialize_input_stream8_U0_finish_packets_din),
+    .if_din(read_input_beats17_U0_finish_packets_din),
     .if_full_n(finish_packets_full_n),
-    .if_write(serialize_input_stream8_U0_finish_packets_write),
+    .if_write(read_input_beats17_U0_finish_packets_write),
     .if_dout(finish_packets_dout),
     .if_empty_n(finish_packets_empty_n),
     .if_read(pack_clear_stream_U0_finish_packets_read)
-);
-
-lwe_decrypt_fifo_w32_d2_S count_c_U(
-    .clk(ap_clk),
-    .reset(ap_rst),
-    .if_read_ce(1'b1),
-    .if_write_ce(1'b1),
-    .if_din(serialize_input_stream8_U0_count_out_din),
-    .if_full_n(count_c_full_n),
-    .if_write(serialize_input_stream8_U0_count_out_write),
-    .if_dout(count_c_dout),
-    .if_empty_n(count_c_empty_n),
-    .if_read(parse_mask_stream_U0_input_count_read)
 );
 
 lwe_decrypt_fifo_w2_d2_S layout_c_U(
@@ -363,25 +531,116 @@ lwe_decrypt_fifo_w2_d2_S layout_c_U(
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(serialize_input_stream8_U0_layout_out_din),
+    .if_din(read_input_beats17_U0_layout_out_din),
     .if_full_n(layout_c_full_n),
-    .if_write(serialize_input_stream8_U0_layout_out_write),
+    .if_write(read_input_beats17_U0_layout_out_write),
     .if_dout(layout_c_dout),
     .if_empty_n(layout_c_empty_n),
-    .if_read(parse_mask_stream_U0_layout_read)
+    .if_read(frame_input_beats_U0_layout_read)
 );
 
-lwe_decrypt_fifo_w128_d32_A terms_U(
+lwe_decrypt_fifo_w32_d2_S count_c_U(
     .clk(ap_clk),
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(parse_mask_stream_U0_terms_din),
+    .if_din(read_input_beats17_U0_count_out_din),
+    .if_full_n(count_c_full_n),
+    .if_write(read_input_beats17_U0_count_out_write),
+    .if_dout(count_c_dout),
+    .if_empty_n(count_c_empty_n),
+    .if_read(frame_input_beats_U0_input_count_read)
+);
+
+lwe_decrypt_fifo_w1536_d4_S frames_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(frame_input_beats_U0_frames_din),
+    .if_full_n(frames_full_n),
+    .if_write(frame_input_beats_U0_frames_write),
+    .if_dout(frames_dout),
+    .if_empty_n(frames_empty_n),
+    .if_read(address_mask_beats_U0_frames_read)
+);
+
+lwe_decrypt_fifo_w2_d2_S layout_c21_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(frame_input_beats_U0_layout_out_din),
+    .if_full_n(layout_c21_full_n),
+    .if_write(frame_input_beats_U0_layout_out_write),
+    .if_dout(layout_c21_dout),
+    .if_empty_n(layout_c21_empty_n),
+    .if_read(address_mask_beats_U0_layout_read)
+);
+
+lwe_decrypt_fifo_w1024_d4_S addresses_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(address_mask_beats_U0_addresses_din),
+    .if_full_n(addresses_full_n),
+    .if_write(address_mask_beats_U0_addresses_write),
+    .if_dout(addresses_dout),
+    .if_empty_n(addresses_empty_n),
+    .if_read(fetch_key_beats_U0_addresses_read)
+);
+
+lwe_decrypt_fifo_w2_d3_S layout_c22_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(address_mask_beats_U0_layout_out_din),
+    .if_full_n(layout_c22_full_n),
+    .if_write(address_mask_beats_U0_layout_out_write),
+    .if_dout(layout_c22_dout),
+    .if_empty_n(layout_c22_empty_n),
+    .if_read(select_mask_beats_U0_layout_read)
+);
+
+lwe_decrypt_fifo_w1536_d4_S keyed_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(fetch_key_beats_U0_keyed_din),
+    .if_full_n(keyed_full_n),
+    .if_write(fetch_key_beats_U0_keyed_write),
+    .if_dout(keyed_dout),
+    .if_empty_n(keyed_empty_n),
+    .if_read(select_mask_beats_U0_keyed_read)
+);
+
+lwe_decrypt_fifo_w640_d4_S terms_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(select_mask_beats_U0_terms_din),
     .if_full_n(terms_full_n),
-    .if_write(parse_mask_stream_U0_terms_write),
+    .if_write(select_mask_beats_U0_terms_write),
     .if_dout(terms_dout),
     .if_empty_n(terms_empty_n),
-    .if_read(accumulate_mask_stream_U0_terms_read)
+    .if_read(reduce_mask_beats_U0_terms_read)
+);
+
+lwe_decrypt_fifo_w256_d16_S sums_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(reduce_mask_beats_U0_sums_din),
+    .if_full_n(sums_full_n),
+    .if_write(reduce_mask_beats_U0_sums_write),
+    .if_dout(sums_dout),
+    .if_empty_n(sums_empty_n),
+    .if_read(accumulate_mask_beats_U0_sums_read)
 );
 
 lwe_decrypt_fifo_w192_d4_S blocks_U(
@@ -389,9 +648,9 @@ lwe_decrypt_fifo_w192_d4_S blocks_U(
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(accumulate_mask_stream_U0_blocks_din),
+    .if_din(accumulate_mask_beats_U0_blocks_din),
     .if_full_n(blocks_full_n),
-    .if_write(accumulate_mask_stream_U0_blocks_write),
+    .if_write(accumulate_mask_beats_U0_blocks_write),
     .if_dout(blocks_dout),
     .if_empty_n(blocks_empty_n),
     .if_read(decode_block_stream_U0_blocks_read)
@@ -410,6 +669,19 @@ lwe_decrypt_fifo_w24_d4_S clear_U(
     .if_read(pack_clear_stream_U0_clear_read)
 );
 
+lwe_decrypt_start_for_frame_input_beats_U0 start_for_frame_input_beats_U0_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(start_for_frame_input_beats_U0_din),
+    .if_full_n(start_for_frame_input_beats_U0_full_n),
+    .if_write(read_input_beats17_U0_start_write),
+    .if_dout(start_for_frame_input_beats_U0_dout),
+    .if_empty_n(start_for_frame_input_beats_U0_empty_n),
+    .if_read(frame_input_beats_U0_ap_ready)
+);
+
 lwe_decrypt_start_for_pack_clear_stream_U0 start_for_pack_clear_stream_U0_U(
     .clk(ap_clk),
     .reset(ap_rst),
@@ -417,23 +689,62 @@ lwe_decrypt_start_for_pack_clear_stream_U0 start_for_pack_clear_stream_U0_U(
     .if_write_ce(1'b1),
     .if_din(start_for_pack_clear_stream_U0_din),
     .if_full_n(start_for_pack_clear_stream_U0_full_n),
-    .if_write(serialize_input_stream8_U0_start_write),
+    .if_write(read_input_beats17_U0_start_write),
     .if_dout(start_for_pack_clear_stream_U0_dout),
     .if_empty_n(start_for_pack_clear_stream_U0_empty_n),
     .if_read(pack_clear_stream_U0_ap_ready)
 );
 
-lwe_decrypt_start_for_accumulate_mask_stream_U0 start_for_accumulate_mask_stream_U0_U(
+lwe_decrypt_start_for_address_mask_beats_U0 start_for_address_mask_beats_U0_U(
     .clk(ap_clk),
     .reset(ap_rst),
     .if_read_ce(1'b1),
     .if_write_ce(1'b1),
-    .if_din(start_for_accumulate_mask_stream_U0_din),
-    .if_full_n(start_for_accumulate_mask_stream_U0_full_n),
-    .if_write(parse_mask_stream_U0_start_write),
-    .if_dout(start_for_accumulate_mask_stream_U0_dout),
-    .if_empty_n(start_for_accumulate_mask_stream_U0_empty_n),
-    .if_read(accumulate_mask_stream_U0_ap_ready)
+    .if_din(start_for_address_mask_beats_U0_din),
+    .if_full_n(start_for_address_mask_beats_U0_full_n),
+    .if_write(frame_input_beats_U0_start_write),
+    .if_dout(start_for_address_mask_beats_U0_dout),
+    .if_empty_n(start_for_address_mask_beats_U0_empty_n),
+    .if_read(address_mask_beats_U0_ap_ready)
+);
+
+lwe_decrypt_start_for_select_mask_beats_U0 start_for_select_mask_beats_U0_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(start_for_select_mask_beats_U0_din),
+    .if_full_n(start_for_select_mask_beats_U0_full_n),
+    .if_write(fetch_key_beats_U0_start_write),
+    .if_dout(start_for_select_mask_beats_U0_dout),
+    .if_empty_n(start_for_select_mask_beats_U0_empty_n),
+    .if_read(select_mask_beats_U0_ap_ready)
+);
+
+lwe_decrypt_start_for_reduce_mask_beats_U0 start_for_reduce_mask_beats_U0_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(start_for_reduce_mask_beats_U0_din),
+    .if_full_n(start_for_reduce_mask_beats_U0_full_n),
+    .if_write(select_mask_beats_U0_start_write),
+    .if_dout(start_for_reduce_mask_beats_U0_dout),
+    .if_empty_n(start_for_reduce_mask_beats_U0_empty_n),
+    .if_read(reduce_mask_beats_U0_ap_ready)
+);
+
+lwe_decrypt_start_for_accumulate_mask_beats_U0 start_for_accumulate_mask_beats_U0_U(
+    .clk(ap_clk),
+    .reset(ap_rst),
+    .if_read_ce(1'b1),
+    .if_write_ce(1'b1),
+    .if_din(start_for_accumulate_mask_beats_U0_din),
+    .if_full_n(start_for_accumulate_mask_beats_U0_full_n),
+    .if_write(reduce_mask_beats_U0_start_write),
+    .if_dout(start_for_accumulate_mask_beats_U0_dout),
+    .if_empty_n(start_for_accumulate_mask_beats_U0_empty_n),
+    .if_read(accumulate_mask_beats_U0_ap_ready)
 );
 
 lwe_decrypt_start_for_decode_block_stream_U0 start_for_decode_block_stream_U0_U(
@@ -443,7 +754,7 @@ lwe_decrypt_start_for_decode_block_stream_U0 start_for_decode_block_stream_U0_U(
     .if_write_ce(1'b1),
     .if_din(start_for_decode_block_stream_U0_din),
     .if_full_n(start_for_decode_block_stream_U0_full_n),
-    .if_write(accumulate_mask_stream_U0_start_write),
+    .if_write(accumulate_mask_beats_U0_start_write),
     .if_dout(start_for_decode_block_stream_U0_dout),
     .if_empty_n(start_for_decode_block_stream_U0_empty_n),
     .if_read(decode_block_stream_U0_ap_ready)
@@ -451,35 +762,43 @@ lwe_decrypt_start_for_decode_block_stream_U0 start_for_decode_block_stream_U0_U(
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-        ap_sync_reg_parse_mask_stream_U0_ap_ready <= 1'b0;
+        ap_sync_reg_fetch_key_beats_U0_ap_ready <= 1'b0;
     end else begin
         if (((ap_sync_ready & ap_start) == 1'b1)) begin
-            ap_sync_reg_parse_mask_stream_U0_ap_ready <= 1'b0;
+            ap_sync_reg_fetch_key_beats_U0_ap_ready <= 1'b0;
         end else begin
-            ap_sync_reg_parse_mask_stream_U0_ap_ready <= ap_sync_parse_mask_stream_U0_ap_ready;
+            ap_sync_reg_fetch_key_beats_U0_ap_ready <= ap_sync_fetch_key_beats_U0_ap_ready;
         end
     end
 end
 
 always @ (posedge ap_clk) begin
     if (ap_rst == 1'b1) begin
-        ap_sync_reg_serialize_input_stream8_U0_ap_ready <= 1'b0;
+        ap_sync_reg_read_input_beats17_U0_ap_ready <= 1'b0;
     end else begin
         if (((ap_sync_ready & ap_start) == 1'b1)) begin
-            ap_sync_reg_serialize_input_stream8_U0_ap_ready <= 1'b0;
+            ap_sync_reg_read_input_beats17_U0_ap_ready <= 1'b0;
         end else begin
-            ap_sync_reg_serialize_input_stream8_U0_ap_ready <= ap_sync_serialize_input_stream8_U0_ap_ready;
+            ap_sync_reg_read_input_beats17_U0_ap_ready <= ap_sync_read_input_beats17_U0_ap_ready;
         end
     end
 end
 
-assign accumulate_mask_stream_U0_ap_continue = 1'b1;
+assign accumulate_mask_beats_U0_ap_continue = 1'b1;
 
-assign accumulate_mask_stream_U0_ap_start = start_for_accumulate_mask_stream_U0_empty_n;
+assign accumulate_mask_beats_U0_ap_start = start_for_accumulate_mask_beats_U0_empty_n;
+
+assign address_mask_beats_U0_ap_continue = 1'b1;
+
+assign address_mask_beats_U0_ap_start = start_for_address_mask_beats_U0_empty_n;
+
+assign address_mask_beats_U0_start_full_n = 1'b1;
+
+assign address_mask_beats_U0_start_write = 1'b0;
 
 assign ap_done = pack_clear_stream_U0_ap_done;
 
-assign ap_idle = (serialize_input_stream8_U0_ap_idle & parse_mask_stream_U0_ap_idle & pack_clear_stream_U0_ap_idle & decode_block_stream_U0_ap_idle & accumulate_mask_stream_U0_ap_idle);
+assign ap_idle = (select_mask_beats_U0_ap_idle & reduce_mask_beats_U0_ap_idle & read_input_beats17_U0_ap_idle & pack_clear_stream_U0_ap_idle & frame_input_beats_U0_ap_idle & fetch_key_beats_U0_ap_idle & decode_block_stream_U0_ap_idle & address_mask_beats_U0_ap_idle & accumulate_mask_beats_U0_ap_idle);
 
 assign ap_ready = ap_sync_ready;
 
@@ -487,13 +806,13 @@ assign ap_sync_continue = ap_continue;
 
 assign ap_sync_done = pack_clear_stream_U0_ap_done;
 
-assign ap_sync_parse_mask_stream_U0_ap_ready = (parse_mask_stream_U0_ap_ready | ap_sync_reg_parse_mask_stream_U0_ap_ready);
+assign ap_sync_fetch_key_beats_U0_ap_ready = (fetch_key_beats_U0_ap_ready | ap_sync_reg_fetch_key_beats_U0_ap_ready);
 
-assign ap_sync_ready = (ap_sync_serialize_input_stream8_U0_ap_ready & ap_sync_parse_mask_stream_U0_ap_ready);
+assign ap_sync_read_input_beats17_U0_ap_ready = (read_input_beats17_U0_ap_ready | ap_sync_reg_read_input_beats17_U0_ap_ready);
 
-assign ap_sync_serialize_input_stream8_U0_ap_ready = (serialize_input_stream8_U0_ap_ready | ap_sync_reg_serialize_input_stream8_U0_ap_ready);
+assign ap_sync_ready = (ap_sync_read_input_beats17_U0_ap_ready & ap_sync_fetch_key_beats_U0_ap_ready);
 
-assign data_in_TREADY = serialize_input_stream8_U0_data_in_TREADY;
+assign data_in_TREADY = read_input_beats17_U0_data_in_TREADY;
 
 assign data_out_TDATA = pack_clear_stream_U0_data_out_TDATA;
 
@@ -519,13 +838,29 @@ assign decode_block_stream_U0_start_full_n = 1'b1;
 
 assign decode_block_stream_U0_start_write = 1'b0;
 
-assign key_address0 = parse_mask_stream_U0_key_address0;
+assign fetch_key_beats_U0_ap_continue = 1'b1;
 
-assign key_ce0 = parse_mask_stream_U0_key_ce0;
+assign fetch_key_beats_U0_ap_start = ((ap_sync_reg_fetch_key_beats_U0_ap_ready ^ 1'b1) & ap_start);
 
-assign key_d0 = 1'd0;
+assign frame_input_beats_U0_ap_continue = 1'b1;
 
-assign key_we0 = 1'b0;
+assign frame_input_beats_U0_ap_start = start_for_frame_input_beats_U0_empty_n;
+
+assign groups_address0 = fetch_key_beats_U0_groups_address0;
+
+assign groups_address1 = fetch_key_beats_U0_groups_address1;
+
+assign groups_ce0 = fetch_key_beats_U0_groups_ce0;
+
+assign groups_ce1 = fetch_key_beats_U0_groups_ce1;
+
+assign groups_d0 = 8'd0;
+
+assign groups_d1 = 8'd0;
+
+assign groups_we0 = 1'b0;
+
+assign groups_we1 = 1'b0;
 
 assign pack_clear_stream_U0_ap_continue = ap_continue;
 
@@ -535,18 +870,32 @@ assign pack_clear_stream_U0_start_full_n = 1'b1;
 
 assign pack_clear_stream_U0_start_write = 1'b0;
 
-assign parse_mask_stream_U0_ap_continue = 1'b1;
+assign read_input_beats17_U0_ap_continue = 1'b1;
 
-assign parse_mask_stream_U0_ap_start = ((ap_sync_reg_parse_mask_stream_U0_ap_ready ^ 1'b1) & ap_start);
+assign read_input_beats17_U0_ap_start = ((ap_sync_reg_read_input_beats17_U0_ap_ready ^ 1'b1) & ap_start);
 
-assign serialize_input_stream8_U0_ap_continue = 1'b1;
+assign read_input_beats17_U0_start_full_n = (start_for_pack_clear_stream_U0_full_n & start_for_frame_input_beats_U0_full_n);
 
-assign serialize_input_stream8_U0_ap_start = ((ap_sync_reg_serialize_input_stream8_U0_ap_ready ^ 1'b1) & ap_start);
+assign reduce_mask_beats_U0_ap_continue = 1'b1;
 
-assign start_for_accumulate_mask_stream_U0_din = 1'b1;
+assign reduce_mask_beats_U0_ap_start = start_for_reduce_mask_beats_U0_empty_n;
+
+assign select_mask_beats_U0_ap_continue = 1'b1;
+
+assign select_mask_beats_U0_ap_start = start_for_select_mask_beats_U0_empty_n;
+
+assign start_for_accumulate_mask_beats_U0_din = 1'b1;
+
+assign start_for_address_mask_beats_U0_din = 1'b1;
 
 assign start_for_decode_block_stream_U0_din = 1'b1;
 
+assign start_for_frame_input_beats_U0_din = 1'b1;
+
 assign start_for_pack_clear_stream_U0_din = 1'b1;
+
+assign start_for_reduce_mask_beats_U0_din = 1'b1;
+
+assign start_for_select_mask_beats_U0_din = 1'b1;
 
 endmodule //lwe_decrypt_decrypt_dataflow

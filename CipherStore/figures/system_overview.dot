@@ -1,0 +1,40 @@
+digraph CipherStore {
+  graph [rankdir=TB, newrank=true, splines=polyline, bgcolor="white",
+         pad=0.06, nodesep=0.27, ranksep=0.44, fontname="Helvetica",
+         fontsize=13, fontcolor="#243746"];
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC",
+        color="#47637A", penwidth=1.0, fontname="Helvetica",
+        fontsize=11, margin="0.10,0.07"];
+  edge [color="#47637A", penwidth=1.0, arrowsize=0.65,
+        fontname="Helvetica", fontsize=9, fontcolor="#243746"];
+
+  task [label="Client task\nand control", fillcolor="#EAF1F7"];
+  manifest [label="Host manifest\n(row, match, value, count)", fillcolor="#EAF1F7"];
+  client [label="Client output\n(LWE ciphertexts + map)", fillcolor="#EAF1F7"];
+  backend [label="FHE back end", fillcolor="#F3F3F3"];
+
+  subgraph cluster_csd {
+    label="SoC-FPGA computational storage device";
+    style="rounded";
+    color="#839EB3";
+    penwidth=1.1;
+    margin=12;
+    ssd [label="SSD\nrecords"];
+    input [label="Input\nSLM"];
+    filter [label="FPGA selection\n+ projection", fillcolor="#EAF4EF"];
+    encrypt [label="FPGA LWE\nencryption", fillcolor="#EAF4EF"];
+    output [label="Output\nSLM"];
+    {rank=same; ssd; input; filter; encrypt; output;}
+    ssd -> input [label="copy"];
+    input -> filter [label="both passes"];
+    filter -> encrypt [label="selected values"];
+    encrypt -> output [label="ciphertexts"];
+  }
+
+  task -> ssd [label="source range"];
+  task -> filter [style=dashed, constraint=false, label="configure"];
+  filter -> manifest [label="pass 1", constraint=false];
+  manifest -> output [style=dashed, constraint=false, label="size"];
+  output -> client [label="read"];
+  client -> backend [label="compute"];
+}

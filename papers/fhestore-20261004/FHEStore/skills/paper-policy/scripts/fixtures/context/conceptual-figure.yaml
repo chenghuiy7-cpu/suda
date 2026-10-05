@@ -1,0 +1,16 @@
+version: 1
+paper_type: empirical
+submission_stage: draft
+task_scope: artifact
+task_mode: figure_creation
+artifact_mode: draft
+scopes:
+- figures
+artifacts:
+- figure
+features:
+- paper_figure
+- conceptual_figure
+- generated_conceptual_figure
+provenance:
+  submission_stage: user

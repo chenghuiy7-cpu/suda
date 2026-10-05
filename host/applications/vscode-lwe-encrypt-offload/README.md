@@ -217,3 +217,19 @@ OUTPUT_CSV=slm_read_qd12_runs.csv \
 
 Only test QD4 explicitly after QD2 remains stable. A blocked ioctl can leave the
 NVMQ queue unusable until the QEMU/NVMQ connection is restarted.
+
+## FPGA clock-cycle timing (2026-10-04)
+
+With the profiled BOOT.bin and ARM runtime, the application also prints
+`hw_profile available=yes ... stream_ms=... input_wait_ms=... output_wait_ms=...`.
+The shared slot profiler measures ap_start to first sampled task-finish TVALID
+at the current 250MHz clock, including key/setup/AXIS waits. This is distinct
+from `fpga_execute`, the full synchronous NVMe request latency, and from
+`slm_to_host`, ciphertext transfer latency. The final marker transfer wait is
+outside the hardware snapshot. Stall counters may overlap.
+
+The encryption algorithm and physical ciphertext layout are unchanged. Timing
+metadata uses the existing finish guard area and is excluded from result bytes
+and ciphertext dumps. With old firmware/runtime, `hw_profile available=no` is
+reported rather than substituting request latency for hardware execution time.
+No extra CLI option is necessary; use the existing `--benchmark` commands.

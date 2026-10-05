@@ -53,3 +53,13 @@
 #define SELECTIVE_FILTER_V2_PRED_TYPE 4U
 #define SELECTIVE_FILTER_V2_PRED_COMPARISON 5U
 #define SELECTIVE_FILTER_V2_PRED_LITERAL 8U
+
+/* Discovery: one 64B beat per input row, a normal 64B summary, then SUDA
+ * finish (stripped by runtime). Row: LE u32 index, u32 selected, u64 value.
+ * Summary: u64 magic; u32 requested, observed, selected, error, record_bytes,
+ * projection_offset, projection_type, version. Reserved bytes are zero.
+ * Errors still pad missing rows, so the deterministic RX range completes. */
+#define SELECTIVE_FILTER_OUTPUT_MANIFEST 2U
+#define SELECTIVE_FILTER_MANIFEST_MAGIC 0x31464e414d4c4653ULL
+#define SELECTIVE_FILTER_MANIFEST_VERSION 1U
+#define SELECTIVE_FILTER_MANIFEST_BEAT_BYTES 64U

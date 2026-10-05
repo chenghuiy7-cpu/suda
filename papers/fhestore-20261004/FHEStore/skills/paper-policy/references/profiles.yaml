@@ -1,0 +1,134 @@
+version: 1
+registry: paper-policy-profiles
+profiles:
+- id: final-manuscript
+  match:
+    field: submission_stage
+    any_of:
+    - submission
+    - camera_ready
+  activate_hard:
+  - FINAL.NO_UNRESOLVED_MARKERS
+  source:
+    kind: local
+    url: null
+    as_of: null
+- id: final-table
+  match:
+    field: artifact_mode
+    any_of:
+    - final_table
+  activate_hard:
+  - TABLE.FINAL_READABLE
+  source:
+    kind: local
+    url: null
+    as_of: null
+- id: citation-audit
+  match:
+    field: task_mode
+    any_of:
+    - citation_audit
+  activate_hard:
+  - CITE.SOURCE_LOCATOR_REQUIRED
+  source:
+    kind: user
+    url: null
+    as_of: null
+- id: final-citation-check
+  match:
+    field: task_mode
+    any_of:
+    - final_citation_check
+  activate_hard:
+  - CITE.SOURCE_LOCATOR_REQUIRED
+  - FINAL.NO_UNRESOLVED_MARKERS
+  source:
+    kind: user
+    url: null
+    as_of: null
+- id: double-blind
+  match:
+    field: double_blind
+    any_of:
+    - true
+  activate_hard:
+  - ANON.DOUBLE_BLIND
+  source:
+    kind: user
+    url: null
+    as_of: null
+- id: stochastic-experiment
+  match:
+    field: experiment_type
+    any_of:
+    - stochastic
+    - multi_run
+  activate_hard:
+  - EXPERIMENT.STOCHASTIC_UNCERTAINTY
+  source:
+    kind: local
+    url: null
+    as_of: null
+- id: known-measurement-bias
+  match:
+    field: measurement_bias_status
+    any_of:
+    - known_systematic
+    - characterized_missingness
+  activate_hard:
+  - CLAIM.KNOWN_BIAS_DIRECTION
+  source:
+    kind: user
+    url: null
+    as_of: null
+- id: multi-role-evidence
+  match:
+    field: evidence_structure
+    any_of:
+    - multi_role
+    - tiered
+    - validation_and_substantive
+  activate_hard:
+  - METHOD.EVIDENCE_ROLE_BOUNDARY
+  source:
+    kind: user
+    url: null
+    as_of: null
+- id: reproducibility
+  match:
+    field: task_mode
+    any_of:
+    - reproducibility_check
+    - submission_readiness
+  activate_hard:
+  - EXPERIMENT.REPRODUCIBILITY
+  source:
+    kind: local
+    url: null
+    as_of: null
+- id: paper-run-final
+  match:
+    field: task_mode
+    any_of:
+    - paper_run_final
+  activate_hard:
+  - EXPERIMENT.ACTUAL_RUN_CONFIRMATION
+  - FINAL.NO_UNRESOLVED_MARKERS
+  source:
+    kind: local
+    url: null
+    as_of: null
+- id: final-figure
+  match:
+    field: artifact_mode
+    any_of:
+    - final_figure
+  activate_hard:
+  - FIG.FINAL_EXPORT_ACCESSIBILITY
+  - FIG.FINAL_WIDTH_READABLE
+  - FIG.TRACEABLE_SCRIPT
+  source:
+    kind: local
+    url: null
+    as_of: null

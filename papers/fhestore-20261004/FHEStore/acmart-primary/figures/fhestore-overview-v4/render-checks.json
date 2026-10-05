@@ -1,0 +1,11 @@
+{
+  "vertices": 35,
+  "edges": 11,
+  "unresolvedEdges": [],
+  "unrenderedCells": [],
+  "textElements": 24,
+  "rasterElements": 0,
+  "foreignObjects": 0,
+  "renderer": "Official diagrams.net viewer-static.min.js + mxCodec/mxImageExport",
+  "viewerSha256": "32c73b8e42e784d0ace7d59754cbea6c2a78a0f506d390e2a3870546b9242f7c"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Academic Writing"
+  short_description: "Draft, revise, and audit research papers"
+  default_prompt: "Use $academic-writing to turn my research evidence into a clear, publication-ready paper section."

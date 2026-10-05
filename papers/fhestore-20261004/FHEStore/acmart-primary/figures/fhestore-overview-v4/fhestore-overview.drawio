@@ -1,0 +1,154 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device">
+  <diagram id="fhestore-overview-v4" name="FHEStore Overview">
+    <mxGraphModel dx="1650" dy="570" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1650" pageHeight="570" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="page-canvas" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;strokeColor=none;connectable=0;selectable=0;">
+          <mxGeometry as="geometry" x="0" y="0" width="1650" height="570" />
+        </mxCell>
+        <mxCell id="csd-region" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#F1F6FA;container=1;strokeWidth=4;">
+          <mxGeometry as="geometry" x="25" y="30" width="600" height="420" />
+        </mxCell>
+        <mxCell id="host-region" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#F1F6FA;container=1;strokeWidth=4;">
+          <mxGeometry as="geometry" x="760" y="30" width="350" height="420" />
+        </mxCell>
+        <mxCell id="remote-service" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#F2F2F2;container=1;strokeColor=#5D636B;strokeWidth=4;">
+          <mxGeometry as="geometry" x="1260" y="30" width="365" height="420" />
+        </mxCell>
+        <mxCell id="csd-title" value="FHEStore CSD" parent="csd-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=34;fontStyle=1;fontColor=#2C5573;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="24" y="16" width="540" height="45" />
+        </mxCell>
+        <mxCell id="host-title" value="Host" parent="host-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=34;fontStyle=1;fontColor=#2C5573;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="24" y="16" width="302" height="45" />
+        </mxCell>
+        <mxCell id="remote-title" value="Remote HPU" parent="remote-service" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=34;fontStyle=1;fontColor=#5D636B;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="24" y="16" width="317" height="45" />
+        </mxCell>
+        <mxCell id="remote-subtitle" value="External FHE service" parent="remote-service" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=0;fontColor=#5D636B;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="24" y="64" width="317" height="35" />
+        </mxCell>
+        <mxCell id="device-runtime" value="Device runtime" parent="csd-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;">
+          <mxGeometry as="geometry" x="225" y="90" width="350" height="58" />
+        </mxCell>
+        <mxCell id="host-task-runtime" value="Task runtime" parent="host-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;">
+          <mxGeometry as="geometry" x="25" y="90" width="300" height="58" />
+        </mxCell>
+        <mxCell id="runtime-submits-task-pcie" value="" edge="1" parent="1" source="host-task-runtime" target="device-runtime" style="edgeStyle=none;rounded=0;html=0;strokeWidth=2.8;strokeColor=#5D636B;endArrow=classic;endFill=1;endSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=7 5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="submit-task-label" value="Submit task" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=24;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="630" y="99" width="125" height="32" />
+        </mxCell>
+        <mxCell id="pcie-label" value="PCIe" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=28;fontStyle=1;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="637" y="185" width="112" height="35" />
+        </mxCell>
+        <mxCell id="network-label" value="Network" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=28;fontStyle=1;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="1117" y="185" width="136" height="35" />
+        </mxCell>
+        <mxCell id="persistent-store" value="Persistent&#10;data" parent="csd-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;shape=cylinder;size=0.15;">
+          <mxGeometry as="geometry" x="30" y="205" width="150" height="193" />
+        </mxCell>
+        <mxCell id="input-preparation" value="" parent="csd-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;container=1;">
+          <mxGeometry as="geometry" x="225" y="205" width="350" height="78" />
+        </mxCell>
+        <mxCell id="input-title" value="Input preparation" parent="input-preparation" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=28;fontStyle=1;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="9" width="334" height="30" />
+        </mxCell>
+        <mxCell id="input-operations" value="Encode &amp; Encrypt" parent="input-preparation" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=25;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="39" width="334" height="27" />
+        </mxCell>
+        <mxCell id="result-recovery" value="" parent="csd-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;container=1;">
+          <mxGeometry as="geometry" x="225" y="320" width="350" height="78" />
+        </mxCell>
+        <mxCell id="result-title" value="Result recovery" parent="result-recovery" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=28;fontStyle=1;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="9" width="334" height="30" />
+        </mxCell>
+        <mxCell id="result-operations" value="Decrypt &amp; Decode" parent="result-recovery" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=25;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="39" width="334" height="27" />
+        </mxCell>
+        <mxCell id="device-executes-input" value="" edge="1" parent="1" source="device-runtime" target="input-preparation" style="edgeStyle=none;rounded=0;html=0;strokeWidth=2.8;strokeColor=#5D636B;endArrow=classic;endFill=1;endSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=7 5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="execute-label" value="Execute" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=26;fontStyle=0;fontColor=#22303C;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="445" y="182" width="124" height="35" />
+        </mxCell>
+        <mxCell id="ciphertext-relay" value="" parent="host-region" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;container=1;">
+          <mxGeometry as="geometry" x="25" y="205" width="300" height="193" />
+        </mxCell>
+        <mxCell id="input-ciphertexts" value="Input ciphertexts" parent="ciphertext-relay" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="22" width="284" height="34" />
+        </mxCell>
+        <mxCell id="relay-title" value="Ciphertext relay" parent="ciphertext-relay" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=28;fontStyle=1;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="80" width="284" height="34" />
+        </mxCell>
+        <mxCell id="result-ciphertexts" value="Result ciphertexts" parent="ciphertext-relay" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="8" y="137" width="284" height="34" />
+        </mxCell>
+        <mxCell id="homomorphic-evaluation" value="Homomorphic&#10;evaluation" parent="remote-service" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=30;fontStyle=0;fontColor=#22303C;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="24" y="275" width="317" height="70" />
+        </mxCell>
+        <mxCell id="store-to-input" value="" edge="1" parent="1" source="persistent-store" target="input-preparation" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=1;exitY=0.20207253886010362;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="input-to-relay-pcie" value="" edge="1" parent="1" source="input-preparation" target="ciphertext-relay" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.20207253886010362;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="relay-to-remote-network" value="" edge="1" parent="1" source="ciphertext-relay" target="remote-service" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=1;exitY=0.20207253886010362;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.580952380952381;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="remote-to-relay-network" value="" edge="1" parent="1" source="remote-service" target="ciphertext-relay" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=0;exitY=0.8547619047619047;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7979274611398963;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="relay-to-recovery-pcie" value="" edge="1" parent="1" source="ciphertext-relay" target="result-recovery" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=0;exitY=0.7979274611398963;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="recovery-to-store" value="" edge="1" parent="1" source="result-recovery" target="persistent-store" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7979274611398963;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scope-left" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="25" y="468" width="0" height="0" />
+        </mxCell>
+        <mxCell id="scope-right" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="1110" y="468" width="0" height="0" />
+        </mxCell>
+        <mxCell id="legend-data-start" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="630" y="545" width="0" height="0" />
+        </mxCell>
+        <mxCell id="legend-data-end" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="702" y="545" width="0" height="0" />
+        </mxCell>
+        <mxCell id="legend-control-start" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="947" y="545" width="0" height="0" />
+        </mxCell>
+        <mxCell id="legend-control-end" value="" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;opacity=0;strokeColor=none;fillColor=none;">
+          <mxGeometry as="geometry" x="1019" y="545" width="0" height="0" />
+        </mxCell>
+        <mxCell id="fhestore-scope-bracket" value="" edge="1" parent="1" source="scope-left" target="scope-right" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=none;endFill=1;endSize=12;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="25" y="480" />
+              <mxPoint x="1110" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="fhestore-scope-label" value="FHEStore (this work)" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=1;fontColor=#2C5573;align=center;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="25" y="486" width="1085" height="33" />
+        </mxCell>
+        <mxCell id="legend-data-arrow" value="" edge="1" parent="1" source="legend-data-start" target="legend-data-end" style="edgeStyle=none;rounded=0;html=0;strokeWidth=3.8;strokeColor=#2C5573;endArrow=classic;endFill=1;endSize=12;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="legend-control-arrow" value="" edge="1" parent="1" source="legend-control-start" target="legend-control-end" style="edgeStyle=none;rounded=0;html=0;strokeWidth=2.8;strokeColor=#5D636B;endArrow=classic;endFill=1;endSize=12;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=7 5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="legend-data-label" value="Data flow" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=0;fontColor=#22303C;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="721" y="529" width="191" height="34" />
+        </mxCell>
+        <mxCell id="legend-control-label" value="Task control" parent="1" vertex="1" style="html=0;whiteSpace=wrap;fontFamily=Arial;fontSize=28;fontColor=#22303C;strokeColor=#2C5573;strokeWidth=2.8;shadow=0;rounded=0;align=center;verticalAlign=middle;spacing=4;fillColor=#FFFFFF;text;strokeColor=none;fillColor=none;fontSize=27;fontStyle=0;fontColor=#22303C;align=left;spacing=0;connectable=0;">
+          <mxGeometry as="geometry" x="1037" y="529" width="232" height="34" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

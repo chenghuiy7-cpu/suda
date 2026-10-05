@@ -1,0 +1,3 @@
+benchmark_decrypt_*/
+benchmark_decrypt_sweep.log
+.bench_access.pub

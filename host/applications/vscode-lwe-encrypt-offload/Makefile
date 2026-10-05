@@ -20,3 +20,5 @@ $(APP): $(OBJS)
 
 clean:
 	rm -f $(APP) $(OBJS)
+
+$(OBJS): ../common/lwe_hw_profile.hpp $(ROOT_DIR)/../device/shared_components/lwe_hw_profile.h

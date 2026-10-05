@@ -1,0 +1,55 @@
+\section{System Overview}
+\label{sec:architecture}
+
+FHEStore connects persistent application data to an external FHE evaluator through two storage-side paths: an input path for preprocessing, encoding, and encryption, and a return path for decryption, decoding, and result write-back. The host coordinates these paths through operator programs and relays ciphertext batches to and from the remote service.
+
+\subsection{System Organization}
+\label{subsec:system-organization}
+
+Figure~\ref{fig:pipeline} shows FHEStore's organization and its connection to a remote FHE service. FHEStore covers the FPGA-based computational storage device (CSD) and the host software that coordinates storage-side input preparation, result recovery, and ciphertext handoff. The remote server provides homomorphic evaluation through an FHE accelerator. The CSD combines persistent storage, device-local buffers, a device runtime, and an FPGA operator pool. Its input path supplies stored data to optional preprocessing and then to an integrated encoding and encryption operator. Its return path supplies result ciphertexts to an integrated decryption and decoding operator and passes recovered application values to write-back.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fhestore-overview-v5/fhestore-overview.png}
+  \caption{System overview of FHEStore. The CSD and host coordinate storage-side processing and ciphertext handoff; the remote server provides homomorphic evaluation through an FHE accelerator. PCIe connects the CSD to the host, which relays ciphertexts to and from the server over a network. Blue solid arrows denote data flow; gray dashed arrows denote control flow.}
+  \Description{The CSD contains a device runtime and a storage-side data path with persistent data and an operator pool. The host contains an application, a task runtime, and a ciphertext relay. The remote server contains server-side software and an FHE accelerator. The host submits tasks over PCIe to the device runtime, which configures storage-side execution. Ciphertexts flow from the CSD operator pool through the host relay to the remote accelerator and return along the same route.}
+  \label{fig:pipeline}
+\end{figure*}
+
+The host has two roles. Its task runtime translates application requests into operator graphs, per-operator contexts, and data ranges for device execution. Its ciphertext relay retrieves generated ciphertexts from the CSD and forwards them to the remote service, then stages returned ciphertexts for the CSD's decryption path. PCIe connects the host and CSD and carries both task control and ciphertext transfers. The host communicates with the remote service over a network; the prototype uses TCP. The remote server's FHE accelerator performs homomorphic evaluation on the supplied ciphertexts.
+
+FHEStore assumes that the host and CSD belong to the data owner's trusted domain, where preprocessing, decryption, and record merging access plaintext. The host loads the secret key locally and provisions the CSD's cryptographic operators through their execution contexts. The remote service is provisioned with the corresponding evaluation keys and receives ciphertexts for homomorphic computation.
+
+\subsection{Application Task Model}
+\label{subsec:application-task}
+
+An application specifies a task $T=(D,Q,E,O)$, comprising source data $D$, preprocessing $Q$, cryptographic configuration $E$, and a downstream action $O$. For record-oriented inputs, $D$ identifies a storage namespace and block range together with a schema specifying record width, field types, and byte offsets. $Q$ specifies the selection predicate and projected field; $E$ identifies the encoding and cryptographic parameter preset; and $O$ specifies ciphertext delivery or a remote operation and result destination. The selective prototype evaluates predicates over integer fields and projects an unsigned 8-bit field for encryption. Direct encryption uses the supplied application values and bypasses preprocessing.
+
+For records $r_0,\ldots,r_{N-1}$, let $P_Q$ be the selection predicate and $\pi_Q$ the projection. The ordered index sequence $\mathcal{I}_Q=(i_0,\ldots,i_{M-1})$ contains the records satisfying $P_Q$, in source-record order. The input path produces
+\begin{equation}
+  c_j = \operatorname{Enc}_{E}\!\left(
+    \operatorname{Encode}_{E}\!\left(\pi_Q(r_{i_j})\right)
+  \right),\quad 0\leq j<M.
+  \label{eq:task-ciphertexts}
+\end{equation}
+Here, $c_j$ denotes the ciphertext bundle representing one application value; its constituent LWE ciphertexts follow the encoding specified by $E$. The host retains $\mathcal{I}_Q$ alongside the ciphertext sequence. In the elementwise update workflow, the $j$th returned value is associated with record $i_j$, allowing the result to be placed into the selected field of that record.
+
+Task semantics are separate from execution settings. A runtime profile selects device endpoints, batch size, and transfer granularity. The host divides the source into block-aligned batches and attaches a record-base offset to each batch, preserving global record identities across the task. The same task can stop after ciphertext generation or continue through remote evaluation and result write-back, according to $O$.
+
+\subsection{Operator Graphs and Device Execution}
+\label{subsec:operator-execution}
+
+The task runtime represents a device execution as an operator program, a set of operator contexts, and a set of input and output memory ranges. The program identifies the operator types and their stream connections. Contexts supply parameters such as record layout, predicates, projected fields, and cryptographic configuration. Memory ranges identify the device buffers and byte extents used by an invocation. Together, these objects connect the task's logical operations to its concrete input and output data.
+
+The host loads and activates the program through the CSD interface and submits an execution request with the contexts and range bindings. The device runtime maps logical operator identifiers to available physical FPGA instances and configures their stream connections and buffer transfers. For selective input preparation, the graph connects the filtering and projection operator directly to encoding and encryption, so projected values flow between the FPGA operators within the CSD. Direct encryption uses a single cryptographic operator. The return path uses a separate decryption program whose input range contains returned ciphertexts and whose output range receives decoded application values.
+
+Selection determines the cryptographic workload and the required output capacity. For each selective batch, device-generated selection metadata supplies the selected count and record indices to the host. The host uses this count and the per-value ciphertext size to bind the generation program's output range. Selection discovery and ciphertext generation operate on the same buffered input image, keeping the count, ciphertext order, and record mapping consistent. A batch with no selected records skips encryption and remote evaluation.
+
+\subsection{Ciphertext Handoff and Result Write-Back}
+\label{subsec:ciphertext-handoff}
+
+At the CSD--host handoff, the host uses the device-reported output length and the task's cryptographic configuration to form a network request. Each request carries an identifier, ciphertext-shape metadata, and the ciphertext payload. The prototype checks the response identifier and metadata before supplying the returned batch to the decryption path. Encoding, cryptographic parameters, and ciphertext serialization must agree across input production, remote evaluation, and result recovery.
+
+The host transfers the returned ciphertexts over PCIe into a device-local input buffer and invokes the FPGA decryption and decoding operator. Recovered application values are then written according to the task's destination policy. For contiguous outputs, the device copies the decrypted output buffer to a designated SSD range. For selected-record updates, the host uses the retained index sequence to merge recovered values into record pages and writes the resulting record image to the specified destination. This merge preserves unselected records and the other fields of selected records.
+
+The application distinguishes completion of ciphertext generation, receipt of a remote response, and completion of result write-back. A generation-only task completes when its ciphertext output and record mapping are available. An update task also waits for result recovery and destination I/O. The task interface uses a separate destination range for selected-record updates, and the prototype verifies the written record image by reading it back.

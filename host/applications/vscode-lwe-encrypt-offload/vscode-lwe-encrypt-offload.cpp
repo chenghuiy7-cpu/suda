@@ -1,4 +1,5 @@
 #include <libnvme.h>
+#include "../common/lwe_hw_profile.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -1322,6 +1323,7 @@ int main(int argc, char** argv)
         goto cleanup;
     }
     gettimeofday(&slm_read_end, nullptr);
+    print_lwe_hw_profile(raw, output_bytes, cipher_physical_bytes);
     log_stage("output read completed; verifying ciphertext");
 
     gettimeofday(&verify_start, nullptr);

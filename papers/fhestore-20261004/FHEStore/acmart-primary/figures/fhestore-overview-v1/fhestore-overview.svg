@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="89mm" viewBox="0 0 1600 800" version="1.1" role="img" aria-labelledby="figure-title figure-description">
+  <title id="figure-title">FHEStore functional system overview</title>
+  <desc id="figure-description">Host application task runtime controls FHEStore through task, graph, and parameter descriptions. Within FHEStore, persistent data enters optional preprocessing followed by FPGA encoding and encryption. Input ciphertexts are transferred through the host to a remote FHE service containing an HPU. Result ciphertexts return through the host for FPGA decryption and decoding. Write-back returns recovered results to the same persistent storage. Solid arrows show data flow; a dashed arrow shows task control.</desc>
+  <metadata>Fully editable vector reconstruction of design-reference.png. Target placement: two-column-spanning, 178 mm x 89 mm. Minimum text size: 26 SVG units = approximately 8.20 pt at target width. Functional grouping does not assert that every Write-back operation runs exclusively on the device. See the companion caption for host-assisted merging.</metadata>
+  <defs>
+    <marker id="arrow-outline" markerWidth="16" markerHeight="16" viewBox="0 0 16 16" refX="15.5" refY="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 16,8 L 0,16 Z" fill="#33475b" />
+    </marker>
+    <marker id="arrow-control" markerWidth="16" markerHeight="16" viewBox="0 0 16 16" refX="15.5" refY="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 16,8 L 0,16 Z" fill="#66727e" />
+    </marker>
+    <marker id="arrow-blue" markerWidth="16" markerHeight="16" viewBox="0 0 16 16" refX="15.5" refY="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 16,8 L 0,16 Z" fill="#246ca8" />
+    </marker>
+    <marker id="arrow-teal" markerWidth="16" markerHeight="16" viewBox="0 0 16 16" refX="15.5" refY="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 16,8 L 0,16 Z" fill="#24837f" />
+    </marker>
+    <style>text {font-family: Arimo, 'Nimbus Sans', 'DejaVu Sans', sans-serif;}</style>
+  </defs>
+  <rect id="background" x="0" y="0" width="1600" height="800" fill="#ffffff" />
+  <g id="regions">
+    <rect id="fhestore-region" x="28" y="228" width="885" height="425" rx="24" fill="#f0f7fc" stroke="#33475b" stroke-width="3" />
+    <path id="remote-service-cloud" d="M 1150,430 C 1138,404 1147,375 1174,359 C 1160,317 1196,287 1235,287 C 1248,287 1260,291 1270,297 C 1297,246 1365,237 1416,270 C 1442,286 1455,309 1462,331 C 1506,320 1551,350 1550,393 C 1590,430 1593,484 1569,520 C 1580,570 1547,608 1501,604 C 1459,659 1372,675 1309,643 C 1287,631 1270,615 1257,594 C 1226,605 1192,601 1170,588 C 1138,575 1127,548 1142,521 C 1119,504 1113,470 1130,445 C 1135,438 1142,433 1150,430 Z" fill="#f1f7fc" stroke="#285c86" stroke-width="3.2" stroke-linejoin="round" />
+  </g>
+  <g id="modules-and-icons">
+    <rect id="host-runtime" x="370" y="35" width="355" height="96" rx="10" fill="#f5f6f8" stroke="#33475b" stroke-width="3" />
+    <g id="persistent-store">
+      <path d="M 57,399 L 57,588 C 57,623 273,623 273,588 L 273,399 Z" fill="#dfedf9" stroke="#33475b" stroke-width="3" />
+      <ellipse cx="165" cy="399" rx="108" ry="26" fill="#eaf4fe" stroke="#33475b" stroke-width="3" />
+    </g>
+    <rect id="preprocess" x="342" y="389" width="193" height="82" rx="10" fill="#f5f6f8" stroke="#33475b" stroke-width="3" />
+    <rect id="encode-encrypt" x="598" y="381" width="285" height="99" rx="10" fill="#d9e9fb" stroke="#285c86" stroke-width="3" />
+    <rect id="decrypt-decode" x="598" y="546" width="285" height="95" rx="10" fill="#d9eeeb" stroke="#24837f" stroke-width="3" />
+    <rect id="write-back" x="342" y="550" width="193" height="72" rx="10" fill="#f5f6f8" stroke="#33475b" stroke-width="3" />
+    <g id="hpu-chip" stroke="#285c86" stroke-width="5" fill="none" stroke-linecap="round">
+      <path d="M 1315,415 V 395 M 1315,526 V 546" />
+      <path d="M 1353,415 V 395 M 1353,526 V 546" />
+      <path d="M 1391,415 V 395 M 1391,526 V 546" />
+      <path d="M 1290,439 H 1270 M 1416,439 H 1436" />
+      <path d="M 1290,470 H 1270 M 1416,470 H 1436" />
+      <path d="M 1290,501 H 1270 M 1416,501 H 1436" />
+      <rect x="1290" y="415" width="126" height="111" rx="14" fill="#dfedf9" stroke="#285c86" />
+    </g>
+  </g>
+  <g id="data-and-control-connectors">
+    <path id="task-control" d="M 547.5,145 L 547.5,226" fill="none" stroke="#66727e" stroke-width="3.2" stroke-linecap="round" marker-end="url(#arrow-control)" stroke-dasharray="10 9" />
+    <path id="store-to-preprocess" d="M 273,430 L 340,430" fill="none" stroke="#33475b" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-outline)" />
+    <path id="preprocess-to-encrypt" d="M 535,430 L 596,430" fill="none" stroke="#33475b" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-outline)" />
+    <path id="input-ciphertext-handoff" d="M 883,430 L 1150,430" fill="none" stroke="#246ca8" stroke-width="5" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+    <path id="result-ciphertext-handoff" d="M 1170,588 L 885,588" fill="none" stroke="#24837f" stroke-width="5" stroke-linecap="round" marker-end="url(#arrow-teal)" />
+    <path id="decrypt-to-write-back" d="M 598,588 L 537,588" fill="none" stroke="#33475b" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-outline)" />
+    <path id="write-back-to-store" d="M 342,588 L 275,588" fill="none" stroke="#33475b" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-outline)" />
+  </g>
+  <g id="editable-labels">
+    <text x="547.5" y="75" font-size="32" font-weight="700" text-anchor="middle" fill="#243445">Host Application</text>
+    <text x="547.5" y="111" font-size="32" font-weight="700" text-anchor="middle" fill="#243445">Task Runtime</text>
+    <text x="570" y="190" font-size="27" font-weight="400" text-anchor="start" fill="#243445">Task / Graph / Parameters</text>
+    <text x="53" y="278" font-size="42" font-weight="700" text-anchor="start" fill="#243445">FHEStore</text>
+    <text x="53" y="314" font-size="28" font-weight="600" text-anchor="start" fill="#243445">FPGA-Based Computational Storage</text>
+    <text x="165" y="506" font-size="27" font-weight="700" text-anchor="middle" fill="#243445">Persistent Data</text>
+    <text x="165" y="543" font-size="27" font-weight="700" text-anchor="middle" fill="#243445">&amp; Results</text>
+    <text x="438.5" y="421" font-size="29" font-weight="600" text-anchor="middle" fill="#243445">Preprocess</text>
+    <text x="438.5" y="452" font-size="27" font-weight="400" text-anchor="middle" fill="#243445">(optional)</text>
+    <text x="740.5" y="423" font-size="30" font-weight="700" text-anchor="middle" fill="#243445">Encode &amp; Encrypt</text>
+    <text x="740.5" y="462" font-size="28" font-weight="400" text-anchor="middle" fill="#243445">FPGA</text>
+    <text x="740.5" y="582" font-size="30" font-weight="700" text-anchor="middle" fill="#243445">Decrypt &amp; Decode</text>
+    <text x="740.5" y="620" font-size="28" font-weight="400" text-anchor="middle" fill="#243445">FPGA</text>
+    <text x="438.5" y="595" font-size="29" font-weight="600" text-anchor="middle" fill="#243445">Write-back</text>
+    <text x="1026" y="405" font-size="27" font-weight="400" text-anchor="middle" fill="#243445">Input ciphertexts</text>
+    <text x="1032" y="500" font-size="26" font-weight="400" text-anchor="middle" fill="#243445">Host-mediated</text>
+    <text x="1032" y="532" font-size="26" font-weight="400" text-anchor="middle" fill="#243445">transfer</text>
+    <text x="1028" y="623" font-size="27" font-weight="400" text-anchor="middle" fill="#243445">Result ciphertexts</text>
+    <text x="1353" y="373" font-size="32" font-weight="700" text-anchor="middle" fill="#243445">Remote FHE Service</text>
+    <text x="1353" y="485" font-size="37" font-weight="700" text-anchor="middle" fill="#243445">HPU</text>
+    <text x="1353" y="576" font-size="26" font-weight="400" text-anchor="middle" fill="#243445">Homomorphic Evaluation</text>
+  </g>
+  <g id="legend">
+    <rect id="legend-box" x="496" y="697" width="608" height="66" rx="12" fill="#f5f6f8" stroke="#66727e" stroke-width="3" />
+    <path id="legend-data-flow" d="M 522,731 L 620,731" fill="none" stroke="#246ca8" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+    <text x="640" y="740" font-size="27" font-weight="400" text-anchor="start" fill="#243445">Data flow</text>
+    <path id="legend-task-control" d="M 798,731 L 896,731" fill="none" stroke="#66727e" stroke-width="3.2" stroke-linecap="round" marker-end="url(#arrow-control)" stroke-dasharray="10 9" />
+    <text x="915" y="740" font-size="27" font-weight="400" text-anchor="start" fill="#243445">Task control</text>
+  </g>
+</svg>

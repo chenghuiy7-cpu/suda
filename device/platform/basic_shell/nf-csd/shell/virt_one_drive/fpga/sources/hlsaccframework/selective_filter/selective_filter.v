@@ -7,7 +7,7 @@
 
 `timescale 1 ns / 1 ps 
 
-(* CORE_GENERATION_INFO="selective_filter_selective_filter,hls_ip_2020_2,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=0,HLS_INPUT_PART=xczu19eg-ffvc1760-2-e,HLS_INPUT_CLOCK=4.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=2.837667,HLS_SYN_LAT=772125,HLS_SYN_TPT=none,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=5317,HLS_SYN_LUT=20381,HLS_VERSION=2020_2}" *)
+(* CORE_GENERATION_INFO="selective_filter_selective_filter,hls_ip_2020_2,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=0,HLS_INPUT_PART=xczu19eg-ffvc1760-2-e,HLS_INPUT_CLOCK=4.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=2.886000,HLS_SYN_LAT=-1,HLS_SYN_TPT=none,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=5542,HLS_SYN_LUT=20773,HLS_VERSION=2020_2}" *)
 
 module selective_filter (
         ap_clk,
@@ -95,8 +95,8 @@ reg context_Rst_A;
 wire    ap_CS_fsm_state1;
 reg   [511:0] cfg_V_reg_175;
 wire    ap_CS_fsm_state2;
-wire   [191:0] trunc_ln419_fu_150_p1;
-reg   [191:0] trunc_ln419_reg_180;
+wire   [191:0] trunc_ln462_fu_150_p1;
+reg   [191:0] trunc_ln462_reg_180;
 wire    grp_p_anonymous_namespace_selective_filter_v2_fu_82_ap_start;
 wire    grp_p_anonymous_namespace_selective_filter_v2_fu_82_ap_done;
 wire    grp_p_anonymous_namespace_selective_filter_v2_fu_82_ap_idle;
@@ -204,7 +204,7 @@ wire    ap_ce_reg;
 initial begin
 #0 ap_CS_fsm = 7'd1;
 #0 cfg_V_reg_175 = 512'd0;
-#0 trunc_ln419_reg_180 = 192'd0;
+#0 trunc_ln462_reg_180 = 192'd0;
 #0 grp_p_anonymous_namespace_selective_filter_v2_fu_82_ap_start_reg = 1'b0;
 #0 grp_selective_filter_legacy_fu_117_ap_start_reg = 1'b0;
 end
@@ -267,7 +267,7 @@ selective_filter_selective_filter_legacy grp_selective_filter_legacy_fu_117(
     .data_out_TLAST(grp_selective_filter_legacy_fu_117_data_out_TLAST),
     .data_out_TID(grp_selective_filter_legacy_fu_117_data_out_TID),
     .data_out_TDEST(grp_selective_filter_legacy_fu_117_data_out_TDEST),
-    .cfg(trunc_ln419_reg_180)
+    .cfg(trunc_ln462_reg_180)
 );
 
 selective_filter_regslice_both #(
@@ -510,10 +510,10 @@ end
 
 always @ (posedge ap_clk) begin
     if (ap_rst_n_inv == 1'b1) begin
-        trunc_ln419_reg_180 <= 192'd0;
+        trunc_ln462_reg_180 <= 192'd0;
     end else begin
         if ((1'b1 == ap_CS_fsm_state2)) begin
-            trunc_ln419_reg_180 <= trunc_ln419_fu_150_p1;
+            trunc_ln462_reg_180 <= trunc_ln462_fu_150_p1;
         end
     end
 end
@@ -745,6 +745,6 @@ assign icmp_ln870_fu_164_p2 = ((p_Result_s_fu_154_p4 == 32'd843862355) ? 1'b1 : 
 
 assign p_Result_s_fu_154_p4 = {{context_Dout_A[223:192]}};
 
-assign trunc_ln419_fu_150_p1 = context_Dout_A[191:0];
+assign trunc_ln462_fu_150_p1 = context_Dout_A[191:0];
 
 endmodule //selective_filter

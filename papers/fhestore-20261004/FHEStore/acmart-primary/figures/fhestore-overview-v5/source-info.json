@@ -1,0 +1,15 @@
+{
+  "source": "Author-uploaded figure in current conversation",
+  "extraction": "Original PNG bytes decoded from the latest user input_image data URL; no image transformation",
+  "session_line": 1613,
+  "dimensions_px": [
+    1087,
+    371
+  ],
+  "sha256": "86432a9bb0100e643bc7c62bf5629a50e642b4206000948767f1d369b6d437df",
+  "png_metadata_keys": [
+    "srgb",
+    "gamma",
+    "dpi"
+  ]
+}

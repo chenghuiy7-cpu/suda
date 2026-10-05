@@ -1,0 +1,19 @@
+Use case: infographic-diagram.
+Create one polished academic systems-paper framework diagram for the FHEStore manuscript. Clean editable-vector-looking design, white background, wide landscape composition roughly 2:1, suitable for spanning two columns of an ACM paper. Large crisp English labels, consistent sans-serif typography, restrained pale blue and pale teal fills, dark readable text, thin consistent outlines, orthogonal connectors, ample whitespace. No gradients, shadows, 3D, textures, logos, decorative title, invented components, or numerical results.
+
+Use this exact scientifically supported composition:
+TOP above the left system: a compact box labeled "Host Application" on first line and "Task Runtime" on second line. A dashed gray arrow goes downward from it to the FHEStore system, labeled "Task / Graph / Parameters". This arrow means configuration and task control.
+
+LEFT occupying about two thirds of the main area: one clean rounded system enclosure headed "FHEStore" with subtitle "FPGA-Based Computational Storage". The enclosure is a system boundary, NOT a boundary meaning every component is FPGA hardware.
+Within this enclosure, at its far left, one restrained outlined storage cylinder labeled "Persistent Data" and "& Results".
+Upper input path, read left to right: storage cylinder -> compact light neutral box "Preprocess" with "(optional)" below -> pale blue box "Encode & Encrypt" with a small "FPGA" label.
+Lower return path, read right to left: pale teal box "Decrypt & Decode" with a small "FPGA" label -> compact neutral box "Write-back" -> SAME storage cylinder. Write-back is a system operation, not an FPGA kernel. Draw the two flows on separate rows without overlaps or crossings.
+
+RIGHT: one attractive but restrained outlined cloud, separated from FHEStore, headed "Remote FHE Service". Inside the cloud show ONLY a simple flat chip outline labeled "HPU", and small text "Homomorphic Evaluation". No HPU internal design details.
+
+UPPER REMOTE CONNECTION: a solid rightward dark blue arrow from Encode & Encrypt to the cloud, labeled "Input ciphertexts".
+LOWER REMOTE CONNECTION: a solid leftward teal arrow from the cloud directly to Decrypt & Decode, labeled "Result ciphertexts".
+Between those two remote arrows in the whitespace gap, print "Host-mediated transfer" as a concise note applying to BOTH directions. These are logical ciphertext handoffs mediated by the Host, not a direct storage-device network interface. Keep text off arrow lines and cloud boundaries.
+
+BOTTOM small simple legend: solid arrow "Data flow", dashed arrow "Task control".
+Show exactly these major relationships and labels. Do not draw SLM, device memory buffers, DMA, drivers, TCP protocol internals, HPU-native layouts, secret keys, security shields, direct-device networking, extra pipeline stages, performance badges, or additional diagrams. Make the FPGA encryption/decryption pair the visual focus and the remote cloud a secondary service endpoint. Pay close attention to correct arrowheads and all text spelling.

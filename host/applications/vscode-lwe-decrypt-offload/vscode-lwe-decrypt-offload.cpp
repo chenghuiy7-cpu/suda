@@ -1,4 +1,5 @@
 #include <libnvme.h>
+#include "../common/lwe_hw_profile.hpp"
 
 #include <errno.h>
 #include <limits.h>
@@ -69,6 +70,7 @@ struct Options {
     bool inspect_only = false;
     bool benchmark = false;
     bool skip_output = false;
+    uint32_t cpu_benchmark_runs = 0;
 };
 
 struct CiphertextInput {
@@ -115,6 +117,8 @@ void print_usage(const char* argv0)
         "                     (default: 131072)\n"
         "  --inspect-only     parse and repack input without accessing FPGA\n"
         "  --benchmark        print stage timings\n"
+        "  --cpu-benchmark-runs N\n"
+        "                     time N Host reference decryptions after input preparation\n"
         "  --skip-output      do not write the decrypted u8 file\n"
         "  --help             show this message\n",
         argv0);
@@ -204,6 +208,12 @@ bool parse_options(int argc, char** argv, Options* options)
                 return false;
             }
             options->plaintext_bytes = static_cast<uint32_t>(value);
+        } else if (strcmp(arg, "--cpu-benchmark-runs") == 0) {
+            if (!parse_u64(text, &value) || value == 0 || value > 1000) {
+                fprintf(stderr, "Invalid CPU benchmark run count: %s\n", text);
+                return false;
+            }
+            options->cpu_benchmark_runs = static_cast<uint32_t>(value);
         } else if (strcmp(arg, "--slm-write-chunk-bytes") == 0) {
             if (!parse_u64(text, &value) || value < kLbaSize ||
                 value > kMaxSlmWriteChunkBytes || value % kLbaSize != 0) {
@@ -633,7 +643,7 @@ bool apply_expected_options(const Options& options, CiphertextInput* input)
 
 bool verify_with_host_reference(
     const CiphertextInput& input,
-    const std::vector<uint8_t>& key,
+    const std::vector<size_t>& active_key_indices,
     const Options& options,
     std::vector<uint8_t>* clear_values)
 {
@@ -648,21 +658,18 @@ bool verify_with_host_reference(
                 (input.input_layout == 1 ? kHpuNativeWordsPerLwe
                     : input.input_layout == 2 ? 2056 : kLogicalWordsPerLwe);
             uint64_t dot = 0;
-            for (size_t natural_index = 0;
-                 natural_index < kMaskDimension;
-                 ++natural_index) {
-                const size_t hpu_index = reverse_psi64_mask_index(natural_index);
-                const size_t group = hpu_index / kHpuPcGroupWords;
-                const size_t lane = hpu_index % kHpuPcGroupWords;
-                const size_t pc = group % kHpuPcCount;
-                const size_t pc_offset =
-                    (group / kHpuPcCount) * kHpuPcGroupWords + lane;
-                if (key[natural_index] != 0) {
-                    dot += load_le64(
-                        input.payload_bytes,
-                        native_base + (input.input_layout != 1
-                            ? natural_index : pc * kHpuPcSlotWords + pc_offset));
+            for (size_t natural_index : active_key_indices) {
+                size_t word_offset = natural_index;
+                if (input.input_layout == 1) {
+                    const size_t hpu_index = reverse_psi64_mask_index(natural_index);
+                    const size_t group = hpu_index / kHpuPcGroupWords;
+                    const size_t lane = hpu_index % kHpuPcGroupWords;
+                    const size_t pc = group % kHpuPcCount;
+                    const size_t pc_offset =
+                        (group / kHpuPcCount) * kHpuPcGroupWords + lane;
+                    word_offset = pc * kHpuPcSlotWords + pc_offset;
                 }
+                dot += load_le64(input.payload_bytes, native_base + word_offset);
             }
             const uint64_t body = load_le64(
                 input.payload_bytes,
@@ -1113,6 +1120,8 @@ int run_fpga(
             break;
         }
         slm_to_host_end = Clock::now();
+        print_lwe_hw_profile(static_cast<const uint8_t*>(output_buffer),
+                             output_bytes, input.plaintext_bytes);
 
         verify_start = Clock::now();
         const uint8_t* actual = static_cast<const uint8_t*>(output_buffer);
@@ -1256,11 +1265,38 @@ int main(int argc, char** argv)
     if (!read_binary_key(options.key_path, &key)) {
         return 1;
     }
+    std::vector<size_t> active_key_indices;
+    active_key_indices.reserve(kMaskDimension);
+    for (size_t index = 0; index < kMaskDimension; ++index) {
+        if (key[index] != 0) {
+            active_key_indices.push_back(index);
+        }
+    }
     std::vector<uint8_t> host_reference;
-    if (!verify_with_host_reference(input, key, options, &host_reference)) {
+    if (!verify_with_host_reference(input, active_key_indices, options, &host_reference)) {
         return 1;
     }
     const Clock::time_point parse_end = Clock::now();
+
+    if (options.cpu_benchmark_runs != 0) {
+        std::vector<double> samples;
+        samples.reserve(options.cpu_benchmark_runs);
+        std::vector<uint8_t> cpu_result;
+        for (uint32_t run = 0; run < options.cpu_benchmark_runs; ++run) {
+            const Clock::time_point start = Clock::now();
+            if (!verify_with_host_reference(input, active_key_indices, options, &cpu_result)) {
+                return 1;
+            }
+            const Clock::time_point end = Clock::now();
+            samples.push_back(elapsed_ms(start, end));
+        }
+        std::sort(samples.begin(), samples.end());
+        const size_t mid = samples.size() / 2;
+        const double median = samples.size() % 2 != 0
+            ? samples[mid] : (samples[mid - 1] + samples[mid]) / 2;
+        printf("cpu_benchmark_ms runs=%u median=%.6f min=%.6f max=%.6f\n",
+               options.cpu_benchmark_runs, median, samples.front(), samples.back());
+    }
 
     printf("source_ciphertext=%s\n", options.input_path);
     printf("source_layout=%s\n", input.source_layout.c_str());

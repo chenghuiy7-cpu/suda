@@ -207,7 +207,8 @@ load_predicate_loop:
     else if (record_bytes < SELECTIVE_FILTER_AXIS_BYTES ||
              record_bytes > SELECTIVE_FILTER_V2_MAX_RECORD_BYTES ||
              (record_bytes & (SELECTIVE_FILTER_AXIS_BYTES - 1)) != 0) config_error = 11;
-    else if (output_mode != SELECTIVE_FILTER_OUTPUT_QUANTITY) config_error = 12;
+    else if (output_mode != SELECTIVE_FILTER_OUTPUT_QUANTITY &&
+             output_mode != SELECTIVE_FILTER_OUTPUT_MANIFEST) config_error = 12;
     else if (predicate_count == 0 ||
              predicate_count > SELECTIVE_FILTER_V2_MAX_PREDICATES) config_error = 13;
     else if (token_count == 0 || token_count > SELECTIVE_FILTER_V2_MAX_TOKENS) config_error = 14;
@@ -242,6 +243,31 @@ v2_stream_loop:
             ap_uint<32> error_code = config_error;
             if (error_code == 0 && beat_index != 0) error_code = 17;
             if (error_code == 0 && record_count != 0 && total_count != record_count) error_code = 18;
+            if (output_mode == SELECTIVE_FILTER_OUTPUT_MANIFEST) {
+            manifest_missing_rows:
+                for (ap_uint<32> row = total_count; row < record_count; ++row) {
+#pragma HLS PIPELINE II=1
+                    Acc_Data_Pkt missing = input_pkt;
+                    missing.data = row;
+                    missing.keep = -1; missing.strb = -1;
+                    missing.user = 0; missing.last = 0;
+                    data_out.write(missing);
+                }
+                Acc_Data_Pkt summary = input_pkt;
+                summary.data = 0;
+                summary.data.range(63, 0) = SELECTIVE_FILTER_MANIFEST_MAGIC;
+                summary.data.range(95, 64) = record_count;
+                summary.data.range(127, 96) = total_count;
+                summary.data.range(159, 128) = selected_count;
+                summary.data.range(191, 160) = error_code;
+                summary.data.range(223, 192) = record_bytes;
+                summary.data.range(255, 224) = projection_offset;
+                summary.data.range(287, 256) = projection_type;
+                summary.data.range(319, 288) = SELECTIVE_FILTER_MANIFEST_VERSION;
+                summary.keep = -1; summary.strb = -1;
+                summary.user = 0; summary.last = 0;
+                data_out.write(summary);
+            }
             Acc_Data_Pkt status = input_pkt;
             build_status_packet(status, total_count, selected_count, error_code,
                 record_bytes, projection_offset, version, projection_type);
@@ -281,6 +307,23 @@ v2_stream_loop:
             bool expression_valid = false;
             bool selected = evaluate_tokens(tokens, token_count, predicate_results, expression_valid);
             if (!expression_valid && config_error == 0) config_error = 19;
+            bool fields_valid = projection_valid;
+        validate_captured_fields:
+            for (int i = 0; i < SELECTIVE_FILTER_V2_MAX_PREDICATES; ++i) {
+#pragma HLS UNROLL
+                if (i < predicate_count && !predicate_valid[i]) fields_valid = false;
+            }
+            if (!fields_valid && config_error == 0) config_error = 20;
+            selected = selected && fields_valid && config_error == 0;
+            if (output_mode == SELECTIVE_FILTER_OUTPUT_MANIFEST) {
+                Acc_Data_Pkt row = input_pkt;
+                row.data = 0;
+                row.data.range(31, 0) = total_count;
+                row.data.range(63, 32) = selected ? 1 : 0;
+                row.data.range(127, 64) = selected ? projection_value : ap_uint<64>(0);
+                row.keep = -1; row.strb = -1; row.user = 0; row.last = 0;
+                data_out.write(row);
+            }
             ++total_count;
             if (selected && projection_valid) {
                 Acc_Data_Pkt output_pkt;
@@ -292,7 +335,7 @@ v2_stream_loop:
                 output_pkt.id = input_pkt.id;
                 output_pkt.dest = input_pkt.dest;
                 output_pkt.last = 0;
-                data_out.write(output_pkt);
+                if (output_mode != SELECTIVE_FILTER_OUTPUT_MANIFEST) data_out.write(output_pkt);
                 ++selected_count;
             }
             beat_index = 0;

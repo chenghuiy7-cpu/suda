@@ -26,7 +26,7 @@ if {[info exists env(HLS_HOST_ARCH_INCLUDE)]} {
 } else {
     set linux_arch_include "/usr/include/x86_64-linux-gnu"
 }
-set compile_flags "-I${shared_include_dir} -I${vitis_hls_include} -I${linux_arch_include} -DUSING_XILINX_STREAM"
+set compile_flags "-I[file normalize [file dirname [info script]]] -I${shared_include_dir} -I${vitis_hls_include} -I${linux_arch_include} -DUSING_XILINX_STREAM"
 
 open_project -reset ${project_name}
 add_files ${target_name}.cpp -cflags "${compile_flags}"

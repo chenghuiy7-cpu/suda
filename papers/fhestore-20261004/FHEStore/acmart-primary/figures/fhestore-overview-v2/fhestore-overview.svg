@@ -1,0 +1,90 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="89mm" viewBox="0 0 1600 800" version="1.1" role="img" aria-labelledby="title desc">
+  <title id="title">FHEStore with explicit host-controlled execution and ciphertext relays</title>
+  <desc id="desc">Three columns show FHEStore computational storage, host software, and a remote FHE service. The host application invokes a task runtime describing an operator graph, contexts, and memory ranges. Dashed control arrows submit a task to the device runtime, which configures FPGA operators. The upper solid data path runs from persistent storage through optional preprocessing and FPGA encoding/encryption, through the host input ciphertext relay, to the remote FHE service. Result ciphertexts traverse the lower path in the opposite direction through the host result ciphertext relay, FPGA decryption/decoding, and write-back to the same persistent store.</desc>
+  <metadata>Editable SVG reconstructed using design-reference.png; no embedded raster. Functional overview, 178 x 89 mm. Minimum font: 26 viewBox units, 8.20 pt. Write-back includes host-assisted record merging where required.</metadata>
+  <defs>
+    <style>text {font-family: Arimo, 'Nimbus Sans', 'DejaVu Sans', sans-serif;}</style>
+    <marker id="arrow-data" markerWidth="12" markerHeight="12" viewBox="0 0 12 12" refX="11.8" refY="6" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 12,6 L 0,12 Z" fill="#315b7e" />
+    </marker>
+    <marker id="arrow-control" markerWidth="12" markerHeight="12" viewBox="0 0 12 12" refX="11.8" refY="6" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0,0 L 12,6 L 0,12 Z" fill="#707982" />
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="800" fill="#ffffff" />
+  <g id="regions">
+    <rect id="fhestore-boundary" x="20" y="31" width="724" height="664" rx="10" fill="#f3f7fa" stroke="#687684" stroke-width="1.8" />
+    <rect id="host-boundary" x="786" y="31" width="426" height="664" rx="10" fill="#f7f8fa" stroke="#687684" stroke-width="1.8" />
+    <rect id="storage-side-data-path-boundary" x="34" y="407" width="696" height="276" rx="0" fill="#f3f7fa" stroke="#687684" stroke-width="1.5" stroke-dasharray="8 6" />
+    <rect id="host-ciphertext-relay-boundary" x="806" y="407" width="388" height="276" rx="0" fill="#f7f8fa" stroke="#687684" stroke-width="1.5" stroke-dasharray="8 6" />
+    <path id="remote-service-cloud" d="M 1260,500 C 1249,473 1266,443 1296,437 C 1302,394 1327,376 1356,382 C 1383,354 1435,363 1460,394 C 1498,385 1533,409 1530,451 C 1572,467 1585,505 1566,537 C 1586,565 1572,604 1542,615 C 1541,646 1513,670 1476,662 C 1442,687 1399,684 1376,662 C 1332,672 1298,661 1275,626 C 1236,618 1228,581 1245,552 C 1219,532 1227,515 1260,500 Z" fill="#f2f6fa" stroke="#687684" stroke-width="2" stroke-linejoin="round" />
+  </g>
+  <g id="modules">
+    <rect id="host-application" x="851" y="107" width="300" height="64" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="host-task-runtime" x="820" y="206" width="362" height="175" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="device-runtime" x="224" y="213" width="300" height="76" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="preprocess" x="280" y="465" width="172" height="70" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="encode-encrypt" x="489" y="455" width="230" height="90" rx="5" fill="#e5eef5" stroke="#687684" stroke-width="2" />
+    <rect id="input-ciphertext-relay" x="835" y="465" width="330" height="70" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="result-ciphertext-relay" x="835" y="591" width="330" height="70" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <rect id="decrypt-decode" x="489" y="581" width="230" height="90" rx="5" fill="#e5eef5" stroke="#687684" stroke-width="2" />
+    <rect id="write-back" x="280" y="591" width="172" height="70" rx="5" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    <g id="persistent-store">
+      <path d="M 46,487 V 635 C 46,665 230,665 230,635 V 487 Z" fill="#edf3f7" stroke="#687684" stroke-width="2" />
+      <ellipse cx="138" cy="487" rx="92" ry="21" fill="#edf3f7" stroke="#687684" stroke-width="2" />
+    </g>
+    <g id="hpu-chip" stroke="#687684" stroke-width="2" fill="none">
+      <rect id="hpu-icon" x="1358" y="510" width="104" height="70" rx="3" fill="#ffffff" stroke="#687684" stroke-width="2" />
+    </g>
+  </g>
+  <g id="connections">
+    <path id="application-to-task-runtime" d="M 1001,171 L 1001,204" fill="none" stroke="#707982" stroke-width="2.5" marker-end="url(#arrow-control)" stroke-linejoin="round" stroke-dasharray="8 6" />
+    <path id="submit-task" d="M 820,251 L 526,251" fill="none" stroke="#707982" stroke-width="2.5" marker-end="url(#arrow-control)" stroke-linejoin="round" stroke-dasharray="8 6" />
+    <path id="configure-fpga-operators" d="M 374,289 L 374,405" fill="none" stroke="#707982" stroke-width="2.5" marker-end="url(#arrow-control)" stroke-linejoin="round" stroke-dasharray="8 6" />
+    <path id="store-to-preprocess" d="M 230,500 L 278,500" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="preprocess-to-encrypt" d="M 452,500 L 487,500" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="encrypt-to-host-input-relay" d="M 719,500 L 833,500" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="host-input-relay-to-service" d="M 1165,500 L 1260,500" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="service-to-host-result-relay" d="M 1275,626 L 1167,626" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="host-result-relay-to-decrypt" d="M 835,626 L 721,626" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="decrypt-to-write-back" d="M 489,626 L 454,626" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <path id="write-back-to-store" d="M 280,626 L 232,626" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+  </g>
+  <g id="editable-labels">
+    <text x="45" y="74" font-size="34" font-weight="700" text-anchor="start" fill="#283441">FHEStore CSD</text>
+    <text x="45" y="109" font-size="26" font-weight="400" text-anchor="start" fill="#283441">FPGA computational storage</text>
+    <text x="999" y="74" font-size="32" font-weight="700" text-anchor="middle" fill="#283441">Host</text>
+    <text x="1001" y="147" font-size="28" font-weight="400" text-anchor="middle" fill="#283441">Application</text>
+    <text x="1001" y="240" font-size="29" font-weight="600" text-anchor="middle" fill="#283441">Task Runtime</text>
+    <text x="1001" y="286" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Operator graph</text>
+    <text x="1001" y="321" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Operator contexts</text>
+    <text x="1001" y="356" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Data ranges</text>
+    <text x="374" y="261" font-size="27" font-weight="600" text-anchor="middle" fill="#283441">Device Runtime</text>
+    <text x="672" y="232" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Submit task</text>
+    <text x="392" y="353" font-size="26" font-weight="400" text-anchor="start" fill="#283441">Configure / execute</text>
+    <text x="53" y="437" font-size="26" font-weight="600" text-anchor="start" fill="#283441">Storage-side data path</text>
+    <text x="825" y="437" font-size="26" font-weight="600" text-anchor="start" fill="#283441">Ciphertext relay</text>
+    <text x="138" y="566" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Persistent</text>
+    <text x="138" y="599" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">data &amp; results</text>
+    <text x="366" y="490" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Preprocess</text>
+    <text x="366" y="522" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">(optional)</text>
+    <text x="604" y="488" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Encode &amp; Encrypt</text>
+    <text x="604" y="527" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">FPGA</text>
+    <text x="1000" y="510" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Input ciphertext relay</text>
+    <text x="1000" y="636" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Result ciphertext relay</text>
+    <text x="604" y="614" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Decrypt &amp; Decode</text>
+    <text x="604" y="653" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">FPGA</text>
+    <text x="366" y="636" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Write-back</text>
+    <text x="1410" y="466" font-size="26" font-weight="600" text-anchor="middle" fill="#283441">Remote FHE Service</text>
+    <text x="1410" y="555" font-size="29" font-weight="400" text-anchor="middle" fill="#283441">HPU</text>
+    <text x="1410" y="619" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">Homomorphic</text>
+    <text x="1410" y="652" font-size="26" font-weight="400" text-anchor="middle" fill="#283441">evaluation</text>
+  </g>
+  <g id="legend">
+    <path id="legend-data" d="M 540,753 L 602,753" fill="none" stroke="#315b7e" stroke-width="2.5" marker-end="url(#arrow-data)" stroke-linejoin="round" />
+    <text x="617" y="762" font-size="26" font-weight="400" text-anchor="start" fill="#283441">Data flow</text>
+    <path id="legend-control" d="M 806,753 L 868,753" fill="none" stroke="#707982" stroke-width="2.5" marker-end="url(#arrow-control)" stroke-linejoin="round" stroke-dasharray="8 6" />
+    <text x="883" y="762" font-size="26" font-weight="400" text-anchor="start" fill="#283441">Task control</text>
+  </g>
+</svg>

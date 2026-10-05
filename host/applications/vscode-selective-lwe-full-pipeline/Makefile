@@ -28,8 +28,11 @@ sql_filter_compiler.o: ../vscode-selective-lwe-encrypt-offload/sql_filter_compil
 	../vscode-selective-lwe-encrypt-offload/sql_filter_compiler.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+vscode-selective-lwe-full-pipeline.o: selection_manifest.hpp ../vscode-selective-lwe-encrypt-offload/sql_filter_compiler.hpp $(ROOT_DIR)/../device/operators/hls/selective_filter/selective_filter_protocol.h
+
 test: $(APP)
 	./$(APP) --self-test
+	python3 -m unittest -v test_task.py
 
 clean:
 	rm -f $(APP) $(OBJS)

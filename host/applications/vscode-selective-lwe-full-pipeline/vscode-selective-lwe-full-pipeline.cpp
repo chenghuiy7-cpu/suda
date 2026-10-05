@@ -21,6 +21,7 @@
 
 #include "sql_filter_compiler.hpp"
 #include "lwe_remote_protocol.hpp"
+#include "selection_manifest.hpp"
 
 namespace {
 
@@ -79,7 +80,10 @@ struct Options {
     const char* io_device = "nvmq0n1";
     const char* key_path = kDefaultKeyPath;
     const char* output_path = "selective_lwe_fpga_ciphertexts.bin";
-    const char* reference_path = "testdata/tpch_like_512b.bin";
+    const char* reference_path = nullptr;
+    const char* selection_output_path = nullptr;
+    uint32_t record_base = 0;
+    bool encrypt_only = false;
     const char* slm_read_trace_path = nullptr;
     const char* remote_host = "10.16.0.129";
     const char* plaintext_output_path = nullptr;
@@ -152,7 +156,10 @@ void print_usage(const char* argv0)
         "  --explain-filter   compile and print filter metadata without device I/O\n"
         "  --predicate gt|eq  quantity comparison (default: gt)\n"
         "  --threshold N      uint8 predicate threshold (default: 32)\n"
-        "  --reference PATH   local binary image used only for correctness checking\n"
+        "  --encrypt-only    generate selected ciphertexts without remote/update\n"
+        "  --selection-output PATH device row mapping JSON (written on success)\n"
+        "  --record-base N    global row base for batch mapping/reference slicing\n"
+        "  --reference PATH   optional local binary image for correctness checking\n"
         "  --input-lbas N      copy N 4KB SSD blocks to input SLM\n"
         "                      (default: minimum needed for all records)\n"
         "  --slm-read-chunk-bytes N\n"
@@ -231,6 +238,10 @@ bool parse_options(int argc, char** argv, Options* options)
             options->explain_filter = true;
             continue;
         }
+        if (strcmp(arg, "--encrypt-only") == 0) {
+            options->encrypt_only = true;
+            continue;
+        }
         if (strcmp(arg, "--self-test") == 0) {
             options->self_test = true;
             continue;
@@ -272,6 +283,12 @@ bool parse_options(int argc, char** argv, Options* options)
             }
         } else if (strcmp(arg, "--output") == 0) {
             options->output_path = text;
+            options->skip_dump = false;
+        } else if (strcmp(arg, "--selection-output") == 0) {
+            options->selection_output_path = text;
+        } else if (strcmp(arg, "--record-base") == 0) {
+            if (!parse_u64(text, &value) || value > UINT32_MAX) return false;
+            options->record_base = static_cast<uint32_t>(value);
         } else if (strcmp(arg, "--reference") == 0) {
             options->reference_path = text;
         } else if (strcmp(arg, "--schema") == 0) {
@@ -488,10 +505,21 @@ bool parse_options(int argc, char** argv, Options* options)
         fprintf(stderr, "--record-bytes other than 512 requires --query\n");
         return false;
     }
+    if (!options->sql_mode) {
+        options->query = "SELECT quantity FROM records WHERE quantity " +
+            std::string(options->predicate == kPredicateGt ? "> " : "= ") +
+            std::to_string(options->threshold);
+        std::vector<SqlField> fields;
+        std::string error;
+        if (!parse_sql_schema(options->schema, options->record_bytes, &fields, &error) ||
+            !compile_filter_sql(options->query, options->record_bytes, fields,
+                                &options->sql_program, &error)) return false;
+        options->sql_mode = true;
+    }
     if (options->explain_filter) {
         return true;
     }
-    if (options->output_layout != kOutputLayoutHpuNative) {
+    if (!options->encrypt_only && options->output_layout != kOutputLayoutHpuNative) {
         fprintf(stderr, "The remote HPU round trip requires --output-layout hpu-native\n");
         return false;
     }
@@ -503,7 +531,7 @@ bool parse_options(int argc, char** argv, Options* options)
         fprintf(stderr, "Use either --in-place or --output-ssd-lba, not both\n");
         return false;
     }
-    if (!options->in_place && !options->output_ssd_lba_set) {
+    if (!options->encrypt_only && !options->in_place && !options->output_ssd_lba_set) {
         fprintf(stderr, "--output-ssd-lba is required unless --in-place is used\n");
         return false;
     }
@@ -561,12 +589,15 @@ bool parse_options(int argc, char** argv, Options* options)
                 options->max_response_bytes);
         return false;
     }
+    if (uint64_t(options->record_base) + options->record_count > UINT32_MAX) {
+        fprintf(stderr, "Global record index overflows u32\n"); return false;
+    }
     if (options->ssd_lba > UINT64_MAX - options->input_lbas ||
         options->output_ssd_lba > UINT64_MAX - options->input_lbas) {
         fprintf(stderr, "Source or destination SSD LBA range overflows\n");
         return false;
     }
-    if (!options->in_place &&
+    if (!options->encrypt_only && !options->in_place &&
         options->storage_nsid == options->output_storage_nsid &&
         options->ssd_lba < options->output_ssd_lba + options->input_lbas &&
         options->output_ssd_lba < options->ssd_lba + options->input_lbas) {
@@ -588,10 +619,11 @@ bool read_reference_selection(
         fprintf(stderr, "Unable to open reference dataset: %s\n", options.reference_path);
         return false;
     }
-    std::vector<uint8_t> bytes{
-        std::istreambuf_iterator<char>(file),
-        std::istreambuf_iterator<char>()};
     const size_t required = static_cast<size_t>(options.record_count) * options.record_bytes;
+    file.seekg(static_cast<uint64_t>(options.record_base) * options.record_bytes);
+    std::vector<uint8_t> bytes(required);
+    file.read(reinterpret_cast<char*>(bytes.data()), required);
+    bytes.resize(static_cast<size_t>(file.gcount()));
     if (bytes.size() < required) {
         fprintf(
             stderr,
@@ -633,12 +665,6 @@ bool read_reference_selection(
                 bytes.begin() + record_offset,
                 bytes.begin() + record_offset + options.record_bytes);
         }
-    }
-    if (selected_quantities->empty()) {
-        fprintf(
-            stderr,
-            "Predicate selected zero records; choose a threshold with at least one match for the first demo\n");
-        return false;
     }
     return true;
 }
@@ -835,16 +861,6 @@ size_t physical_output_bytes(const Options& options)
         ? kHpuNativeOutputBytes
         : kPhysicalOutputBytes;
     return static_cast<size_t>(options.plaintext_bytes) * bytes_per_u8;
-}
-
-size_t output_buffer_bytes(const Options& options)
-{
-    const size_t bytes_per_u8 = options.output_layout == kOutputLayoutHpuNative
-        ? kHpuNativeOutputBytes
-        : kPhysicalOutputBytes;
-    return round_up_to_lba(
-        static_cast<size_t>(options.record_count) * bytes_per_u8 +
-        kOutputDonePacketBytes);
 }
 
 struct SlmReadSample {
@@ -1883,6 +1899,93 @@ void print_filter_plan(const Options &options)
     printf("\n");
 }
 
+// Discovery reads the SAME input SLM later used by encryption. The receive
+// range is deterministic, so neither Host reference data nor an unknown match
+// count participates in DMA completion. The summary is a normal data beat.
+bool discover_selection(int admin_fd, int io_fd, unsigned input_mem_id,
+                        uint8_t* contexts, const Options& options,
+                        std::vector<uint32_t>* indices,
+                        std::vector<uint8_t>* values) {
+    const size_t payload = selection_manifest::payload_bytes(options.record_count);
+    const size_t receive = round_up_to_lba(payload + kOutputDonePacketBytes);
+    void* buffer = nullptr;
+    if (posix_memalign(&buffer, kLbaSize, receive) != 0) return false;
+    memset(buffer, 0, receive);
+    unsigned output = 0, rsid = 0, result = 0;
+    bool created = false, ranged = false, loaded = false, activated = false;
+    bool success = false;
+    union memory_range_set_decriptor ranges[2] = {};
+    struct hlsacccompute_program program = {};
+    store_u32(contexts, SELECTIVE_FILTER_V2_HDR_OUTPUT_MODE, SELECTIVE_FILTER_OUTPUT_MANIFEST);
+    do {
+        int ret = nvme_create_slm_ns(admin_fd, &output, receive);
+        if (ret) break;
+        created = true;
+        ranges[0].payload.mnsid = input_mem_id;
+        ranges[0].payload.length = input_range_bytes(options);
+        ranges[0].payload.flag = memory_range_descriptor::mdes_flag::MEM_RANGE_DEVICE_MEM;
+        ranges[1].payload.mnsid = output;
+        ranges[1].payload.length = receive;
+        ranges[1].payload.flag = memory_range_descriptor::mdes_flag::MEM_RANGE_DEVICE_MEM;
+        ret = nvme_create_memory_range_set(admin_fd, kComputeNsid, &rsid, 2, ranges);
+        if (ret) break;
+        ranged = true;
+        build_single_operator_program(&program, options.filter_operator_type_id,
+                                      options.program_id, options.record_count);
+        ret = nvme_unload_hlsacc_program(admin_fd, options.program_id, kComputeNsid);
+        if (ret) break;
+        ret = nvme_load_hlsacc_program(admin_fd, sizeof(program), options.program_id,
+                                      kComputeNsid, &program);
+        if (ret) break;
+        loaded = true;
+        ret = nvme_activate_program(admin_fd, options.program_id, kComputeNsid);
+        if (ret) break;
+        activated = true;
+        ret = nvme_execute_hlsacc_program(io_fd, kComputeNsid, rsid, options.program_id,
+                                          reinterpret_cast<AccContext*>(contexts),
+                                          1, 0, 0, &result);
+        if (ret || result != payload) {
+            fprintf(stderr, "Device selection failed: ret=%d result=%u expected=%zu; manifest-capable BOOT.bin required\n",
+                    ret, result, payload);
+            break;
+        }
+        size_t offset = 0, length = 0; int error_number = 0;
+        std::vector<SlmReadSample> samples;
+        ret = read_slm_in_chunks(io_fd, output, 0, receive, options.slm_read_chunk_bytes,
+                                 1, buffer, &offset, &length, &error_number, false, &samples);
+        if (ret) break;
+        std::string error;
+        success = selection_manifest::parse(static_cast<uint8_t*>(buffer), payload,
+            options.record_count, options.record_bytes, options.sql_program.projection_offset,
+            indices, values, &error);
+        if (!success) fprintf(stderr, "Invalid device selection: %s\n", error.c_str());
+    } while (false);
+    if (activated && nvme_deactivate_program(admin_fd, options.program_id, kComputeNsid)) success = false;
+    if (loaded && nvme_unload_hlsacc_program(admin_fd, options.program_id, kComputeNsid)) success = false;
+    if (ranged && nvme_delete_memory_range_set(admin_fd, kComputeNsid, rsid)) success = false;
+    if (created && nvme_delete_slm_ns(admin_fd, output)) success = false;
+    free(buffer);
+    store_u32(contexts, SELECTIVE_FILTER_V2_HDR_OUTPUT_MODE, kFilterOutputQuantity);
+    if (!success) fprintf(stderr, "FPGA discovery failed; SSD update was not attempted\n");
+    return success;
+}
+
+bool write_selection_result(const Options& options,
+                            const std::vector<uint32_t>& indices,
+                            const std::vector<uint8_t>& values) {
+    if (!options.selection_output_path) return true;
+    std::ofstream f(options.selection_output_path);
+    f << "{\"version\":1,\"selection_source\":\"fpga\",\"record_base\":"
+      << options.record_base << ",\"record_count\":" << options.record_count
+      << ",\"selected_count\":" << indices.size() << ",\"indices\":[";
+    for (size_t i = 0; i < indices.size(); ++i)
+        f << (i ? "," : "") << uint64_t(options.record_base) + indices[i];
+    f << "],\"values_u8\":[";
+    for (size_t i = 0; i < values.size(); ++i) f << (i ? "," : "") << unsigned(values[i]);
+    f << "]}\n";
+    return bool(f);
+}
+
 }  // namespace
 
 int main(int argc, char** argv)
@@ -1911,15 +2014,14 @@ int main(int argc, char** argv)
         options.nonce = random_u64();
     }
 
-    std::vector<uint8_t> expected_quantities;
+    std::vector<uint8_t> device_quantities;
     std::vector<uint8_t> expected_records;
     std::vector<uint32_t> selected_indices;
     std::vector<uint8_t> reference_records;
-    if (!read_reference_selection(options, &expected_quantities, &expected_records,
-                                  &selected_indices, &reference_records)) {
-        return 1;
-    }
-    options.plaintext_bytes = static_cast<uint32_t>(expected_quantities.size());
+    std::vector<uint8_t> reference_quantities, source_snapshot;
+    std::vector<uint32_t> reference_indices;
+    if (options.reference_path && !read_reference_selection(options, &reference_quantities,
+            &expected_records, &reference_indices, &reference_records)) return 1;
 
     std::vector<uint8_t> key;
     if (!read_binary_key(options.key_path, &key)) {
@@ -1929,15 +2031,15 @@ int main(int argc, char** argv)
     const size_t input_bytes = input_buffer_bytes(options);
     const size_t compute_input_bytes = stream_input_bytes(options);
     const size_t compute_input_range_bytes = input_range_bytes(options);
-    const size_t cipher_physical_bytes = physical_output_bytes(options);
+    size_t cipher_physical_bytes = physical_output_bytes(options);
     const size_t cipher_bytes_per_selected =
         options.output_layout == kOutputLayoutHpuNative
             ? kHpuNativeOutputBytes
             : kPhysicalOutputBytes;
-    const size_t output_bytes = output_buffer_bytes(options);
-    const size_t output_read_bytes =
+    size_t output_bytes = kLbaSize;
+    size_t output_read_bytes =
         round_up_to_lba(cipher_physical_bytes + kOutputDonePacketBytes);
-    const size_t slm_read_request_count =
+    size_t slm_read_request_count =
         (output_read_bytes + options.slm_read_chunk_bytes - 1) /
         options.slm_read_chunk_bytes;
     const size_t copy_range_count = source_range_count(options);
@@ -1980,6 +2082,8 @@ int main(int argc, char** argv)
             "Unable to open NVMe devices admin=%s io=%s\n",
             options.admin_device,
             options.io_device);
+        if (admin_fd >= 0) close(admin_fd);
+        if (io_fd >= 0) close(io_fd);
         free(output_buffer);
         free(context_pages);
         free(source_range_page);
@@ -2033,7 +2137,7 @@ int main(int argc, char** argv)
 
     fprintf(
         stderr,
-        "[selective_lwe] sizing records=%u selected_reference=%u input_bytes=%zu "
+        "[selective_lwe] initial sizing records=%u selected_pending=%u input_bytes=%zu "
         "compute_input_range_bytes=%zu "
         "cipher_physical_bytes=%zu output_slm_bytes=%zu output_read_bytes=%zu "
         "compute_output_range_bytes=%zu "
@@ -2052,6 +2156,7 @@ int main(int argc, char** argv)
         options.slm_read_queue_depth);
 
     int ret = 0;
+    double discovery_ms = 0, snapshot_ms = 0, output_create_ms = 0;
     gettimeofday(&pipeline_start, nullptr);
     gettimeofday(&slm_create_start, nullptr);
     log_stage("creating input SLM");
@@ -2061,14 +2166,6 @@ int main(int argc, char** argv)
         goto cleanup;
     }
     input_created = true;
-
-    log_stage("creating output SLM");
-    ret = nvme_create_slm_ns(admin_fd, &output_mem_id, output_bytes);
-    if (ret != 0) {
-        fprintf(stderr, "nvme_create_slm_ns(output) failed: %d\n", ret);
-        goto cleanup;
-    }
-    output_created = true;
     gettimeofday(&slm_create_end, nullptr);
 
     for (size_t i = 0; i < copy_range_count; ++i) {
@@ -2103,7 +2200,91 @@ int main(int argc, char** argv)
             ret);
         goto cleanup;
     }
-    gettimeofday(&ssd_copy_end, nullptr);
+    gettimeofday(&ssd_copy_end, nullptr);    {
+        const auto discovery_start = Clock::now();
+        fprintf(stderr, "[selective_full] discovering selection on FPGA (reference optional)\n");
+        if (!discover_selection(admin_fd, io_fd, input_mem_id,
+                static_cast<uint8_t*>(context_pages), options, &selected_indices,
+                &device_quantities)) goto cleanup;
+        discovery_ms = elapsed_clock_ms(discovery_start, Clock::now());
+        printf("selection_source=fpga discovery_ms=%.3f selected_count=%zu\n",
+               discovery_ms, selected_indices.size());
+        if (options.reference_path &&
+            (selected_indices != reference_indices || device_quantities != reference_quantities)) {
+            fprintf(stderr, "Device selection differs from optional --reference\n");
+            goto cleanup;
+        }
+        options.plaintext_bytes = static_cast<uint32_t>(device_quantities.size());
+        fpga_selected_count = options.plaintext_bytes;
+        cipher_physical_bytes = physical_output_bytes(options);
+        output_read_bytes = round_up_to_lba(cipher_physical_bytes + kOutputDonePacketBytes);
+        output_bytes = output_read_bytes;
+        slm_read_request_count = (output_read_bytes + options.slm_read_chunk_bytes - 1) /
+                                 options.slm_read_chunk_bytes;
+        free(output_buffer); output_buffer = nullptr;
+        if (posix_memalign(&output_buffer, kLbaSize, output_bytes) != 0) goto cleanup;
+        memset(output_buffer, 0, output_bytes);
+        raw = static_cast<const uint8_t*>(output_buffer);
+        // Capture the processed input before releasing SLM. Update checks SSD
+        // against this snapshot, never against a reference that drives selection.
+        if (!options.encrypt_only) {
+            const auto snapshot_start = Clock::now();
+            void* snapshot = nullptr;
+            if (posix_memalign(&snapshot, kLbaSize, input_bytes) != 0) goto cleanup;
+            std::vector<SlmReadSample> samples;
+            ret = read_slm_in_chunks(io_fd, input_mem_id, 0, input_bytes,
+                options.slm_read_chunk_bytes, 1, snapshot, &failed_slm_offset,
+                &failed_slm_length, &failed_slm_errno, false, &samples);
+            if (!ret) source_snapshot.assign(static_cast<uint8_t*>(snapshot),
+                                            static_cast<uint8_t*>(snapshot) + input_bytes);
+            free(snapshot);
+            snapshot_ms = elapsed_clock_ms(snapshot_start, Clock::now());
+            if (ret) goto cleanup;
+            if (options.reference_path && memcmp(source_snapshot.data(),
+                    reference_records.data(), reference_records.size()) != 0) {
+                fprintf(stderr, "Input snapshot differs from optional --reference\n");
+                goto cleanup;
+            }
+        }
+        if (selected_indices.empty()) {
+            // Copy-on-write still materializes the unchanged destination.
+            if (!options.encrypt_only) {
+                void* image = nullptr; void* checked = nullptr;
+                if (posix_memalign(&image, kLbaSize, input_bytes) != 0 ||
+                    posix_memalign(&checked, kLbaSize, input_bytes) != 0) {
+                    free(image); free(checked); goto cleanup;
+                }
+                ret = transfer_ssd_blocks(io_fd, options.storage_nsid, options.ssd_lba,
+                                          checked, input_bytes, false);
+                if (!ret && memcmp(checked, source_snapshot.data(), input_bytes) != 0) ret = 1;
+                memcpy(image, source_snapshot.data(), input_bytes);
+                if (!ret && !options.in_place) ret = transfer_ssd_blocks(io_fd,
+                    options.output_storage_nsid, options.output_ssd_lba, image, input_bytes, true);
+                if (!ret) ret = transfer_ssd_blocks(io_fd, options.output_storage_nsid,
+                    options.output_ssd_lba, checked, input_bytes, false);
+                if (!ret && memcmp(image, checked, input_bytes) != 0) ret = 1;
+                free(image); free(checked);
+                if (ret) goto cleanup;
+            }
+            if (!options.skip_dump && !write_dump(options.output_path, {}, {})) goto cleanup;
+            if (!write_selection_result(options, selected_indices, device_quantities)) goto cleanup;
+            printf("empty_selection=passed total_count=%u selected_count=0 updated_count=0\n",
+                   options.record_count);
+            status = 0; goto cleanup;
+        }
+        fprintf(stderr, "[selective_full] device-sized receive payload=%zu range=%zu selected=%u\n",
+                cipher_physical_bytes, output_read_bytes, options.plaintext_bytes);
+    }
+    gettimeofday(&start, nullptr);
+    log_stage("creating output SLM");
+    ret = nvme_create_slm_ns(admin_fd, &output_mem_id, output_bytes);
+    if (ret != 0) {
+        fprintf(stderr, "nvme_create_slm_ns(output) failed: %d\n", ret);
+        goto cleanup;
+    }
+    output_created = true;
+    gettimeofday(&end, nullptr);
+    output_create_ms = elapsed_ms(start, end);
 
     gettimeofday(&program_setup_start, nullptr);
     ranges[0].payload.mnsid = input_mem_id;
@@ -2113,9 +2294,8 @@ int main(int argc, char** argv)
         memory_range_descriptor::mdes_flag::MEM_RANGE_DEVICE_MEM;
     ranges[1].payload.mnsid = output_mem_id;
     // RX completes a multi-BD submission only at its final descriptor. The
-    // allocation holds the worst-case result, but posting that entire range
-    // leaves unused descriptors after a selective result's finish marker.
-    // Bound the receive range to the reference payload plus its finish page
+    // device discovery supplies the exact selected count. Bound the receive
+    // range to that payload plus its finish page
     // so the marker lands in the final descriptor of the final submission.
     ranges[1].payload.length = output_read_bytes;
     ranges[1].payload.starting_byte = 0;
@@ -2136,6 +2316,7 @@ int main(int argc, char** argv)
     range_created = true;
 
     build_program(&program, options);
+    program.max_responded_time = std::max<uint32_t>(30000, program.max_responded_time);
     log_stage("clearing stale FPGA program slot");
     ret = nvme_unload_hlsacc_program(
         admin_fd,
@@ -2256,12 +2437,12 @@ int main(int argc, char** argv)
         goto cleanup;
     }
     fpga_selected_count = result_bytes / cipher_bytes_per_selected;
-    if (fpga_selected_count != expected_quantities.size()) {
+    if (fpga_selected_count != device_quantities.size()) {
         fprintf(
             stderr,
-            "FPGA selected count does not match host predicate reference: got=%zu expected=%zu\n",
+            "FPGA selected count does not match device discovery: got=%zu expected=%zu\n",
             fpga_selected_count,
-            expected_quantities.size());
+            device_quantities.size());
         ret = 1;
         goto cleanup;
     }
@@ -2358,8 +2539,8 @@ int main(int argc, char** argv)
             "FPGA CPU-LWE ciphertext verification failed for both stream layouts\n");
         goto cleanup;
     }
-    if (clears != expected_quantities) {
-        fprintf(stderr, "Decrypted selected quantities do not match the host reference predicate\n");
+    if (clears != device_quantities) {
+        fprintf(stderr, "Decrypted selected quantities do not match device discovery\n");
         goto cleanup;
     }
     gettimeofday(&verify_end, nullptr);
@@ -2372,6 +2553,13 @@ int main(int argc, char** argv)
     }
     gettimeofday(&dump_end, nullptr);
 
+    if (options.encrypt_only) {
+        if (!write_selection_result(options, selected_indices, device_quantities)) goto cleanup;
+        printf("selective SSD-to-FPGA-encrypt-to-Host generation passed\n");
+        printf("total_count=%u selected_count=%zu ciphertext_payload_bytes=%zu layout=%s\n",
+               options.record_count, selected_indices.size(), cipher_physical_bytes, layout);
+        status = 0; goto cleanup;
+    }
     hpu_native_words.assign(
         reinterpret_cast<const uint64_t*>(raw),
         reinterpret_cast<const uint64_t*>(raw) +
@@ -2436,7 +2624,7 @@ int main(int argc, char** argv)
         const double remote_round_trip_wall_ms =
             elapsed_clock_ms(remote_start, Clock::now());
 
-        std::vector<uint8_t> expected_remote = expected_quantities;
+        std::vector<uint8_t> expected_remote = device_quantities;
         if (options.remote_operation != lwe_remote::kOperationEchoU8) {
             for (uint8_t& value : expected_remote) {
                 value = static_cast<uint8_t>(value + options.scalar);
@@ -2517,10 +2705,9 @@ int main(int argc, char** argv)
             close(update_fd); free(source_image_buffer); free(readback_buffer);
             goto cleanup;
         }
-        if (memcmp(source_image_buffer, reference_records.data(),
-                   reference_records.size()) != 0) {
+        if (memcmp(source_image_buffer, source_snapshot.data(), input_bytes) != 0) {
             fprintf(stderr,
-                    "Source SSD records differ from --reference; refusing to patch possibly wrong rows\n");
+                    "Source SSD changed since processing snapshot; refusing update\n");
             close(update_fd); free(source_image_buffer); free(readback_buffer);
             goto cleanup;
         }
@@ -2565,9 +2752,10 @@ int main(int argc, char** argv)
                options.record_count, fpga_selected_count, decrypted.size());
         printf("selected_indices=");
         for (size_t i = 0; i < selected_indices.size(); ++i)
-            printf("%s%u", i ? "," : "", selected_indices[i]);
+            printf("%s%llu", i ? "," : "",
+                   static_cast<unsigned long long>(options.record_base) + selected_indices[i]);
         printf("\ninput_values=");
-        for (uint8_t value : expected_quantities) printf("%02x", value);
+        for (uint8_t value : device_quantities) printf("%02x", value);
         printf("\nresult_values=");
         for (uint8_t value : decrypted) printf("%02x", value);
         printf("\n");
@@ -2579,7 +2767,7 @@ int main(int argc, char** argv)
             options.storage_nsid, static_cast<unsigned long long>(options.ssd_lba),
             options.input_lbas, options.output_storage_nsid,
             static_cast<unsigned long long>(options.output_ssd_lba), options.input_lbas);
-        printf("ssd_update_mode=%s source_reference_checked=yes destination_readback_checked=yes\n",
+        printf("ssd_update_mode=%s source_snapshot_checked=yes destination_readback_checked=yes\n",
                options.in_place ? "in-place" : "copy-on-write");
         printf("filter_encrypt_result_bytes=%u remote_result_bytes=%zu decrypt_result_bytes=%u\n",
                result_bytes, rpc_result.ciphertext_words.size() * sizeof(uint64_t),
@@ -2615,6 +2803,7 @@ int main(int argc, char** argv)
         }
         if (!options.zero_noise)
             printf("warning=internal PRNG/noise is a prototype, not bit-exact tfhe-rs randomness\n");
+        if (!write_selection_result(options, selected_indices, device_quantities)) goto cleanup;
         status = 0;
     }
 
@@ -2655,8 +2844,8 @@ cleanup:
     free(context_pages);
     free(source_range_page);
     gettimeofday(&cleanup_end, nullptr);
-    if (status == 0 && options.benchmark) {
-        const double slm_create_ms = elapsed_ms(slm_create_start, slm_create_end);
+    if (status == 0 && options.benchmark && options.plaintext_bytes > 0) {
+        const double slm_create_ms = elapsed_ms(slm_create_start, slm_create_end) + output_create_ms;
         const double ssd_copy_ms = elapsed_ms(ssd_copy_start, ssd_copy_end);
         const double program_setup_ms =
             elapsed_ms(program_setup_start, program_setup_end);
@@ -2666,7 +2855,7 @@ cleanup:
         const double dump_write_ms = elapsed_ms(dump_start, dump_end);
         const double cleanup_ms = elapsed_ms(cleanup_start, cleanup_end);
         const double transport_ready_ms =
-            ssd_copy_ms + fpga_execute_ms + slm_read_ms;
+            ssd_copy_ms + discovery_ms + fpga_execute_ms + slm_read_ms;
         const double data_path_ms =
             transport_ready_ms + host_verify_ms;
         const double one_shot_transport_ready_ms =
@@ -2676,6 +2865,7 @@ cleanup:
         const double process_ms = elapsed_ms(application_start, cleanup_end);
         const double count = static_cast<double>(options.plaintext_bytes);
 
+        printf("selection_stage_ms discovery=%.3f snapshot=%.3f\n", discovery_ms, snapshot_ms);
         printf(
             "benchmark_stage_ms slm_create=%.3f ssd_to_slm=%.3f "
             "program_setup=%.3f fpga_execute=%.3f slm_to_host=%.3f "

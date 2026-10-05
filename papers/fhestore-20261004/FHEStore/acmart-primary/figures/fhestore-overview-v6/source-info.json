@@ -1,0 +1,11 @@
+{
+  "source": "Author-uploaded Figure 1 replacement, 2026-10-04",
+  "extraction": "Original PNG bytes decoded from the user input_image data URL; no transformation",
+  "session": "rollout-2026-10-04T10-50-39-01a104d2-16af-7740-86b4-595efd656257.jsonl",
+  "session_line": 2055,
+  "dimensions_px": [
+    1089,
+    365
+  ],
+  "sha256": "5ff9764235df0f711acf73bca3adc216b571c87eba7a5ccd4a1526b499e0cc99"
+}

@@ -24,6 +24,7 @@
 
 #include "spdk/hlsacccompute.h"
 #include "spdk/endian.h"
+#include "../../../../../shared_components/lwe_hw_profile.h"
 #include "spdk/hash_table.h"
 
 const struct spdk_nvmf_transport_ops spdk_nvmf_transport_mcdma;
@@ -830,10 +831,12 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
   static int
   mcdma_clear_rx_finish_beat(struct spdk_axi_dma_io *io,
 				    uint32_t completion_bytes,
-				    uint32_t finish_bytes)
+				    uint32_t finish_bytes,
+                            const uint8_t *profile_footer)
   {
 	uint64_t offset;
 	uint32_t remaining;
+        uint32_t cleared = 0;
 
 	if (io == NULL || io->iovs == NULL || io->iovcnt <= 0 ||
 	    finish_bytes == 0 || completion_bytes < finish_bytes) {
@@ -858,7 +861,18 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 	  if (clear_len > iov_len - offset) {
 		clear_len = iov_len - offset;
 	  }
-	  memset((uint8_t *)io->iovs[i].iov_base + offset, 0, clear_len);
+          uint8_t *dst = (uint8_t *)io->iovs[i].iov_base + offset;
+          memset(dst, 0, clear_len);
+          if (profile_footer != NULL) {
+              /* Footer can straddle IOVs. Retain bytes 16..63 only; task
+               * marker/error bytes 0..15 are still stripped as before. */
+              uint32_t begin = cleared < LWE_HW_PROFILE_OFFSET
+                  ? LWE_HW_PROFILE_OFFSET : cleared;
+              uint32_t end = cleared + clear_len;
+              if (end > LWE_HW_FINISH_BYTES) end = LWE_HW_FINISH_BYTES;
+              if (end > begin) memcpy(dst + begin - cleared, profile_footer + begin, end - begin);
+          }
+          cleared += clear_len;
 	  remaining -= clear_len;
 	  offset = 0;
 	}
@@ -936,16 +950,22 @@ int tx_channel_send(struct spdk_hlsacccompute_channel *ch) {
 					  ch->req->request_id,
 					  copy_rc);
 				}
-				int clear_rc = mcdma_clear_rx_finish_beat(
-					io, finish_completion_bytes, finish_beat_bytes);
+                struct lwe_hw_profile hw_profile;
+                const uint8_t *profile_footer = copy_rc == 0 &&
+                    lwe_profile_decode((const uint8_t *)finish_qword,
+                                       finish_beat_bytes, &hw_profile)
+                    ? (const uint8_t *)finish_qword : NULL;
+                int clear_rc = mcdma_clear_rx_finish_beat(
+                    io, finish_completion_bytes, finish_beat_bytes, profile_footer);
 
 				if (clear_rc == 0) {
 				  SPDK_NOTICELOG(
-					  "MCDMA_FINISH_STRIP RX结束包已从输出SLM清零 req=%p request_id=%u payload_offset=%u bytes=%u\n",
+					  "MCDMA_FINISH_STRIP RX结束包已清理 req=%p request_id=%u payload_offset=%u bytes=%u profile_preserved=%s\n",
 					  ch->req,
 					  ch->req->request_id,
 					  payload_bytes,
-					  finish_beat_bytes);
+					  finish_beat_bytes,
+                          profile_footer != NULL ? "yes" : "no");
 				} else {
 				  SPDK_ERRLOG(
 					  "MCDMA_FINISH_STRIP RX结束包清零失败 req=%p request_id=%u completion_bytes=%u finish_bytes=%u rc=%d\n",

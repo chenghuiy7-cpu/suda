@@ -1,0 +1,296 @@
+\documentclass[sigconf,anonymous]{acmart}
+
+% Add the review option above to display reviewer line numbers.
+% Keep anonymous for the double-blind submission.
+% This is a writing template: replace all Writing guide paragraphs.
+\newcommand{\writingguide}[1]{\par\noindent\textit{Writing guide: #1}\par}
+
+% Anonymous FPGA '27 draft: retain ACM's reference block and conference footer.
+% Do not claim a publication license or use unassigned DOI/ISBN placeholders.
+% Replace the rights and publication metadata with ACM's eRights values
+% when preparing the accepted paper.
+\setcopyright{none}
+\settopmatter{printacmref=true,printccs=true,printfolios=true}
+\acmDOI{}
+\acmISBN{}
+% Public conference information for the draft header, from the FPGA'27 CFP.
+% Replace publication metadata with ACM's supplied values after acceptance.
+\acmConference[FPGA '27]{35th ACM/SIGDA International Symposium on Field-Programmable Gate Arrays}{March 14--16, 2027}{California, USA}
+\acmYear{2027}
+\copyrightyear{2027}
+
+\title[FHEStore: Bridging Persistent Data and FHE Accelerators]{FHEStore: Bridging Persistent Data and FHE Accelerators with FPGA-Based Computational Storage}
+
+% Author and affiliation fields are intentionally omitted during review.
+% For the accepted version, remove anonymous and add real author metadata.
+% Add the publication metadata supplied by ACM only after acceptance.
+% \author{Author name}
+% \affiliation{\institution{Institution}\city{City}\country{Country}}
+% \email{author@example.org}
+% \acmSubmissionID{ID supplied by the submission system}
+
+\begin{document}
+
+\begin{abstract}
+Fully homomorphic encryption (FHE) accelerators act as ciphertext consumers, substantially reducing the cost of homomorphic computation. However, producing their inputs from persistent data and processing returned results introduce additional overhead. Conventionally, the host serves as the input producer, using CPU and memory resources for data access, preprocessing, encryption, and buffering. It also decrypts returned results and writes them back to storage. Moreover, ciphertext expansion further increases buffering and data-movement costs.
+
+We present FHEStore, an FPGA-based computational storage system that bridges persistent data and FHE accelerators through storage-side input production and result postprocessing. FHEStore combines storage-side data access with an FPGA streaming datapath to integrate lightweight preprocessing and Fast Fully Homomorphic Encryption over the Torus (TFHE). On the return path, it decrypts results on the FPGA and writes the decrypted results back to persistent storage.
+
+We prototype FHEStore on an FPGA-enabled computational storage device and integrate it with a remote homomorphic processing unit (HPU). For TFHE encryption of unsigned 8-bit data with a batch size of 4~KiB, the FPGA encryption engine achieves a $5.33\times$ speedup over host CPU-based encryption. In the evaluated end-to-end input production workflow, FHEStore achieves a $3.26\times$ speedup over the host-based baseline. We also demonstrate homomorphic computation on the remote HPU using FHEStore-generated ciphertexts.
+\end{abstract}
+
+% Draft CCS selections. Generate the matching CCSXML through ACM's CCS
+% tool before preparing the submission metadata.
+\ccsdesc[500]{Hardware~Reconfigurable logic and FPGAs}
+\ccsdesc[300]{Information systems~Storage architectures}
+\ccsdesc[300]{Security and privacy~Cryptography}
+\keywords{Fully homomorphic encryption, TFHE, FPGA, high-level synthesis, computational storage, streaming dataflow}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+Fully homomorphic encryption (FHE) enables a data owner to outsource computation over encrypted data without revealing the plaintext to the evaluator. For applications backed by persistent data, using an FHE accelerator involves two paths around homomorphic computation. An input producer accesses application data and generates the ciphertexts that the accelerator consumes. On the return path, result ciphertexts are decrypted and the recovered values are written back to storage. Input production and result postprocessing thus connect persistent application data with encrypted computation, and their costs remain part of the application workflow.
+
+Dedicated hardware research addresses the execution cost of plaintext--ciphertext conversion through specialized encryption and decryption architectures~\cite{mert2020bfv,lee2023ckks,feryputri2025lwe,syafalni2026multicore}. Specialized arithmetic and parallel datapaths make cryptographic conversion a practical acceleration target across FHE schemes. Translating that acceleration into an application benefit also requires connecting the operators to data preparation, ciphertext delivery, and result recovery. The cost of those surrounding stages depends on where conversion is placed and how data are handed between stages.
+
+Research on memory-aware FHE accelerators complements arithmetic acceleration by optimizing data reuse, memory access, and traffic during homomorphic computation~\cite{xu2026hera,zhou2023fhemem,vanbeirendonck2023fpt,kim2022bts,kim2022ark}. This work establishes the expanded ciphertext representation and large cryptographic working sets, including evaluation keys, as architectural concerns alongside arithmetic. The resulting data layouts, memory organizations, and streaming schedules improve the execution of homomorphic programs. Their optimization boundary centers on the working set consumed by encrypted computation. Application workflows additionally need to generate input ciphertexts from persistent data and convert returned ciphertexts into persistent results; organizing these paths is a complementary systems problem.
+
+Client-side systems further combine cryptographic acceleration with encoding, memory organization, streaming, buffering, or client--server communication~\cite{krieger2024aloha,yune2025abcfhe,vanderhagen2022choco,gupta2024memfhe}. Their client-side processing paths connect cryptographic stages to memory or communication interfaces. For applications whose inputs and outputs reside in persistent storage, the design boundary also encompasses data access and preprocessing before encryption, as well as result write-back after decryption. Integrating these stages with conversion extends the coordination problem from client processing to persistent-data input production and result postprocessing.
+
+This broader boundary couples cryptographic execution with host resource use. In a conventional host-based workflow, CPU software reads and preprocesses stored plaintext, encodes and encrypts the values, and stages ciphertexts for accelerator delivery. It also decrypts returned ciphertexts and writes the recovered values back to storage. Host memory holds plaintext, ciphertexts, and intermediate buffers across these stages; ciphertext expansion increases the volume handled at their interfaces. Offloading encryption and decryption moves their cryptographic computation off the host CPU, while the placement and coordination of the operators determine the buffering and data handoffs required around them. Our objective is therefore to accelerate TFHE encryption and decryption while reducing host CPU work, host-memory buffering, and intermediate data movement between persistent storage and FHE accelerators. Meeting this objective requires jointly designing cryptographic operators and their placement within the input and return paths.
+
+We present FHEStore, an FPGA-based computational storage system that integrates cryptographic acceleration with storage-side input production and result postprocessing. FHEStore implements TFHE encryption and decryption~\cite{chillotti2020tfhe} as hardware operators using high-level synthesis (HLS), with plaintext encoding integrated into encryption. The input streaming datapath connects storage-side data access and lightweight preprocessing to FPGA ciphertext generation. The return datapath connects FPGA decryption of returned ciphertexts to persistent result write-back. A control path coordinates operator execution and data handling, supporting an application workflow from persistent inputs through ciphertext handoff to recovered-result write-back.
+
+\begingroup
+\setlength{\leftmargini}{1.2em}
+\setlength{\listisep}{2pt}
+\setlength{\partopsep}{0pt}
+\setlength{\itemsep}{2pt}
+\setlength{\parsep}{0pt}
+We summarize the contributions of this work as follows:
+\begin{itemize}
+  \item \textbf{HLS encryption and decryption.} We develop streaming TFHE operators that integrate plaintext encoding with encryption and offload encryption and decryption from the host CPU.
+  \item \textbf{Streaming datapaths and application control.} We organize storage access, lightweight preprocessing, and cryptographic operators into storage-side input and return streams, with control supporting ciphertext handoff and decrypted-result write-back for applications.
+  \item \textbf{Prototype and evaluation.} We prototype FHEStore on an FPGA-enabled computational storage device and demonstrate computation on a remote homomorphic processing unit (HPU) using FHEStore-generated ciphertexts. For unsigned 8-bit inputs in 4~KiB plaintext batches, FPGA TFHE encryption and end-to-end input production achieve $5.33\times$ and $3.26\times$ speedups over host CPU encryption and host input production, respectively.
+\end{itemize}
+\endgroup
+
+\section{Background and Motivation}
+\label{sec:background}
+\subsection{FHE and TFHE Fundamentals}
+FHE provides key generation, encryption, homomorphic evaluation, and decryption~\cite{gentry2009fhe}. Let $k_{\mathrm{enc}}$, $k_{\mathrm{dec}}$, and $k_{\mathrm{eval}}$ denote the scheme's encryption, decryption, and evaluation key material. For messages $m_1,\ldots,m_t$, form $c_i\leftarrow\operatorname{Enc}_{k_{\mathrm{enc}}}(m_i)$ and $c_f\leftarrow\operatorname{Eval}_{k_{\mathrm{eval}}}(f,c_1,\ldots,c_t)$. With valid parameters, an exact scheme satisfies the following relation for a supported computation $f$, with overwhelming probability over its randomness:
+\begin{equation}
+  \operatorname{Dec}_{k_{\mathrm{dec}}}(c_f)=f(m_1,\ldots,m_t).
+  \label{eq:fhe-correctness}
+\end{equation}
+Encoding maps application values into the scheme's message representation; decoding maps decrypted messages back into application values.
+
+TFHE operates over the torus $\mathbb{T}=\mathbb{R}/\mathbb{Z}$ and uses learning-with-errors (LWE) and ring-based ciphertexts, with bootstrapping to control noise during homomorphic computation~\cite{chillotti2020tfhe}. A representative building block is secret-key torus-LWE encryption. Let $\mu=\operatorname{Encode}(m)$ belong to a discrete message space $\mathcal{M}\subset\mathbb{T}$, and let $\mathbf{s}\in\mathbb{Z}^{n}$ be the secret key. Sampling a uniform mask $\mathbf{a}\in\mathbb{T}^{n}$ and an error $e$ from the scheme's noise distribution yields the ciphertext
+\begin{equation}
+  c=(\mathbf{a},b),\qquad
+  b=\langle\mathbf{a},\mathbf{s}\rangle+\mu+e\pmod{1}.
+  \label{eq:torus-lwe-encryption}
+\end{equation}
+Decryption computes the ciphertext's phase,
+\begin{equation}
+  \phi_{\mathbf{s}}(c)=b-\langle\mathbf{a},\mathbf{s}\rangle
+  =\mu+e\pmod{1},
+  \label{eq:torus-lwe-phase}
+\end{equation}
+and recovers the nearest element of $\mathcal{M}$ under the torus distance before decoding the application value. Recovery succeeds when the phase remains within the encoded message's decision region~\cite{chillotti2020tfhe}.
+
+These operations expose distinct tasks for hardware: encoding, randomness generation, and key-dependent accumulation on encryption; phase recovery and decoding on decryption. In this torus-LWE representation, a ciphertext contains $n+1$ coefficients. Its serialized size depends on the coefficient precision and cryptographic parameters, while the number of ciphertexts needed for application data depends on the encoding. These choices determine both the cryptographic workload and the volume handled by buffers and transfer interfaces.
+
+\subsection{Existing FHE Producer--Consumer Workflows}
+Outsourced FHE systems commonly place encoding, encryption, decryption, and decoding in the data owner's trusted domain, while a server performs homomorphic computation~\cite{krieger2024aloha,yune2025abcfhe,gupta2024memfhe}. We describe this organization through a producer--consumer view: the input producer prepares ciphertexts, the evaluator consumes them to execute an encrypted program, and the owner recovers the returned results. The evaluator receives the ciphertexts and any required evaluation material, while the decryption key remains within the owner's trusted domain.
+
+Existing implementations realize these roles through different processing and memory interfaces. Client-side accelerators connect encoding and cryptographic conversion to software control, local memory, or external-memory transfers~\cite{krieger2024aloha,yune2025abcfhe}. FHE computation accelerators schedule encrypted operations over ciphertexts and evaluation keys supplied to their memory systems~\cite{xu2026hera,zhou2023fhemem,vanbeirendonck2023fpt}. Across this boundary, the producer and consumer must agree on cryptographic parameters, message encoding, and ciphertext layout. Client-aided execution can also introduce intermediate exchanges in which the client decrypts, processes, and re-encrypts values before computation resumes~\cite{vanderhagen2022choco}.
+
+For the persistent-data workload considered here, input production begins with stored application data and includes access and preprocessing before encoding and encryption. Result postprocessing recovers application values through decryption and decoding and writes them back to persistent storage. Storage access, cryptographic conversion, and accelerator communication consequently form connected stages. Their interfaces determine where plaintext and ciphertext batches are buffered, how work is submitted, and when results become available to the application. This workflow provides the system context for placing conversion alongside persistent-data access.
+
+\subsection{Computational Storage and Application Integration}
+Computational storage couples processing with storage to offload host work or reduce data movement~\cite{snia2025csmodel}. By executing operations along the storage-access path, it can process data where they are stored or accessed, instead of requiring host software to perform every transformation after a conventional read. The processing interface connects persistent data to an executable task, with task completion coordinated with the surrounding application.
+
+Typical operations include filtering, statistical aggregation, feature selection, and decompression~\cite{ruan2019insider}. These operations combine storage access with application processing: a read can deliver selected or transformed data, and a write can incorporate processing before data are stored. The benefit depends on the operation and its output representation. Filtering can shrink the returned data, whereas a representation-changing operation can produce a larger output.
+
+Application integration requires abstractions for accessing data, configuring processing, and obtaining results. FPGA storage frameworks provide examples through virtual-file access, C++ interfaces with data and parameter streams, and unified HLS interfaces for memory and storage~\cite{ruan2019insider,wong2024dongle}. Such interfaces allow application code to express processing tasks and data access while the framework coordinates transfers and hardware execution. Usability therefore depends on how the system exposes task parameters, input and output locations, and completion semantics alongside the processing operators.
+
+This combination of data access and programmable processing suits the FHE workflow described above. On the input path, storage access and preprocessing can feed encoding and encryption; on the return path, decryption and decoding can feed result write-back. Encryption expands the representation, so operator placement determines the intermediate handoffs and buffering around the required ciphertext exchange. Integrating cryptographic operators with storage-side streams and application control is the basis of FHEStore's architecture, presented in Section~\ref{sec:architecture}.
+
+\section{System Overview}
+\label{sec:architecture}
+
+FHEStore connects persistent-data access to storage-side input production and result postprocessing. Its input path connects storage access and optional preprocessing to FPGA encoding and TFHE encryption; its return path connects FPGA decryption and decoding to result write-back. The host coordinates CSD execution and ciphertext handoffs to and from the external consumer.
+
+\subsection{System Organization}
+\label{subsec:system-organization}
+
+Figure~\ref{fig:pipeline} shows the system boundaries and the control and data paths. FHEStore comprises an FPGA-based computational storage device (CSD) and the host software that coordinates its operators and ciphertext handoffs. The remote server represents an external prototype for privacy-preserving outsourced computation with a homomorphic accelerator. The CSD combines persistent storage, device-local buffers, a device runtime, and an FPGA operator pool. The input producer reads stored data, applies lightweight preprocessing when requested, and supplies application values to encoding and encryption. On the return path, decryption and decoding recover application values for persistent write-back.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fhestore-overview-v6/fhestore-overview.png}
+  \caption{FHEStore system organization. FHEStore comprises the CSD and coordinating host software, connected over PCIe. The host relays ciphertexts over a network to an external computation service and returns result ciphertexts to the CSD. Blue arrows denote data flow; gray arrows denote control flow, including task submission and completion.}
+  \Description{The CSD contains a device runtime and a storage-side data path with persistent data and an operator pool. The host contains an application, a task runtime, and a ciphertext relay. The application submits work to the task runtime and receives completion notifications. The host submits tasks over PCIe to the device runtime and receives task completion. The device runtime configures storage-side execution and receives completion status. Input ciphertexts flow from the CSD operator pool through the host relay to an external computation endpoint. Result ciphertexts return through the host to the CSD for decryption, decoding, and write-back.}
+  \label{fig:pipeline}
+\end{figure*}
+
+The host coordinates application control and ciphertext communication. Its task runtime submits device work and receives execution completion. Its ciphertext relay retrieves generated ciphertexts from the CSD and stages returned ciphertexts for the CSD's decryption path. PCIe carries task submission, completion, and ciphertext transfers between the host and CSD; the host connects the relay to the external service over a network.
+
+Following the producer--consumer organization in Section~\ref{sec:background}, FHEStore assumes that the host and CSD belong to the data owner's trusted domain. Input plaintext, recovered results, and secret-key material are handled within this domain. The host loads the LWE secret key $\mathbf{s}$ locally and supplies it to the CSD's cryptographic operators through their execution contexts.
+
+\subsection{Application Task Model}
+\label{subsec:application-task}
+
+An application specifies a task $T=(D,Q,E,O)$. $D$ identifies the stored input and its record schema. $Q$ specifies selection predicates and projected fields when preprocessing is requested. $E$ identifies the encoding and cryptographic parameter preset. $O$ specifies ciphertext delivery or an outsourced operation and a destination for recovered results. These descriptions express the application request independently of device endpoints, batch sizes, and transfer settings chosen by the runtime.
+
+For example, a selective-update task can read a range of records, select those satisfying predicates over integer fields, and encrypt a projected unsigned 8-bit field. The task also specifies where the recovered values should be written after the outsourced operation.
+
+For a selective task, let $r_0,\ldots,r_{N-1}$ denote the source records. The predicate in $Q$ selects $M$ records, and $\pi_Q$ projects their chosen field. Let $\mathcal{I}_Q=(i_0,\ldots,i_{M-1})$ list their indices in source order. With configuration $E$ and local secret key $\mathbf{s}$, the input producer emits
+\begin{equation}
+  c_j \leftarrow \operatorname{Enc}_{\mathbf{s},E}\!\left(
+    \operatorname{Encode}_{E}\!\left(\pi_Q(r_{i_j})\right)
+  \right),\quad 0\leq j<M.
+  \label{eq:task-ciphertexts}
+\end{equation}
+Here, $c_j$ denotes the ciphertext bundle representing one application value. Encoding produces the message blocks for that value, and encryption applies to each block using the LWE representation in Equation~\ref{eq:torus-lwe-encryption}. The host retains $\mathcal{I}_Q$ alongside the ciphertext sequence. For an elementwise update, the $j$th returned value corresponds to record $i_j$, allowing result postprocessing to place it in the selected field of that record.
+
+\subsection{Operator Graphs and Device Execution}
+\label{subsec:operator-execution}
+
+The task runtime translates $T$ into an operator program, operator contexts, and input and output memory ranges. The program specifies operator types and their stream connections. Contexts carry the record layout from $D$, selection and projection settings from $Q$, and cryptographic configuration from $E$. Memory ranges bind an invocation to device-local buffers and byte extents. The host submits these objects to the device runtime, which configures FPGA execution.
+
+For selective input production, the graph connects filtering and projection directly to encoding and encryption, keeping their data handoff inside the CSD. The selected count and the per-value ciphertext size specified by $E$ determine the generation program's output extent. The selected record indices provide the mapping $\mathcal{I}_Q$ used for result placement. Tasks without preprocessing use a single cryptographic operator.
+
+The output action $O$ determines how execution proceeds after ciphertext generation. For tasks that invoke outsourced computation, the host relays generated ciphertexts to the external service and transfers returned ciphertexts into the input range of a separate CSD decryption program. FPGA decryption and decoding produce recovered application values in its output range. For contiguous outputs, the device copies this buffer to the designated SSD range. For selected-record updates, the host uses $\mathcal{I}_Q$ to merge recovered values into destination record pages while preserving unselected records and other fields.
+
+Completion is reported to the application when the output requested by $O$ is available. A generation-only task completes with its ciphertexts and, when selection is used, its record mapping; an update task also waits for result recovery and destination I/O.
+
+\section{FPGA Design and Implementation}
+\label{sec:implementation}
+\subsection{Integrated Encoding and Encryption}
+The FPGA encryption engine transforms preprocessed application values into TFHE ciphertexts, with encoding integrated into the encryption implementation. The engine is implemented using high-level synthesis (HLS). Its measured encryption performance is reported separately from the storage-side input-preparation path so that hardware computation and system integration can be assessed at their respective boundaries.
+\writingguide{Present the HLS datapath and the implemented TFHE encryption algorithm. Specify arithmetic precision, encoding, key and parameter storage, randomness generation, and hardware parallelism. Document only optimizations present in the design and verify that randomness meets the scheme's requirements.}
+
+\subsection{Result Decryption Engine}
+The FPGA decryption engine recovers plaintext results from ciphertexts returned by the remote HPU. Its output feeds persistent write-back, completing the storage-side result-processing path.
+\writingguide{Describe the HLS decryption datapath, supported result representation, decoding, key access, and handoff to storage write-back. Report its latency, throughput, and resource usage separately when measurements are available.}
+
+\subsection{HLS Mapping and Hardware Integration}
+The prototype places the FPGA engines on an FPGA-enabled computational storage device and connects the system to a remote HPU. Table~\ref{tab:implementation} lists the implementation details needed to interpret and reproduce the reported measurements.
+\writingguide{Report the HLS tool version, requested and achieved clock frequencies, initiation intervals, buffers, and interfaces for each engine. Separate synthesis estimates from measured implementation results. Identify resources shared by the engines.}
+
+\begin{table}[t]
+  \caption{Implementation details to complete before submission.}
+  \label{tab:implementation}
+  \centering
+  \small
+  \begin{tabular}{p{0.47\columnwidth}p{0.36\columnwidth}}
+    \toprule
+    Item & Status \\
+    \midrule
+    FPGA board and device & To be supplied \\
+    Storage-side execution platform & To be supplied \\
+    HLS tool and version & To be supplied \\
+    Achieved clock frequency & To be supplied \\
+    LUT / FF / BRAM / DSP use & To be supplied \\
+    TFHE parameters & To be supplied \\
+    Host CPU and software & To be supplied \\
+    Storage and interconnect & To be supplied \\
+    Remote HPU and transport & To be supplied \\
+    Result write-back semantics & To be supplied \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Experimental Evaluation}
+\label{sec:evaluation}
+\subsection{Experimental Setup and Baselines}
+The evaluation examines FPGA encryption performance, end-to-end input preparation, and interoperability with the remote HPU. The engine comparison measures the efficiency of FPGA TFHE encryption. The input-preparation comparison measures FHEStore's storage-side input path, and the HPU demonstration exercises homomorphic computation with its generated ciphertexts.
+\writingguide{Complete Table~\ref{tab:implementation}. Specify the CPU baseline library, thread count, compiler settings, equivalent TFHE parameters and work, batch interpretation, cache state, repetitions, and summary statistic. Describe the storage input, preprocessing workload, HPU operation, and output destination.}
+
+\subsection{Metrics and Measurement Boundaries}
+Latency speedup is defined as
+\begin{equation}
+  S_b = \frac{T_{\mathrm{host},b}}{T_{\mathrm{FHEStore},b}},
+  \label{eq:speedup}
+\end{equation}
+where $b$ identifies the measurement boundary and both latencies cover the same operation at that boundary. The encryption-engine comparison measures FPGA encryption against host CPU-based encryption. The end-to-end input-preparation comparison measures FHEStore's input path against the corresponding host-based path. Remote HPU computation, returned-result processing, and persistent result write-back are separate evaluation boundaries.
+\writingguide{State exact start and stop points and report absolute latencies for both measured speedups. Clarify the inclusion of storage I/O, preprocessing, setup, transfers, and ciphertext delivery. For a complete workflow measurement, time from input access to the specified result-persistence point; do not sum stage times if execution overlaps.}
+
+\subsection{TFHE Encryption and Input-Preparation Results}
+Table~\ref{tab:results} reports encryption and input-preparation speedups for \texttt{u8} data with a 4~KiB (4096-byte) plaintext-input batch.
+
+\begin{table}[t]
+  \caption{TFHE encryption and end-to-end input-preparation speedups over the corresponding host baselines for unsigned 8-bit inputs with a 4~KiB plaintext batch.}
+  \label{tab:results}
+  \centering
+  \small
+  \begin{tabular}{p{0.50\columnwidth}cr}
+    \toprule
+    Measurement & Batch & Speedup \\
+    \midrule
+    FPGA encryption vs. host CPU encryption & 4~KiB & $5.33\times$ \\
+    End-to-end input preparation vs. host baseline & 4~KiB & $3.26\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The FPGA encryption engine achieves a $5.33\times$ speedup over host CPU-based encryption. At the system level, FHEStore achieves a $3.26\times$ speedup in end-to-end input preparation over the host-based baseline. These results establish faster encryption and faster preparation of persistent inputs in the evaluated configuration.
+\writingguide{Add absolute latency and throughput results, repetitions or uncertainty estimates, and a stage breakdown. Specify whether throughput is expressed as plaintext bytes, application values, or ciphertext bytes per second.}
+
+\subsection{Remote HPU Demonstration}
+We demonstrate homomorphic computation on the remote HPU using ciphertexts generated by FHEStore. The demonstration connects storage-side input preparation to the HPU interface.
+\writingguide{Describe the demonstrated HPU operation, parameters, input values, and execution procedure. Compare decrypted outputs with plaintext reference results, and state whether the demonstration includes FPGA result decryption and persistent write-back. Report transfer and HPU execution times separately if measured.}
+
+\subsection{Result Decryption and Write-Back}
+FHEStore's output path receives result ciphertexts, decrypts them on the FPGA, and writes the plaintext results to persistent storage. The corresponding latency boundary runs from result receipt through decryption to the specified storage-completion point.
+\writingguide{Measure FPGA decryption, result handling, storage write-back, and combined output-postprocessing latency against the corresponding host-based path. Verify persisted output values and state the persistence completion condition. Do not claim an output-path or full-workflow speedup without these measurements.}
+
+\subsection{Host CPU Utilization and Data Movement}
+\writingguide{Measure host CPU utilization consistently across the baseline and FHEStore for input preparation and output postprocessing. Report absolute utilization and define any reduction. Measure plaintext and ciphertext traffic at each relevant boundary, including the remote HPU connection. No utilization or traffic-reduction percentage is currently available.}
+
+\subsection{Placement, Selectivity, and Batch Size}
+\writingguide{Compare supported alternative placements, vary preprocessing selectivity where applicable, and sweep batch sizes. Measure latency, throughput, host utilization, and transfer volume. Separate FPGA acceleration from storage-side placement with an ablation where supported, and examine result size and remote transport effects.}
+
+\subsection{Correctness and Limitations}
+The performance measurements use unsigned 8-bit inputs with a 4~KiB plaintext batch and characterize TFHE encryption and input preparation. The remote HPU demonstration establishes integration for the demonstrated computation. Output-postprocessing latency and complete read--compute--write latency remain to be measured.
+\writingguide{Describe encryption/decryption checks, HPU compatibility tests, and verification of persisted results. State workload and parameter coverage, trust assumptions, and conditions under which storage access, ciphertext expansion, transport, or result write-back limits performance.}
+
+\section{Related Work}
+\label{sec:related}
+FHEStore connects persistent data to FHE accelerators through storage-side input preparation and result postprocessing. The relevant comparison axes are computation scope, data-path placement, and accelerator integration. These axes connect FHEStore to work on FHE computation accelerators, FPGA encryption/decryption engines, and computational storage.
+\writingguide{Add primary-paper citations and compare input/output scope, storage-side placement, remote accelerator integration, cryptographic parameters, and measured operations. Distinguish input-encryption acceleration from homomorphic-computation acceleration, and compare speedups only at compatible measurement boundaries.}
+
+\section{Conclusion}
+\label{sec:conclusion}
+FHEStore bridges persistent data and FHE accelerators through FPGA-based computational storage. Its input path combines storage-side data access, lightweight preprocessing, and TFHE encryption; its output path decrypts returned result ciphertexts on the FPGA and writes the decrypted results to persistent storage. The prototype is integrated with a remote HPU and demonstrates homomorphic computation using FHEStore-generated ciphertexts. For unsigned 8-bit data with a 4~KiB batch, the FPGA encryption engine achieves a $5.33\times$ speedup over host CPU-based encryption, and the evaluated end-to-end input preparation achieves a $3.26\times$ speedup over the host-based baseline.
+% Update the conclusion when output-postprocessing and full-workflow
+% measurements are available. Keep the input speedups at their measured scope.
+
+% Do not expose acknowledgments or identifying grant information in review.
+% Add this environment, with real content, in the accepted version.
+% \begin{acks}
+% Acknowledge funding and assistance here.
+% \end{acks}
+
+% Start balancing in a first column, deferring if references start in a second.
+\makeatletter
+\if@firstcolumn
+  \balance
+\else
+  \AddToHookNext{shipout/after}{\balance}
+\fi
+\makeatother
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{FHEStore_refs}
+
+% Optional appendix: keep only material useful for reviewing the paper.
+% Check the conference's page-limit rules before adding supplementary text.
+\appendix
+\section{Reproducibility Details}
+\label{app:reproducibility}
+\writingguide{Provide commands, TFHE parameters, input data, preprocessing settings, FPGA build details, and timing procedures. Document the HPU operation, ciphertext exchange, and verification of decrypted and persisted results.}
+
+\end{document}

@@ -267,6 +267,8 @@ int main()
     run_test(LWE_DECRYPT_INPUT_CPU_PADDED, 1, false, false, true);
     run_test(LWE_DECRYPT_INPUT_CPU_PADDED, 1, false, false, false, false, false, true);
     run_test(LWE_DECRYPT_INPUT_CPU_LWE, 1, false, false, false, false, true);
+    run_test(LWE_DECRYPT_INPUT_CPU_LWE, 1, false, true);
+    run_test(LWE_DECRYPT_INPUT_CPU_LWE, 128, false, true);
 #else
     run_test(LWE_DECRYPT_INPUT_HPU_NATIVE, TEST_U8_COUNT, false, false);
     run_test(LWE_DECRYPT_INPUT_HPU_NATIVE, 65, false, false);

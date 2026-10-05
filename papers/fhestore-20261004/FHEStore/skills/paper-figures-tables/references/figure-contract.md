@@ -1,0 +1,88 @@
+# Figure Contract
+
+For a complex figure, capture the scientific purpose, sources, encodings and target placement in existing notes or a short spec. `figure_spec.yaml` below is optional; a simple supplied plot need not create an extra workflow file.
+
+```yaml
+figure:
+  slug: semantic-utility-main
+  manuscript_target: paper/sections/05_experiments.tex
+  placement: main-text
+  target_width: double-column
+  claim: MethodA preserves more allowed task flow than cost-only cover at matched full privacy cover.
+  reader_takeaway: Privacy coverage is matched; the difference is semantic utility preservation.
+  structural_reference: figures/semantic-utility-main/structure.svg
+  background: pure white
+
+source_data:
+  - path: runs/example/test_metrics.json
+    role: primary metrics
+  - path: runs/example/bootstrap.csv
+    role: uncertainty intervals
+
+panels:
+  - id: A
+    plot_type: grouped_bar
+    metrics: [pure_utility_loss, task_flow_preservation, overall_flow_preservation]
+    methods: [MethodA, BaselineA, BaselineB]
+    message: MethodA has lower loss and higher allowed-flow preservation.
+  - id: B
+    plot_type: interval_bar
+    metrics: [baseline_minus_method_loss_margin]
+    message: The paired margin is positive with a non-overlapping CI.
+
+encoding:
+  proposed: MethodA
+  baselines: [BaselineA, BaselineB]
+  color_roles: [method, baseline, neutral]
+  uncertainty: paired bootstrap 95% CI
+
+caption:
+  draft: >
+    Matched full-cover utility comparison. All cover methods satisfy the same privacy-cover constraint;
+    MethodA preserves more task-required and overall allowed flow than cost-only cover.
+
+validation:
+  - Values match source files.
+  - Labels are readable at target width.
+  - Caption does not claim deployable online protection unless the data supports it.
+```
+
+## Decisions When a Spec Helps
+
+- **Purpose:** the comparison, definition, evidence pattern or mechanism the figure lets the reader inspect.
+- **Source data:** exact local paths or generated `source_data.csv`.
+- **Panel map:** panel IDs, plot type, metric, method/condition order, and message.
+- **Structural reference:** include a wireframe when it helps preserve topology; reuse an existing editable diagram source when sufficient.
+- **Typography:** identify text and mathematical roles; verify readable, accurate, manuscript-compatible rendering.
+- **Production record:** preserve source files and record transformations; follow the selected tools' constraints.
+- **Conditions:** assumptions or settings needed to interpret the figure; do not manufacture a list of unclaimed capabilities.
+- **Caption boundary:** what belongs in the paper caption versus artifact audit notes.
+- **Placement:** identify final dimensions and any source-to-placement scaling needed to reproduce the figure.
+- **Final-width evidence:** record the preview and actual evaluator; agent inspection must not be labeled human evidence. Formal manual checks remain governed by the compliance schema.
+
+## Conceptual Figure Structure Policy
+
+Before visual design, record manuscript-supported components, directed/typed
+connections, boundaries, exact labels and the reader takeaway. Classify figure
+type separately from column span; include actual target width, height budget,
+layout choice and how supported information justifies the occupied area.
+An optional `structure.svg` can constrain complex topology.
+
+For new conceptual figures, follow `conceptual-figures.md`: ImageGen visual design
+followed by editable SVG reconstruction. Keep the selected design/prompt and
+content brief as distinct references; content controls semantics, the design
+controls visual fidelity. Check both independently using
+`conceptual-vector-rebuild.md`, then inspect the final placement. Record material
+deviations and residual raster content. Existing small editable-source changes
+and explicit user/venue requirements follow the workflow's scoped exceptions.
+
+## Source Data Policy
+
+- Prefer copying a small plot-ready table to `source_data.csv` when the raw artifact is large or nested.
+- Preserve the raw artifact path in `figure_spec.yaml`.
+- Put transformations in the plotting script, not in undocumented manual edits.
+- Use stable method labels that match the paper text.
+
+## Caption Policy
+
+Use `captions.md` for the artifact type. Explain the setup, encodings and conditions needed to read the figure. Include a result or interpretation when helpful; do not require a takeaway or anticipatory disclaimer in every caption.

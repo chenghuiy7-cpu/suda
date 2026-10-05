@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "devices": {
+    "admin": "nvmq0",
+    "io": "nvmq0n1"
+  },
+  "batch_records": 128,
+  "transport": {
+    "read_chunk_bytes": 16777216,
+    "write_chunk_bytes": 16777216,
+    "read_queue_depth": 1
+  },
+  "benchmark": true
+}

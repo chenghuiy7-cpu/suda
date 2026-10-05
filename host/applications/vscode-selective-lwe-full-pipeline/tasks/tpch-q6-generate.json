@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "data": {
+    "nsid": 1,
+    "lba": 65536,
+    "records": 128,
+    "record_bytes": 512,
+    "schema": [
+      {
+        "name": "orderkey",
+        "type": "u64",
+        "offset": 0
+      },
+      {
+        "name": "partkey",
+        "type": "u64",
+        "offset": 8
+      },
+      {
+        "name": "suppkey",
+        "type": "u64",
+        "offset": 16
+      },
+      {
+        "name": "linenumber",
+        "type": "u8",
+        "offset": 24
+      },
+      {
+        "name": "quantity",
+        "type": "u8",
+        "offset": 25
+      },
+      {
+        "name": "returnflag",
+        "type": "u8",
+        "offset": 26
+      },
+      {
+        "name": "linestatus",
+        "type": "u8",
+        "offset": 27
+      },
+      {
+        "name": "shipmode_code",
+        "type": "u8",
+        "offset": 28
+      },
+      {
+        "name": "shipinstruct_code",
+        "type": "u8",
+        "offset": 29
+      },
+      {
+        "name": "extendedprice_cents",
+        "type": "u64",
+        "offset": 32
+      },
+      {
+        "name": "discount_bp",
+        "type": "u16",
+        "offset": 40
+      },
+      {
+        "name": "tax_bp",
+        "type": "u16",
+        "offset": 42
+      },
+      {
+        "name": "shipdate",
+        "type": "u32",
+        "offset": 44
+      },
+      {
+        "name": "commitdate",
+        "type": "u32",
+        "offset": 48
+      },
+      {
+        "name": "receiptdate",
+        "type": "u32",
+        "offset": 52
+      },
+      {
+        "name": "source_row",
+        "type": "u64",
+        "offset": 56
+      }
+    ]
+  },
+  "query": "SELECT quantity FROM lineitem WHERE shipdate >= 19940101 AND shipdate < 19950101 AND discount_bp >= 500 AND discount_bp <= 700 AND quantity < 24",
+  "encryption": {
+    "preset": "psi64-big-lwe-u8",
+    "key_ref": "../../../../device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin",
+    "layout": "hpu-native"
+  },
+  "downstream": {
+    "mode": "generate",
+    "output_dir": "../task-results"
+  }
+}

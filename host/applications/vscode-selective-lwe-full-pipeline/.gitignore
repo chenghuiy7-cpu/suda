@@ -2,3 +2,6 @@ vscode-selective-lwe-full-pipeline
 *.o
 *.log
 *.bin
+
+task-results/
+__pycache__/
