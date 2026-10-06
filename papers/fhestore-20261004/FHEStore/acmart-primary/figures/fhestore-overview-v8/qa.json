@@ -1,0 +1,25 @@
+{
+  "evaluator": "Agent: architecture_outline",
+  "semantic_check": "PASS against author revision handoff and v6 baseline",
+  "forward_data_edges": 3,
+  "control_edges": 8,
+  "physical_pcie_edges": 2,
+  "pool_control_endpoints": [
+    [
+      288,
+      236
+    ],
+    [
+      317,
+      236
+    ]
+  ],
+  "native_model_check": "No embedded image; all scientific and physical edges source/target connected",
+  "large_preview": "fhestore-overview.png",
+  "placement_preview": "final-width-preview.png",
+  "placement_mm": [
+    178,
+    60.47750229568411
+  ],
+  "residual_limitations": "No human sign-off; inherited small control labels preserve v6 style"
+}

@@ -1,0 +1,28 @@
+{
+  "source": "tfhe-encryption-v3/tfhe-encryption.drawio",
+  "source_sha256": "5f9552fc755c57dbda8d099da43b1f76db50a11dfeabe9ad836bdb016e27a98f",
+  "author_reference": "Revised Figure 2 supplied as an inline conversation image on 2026-10-05",
+  "operation": "Synchronize the existing native vector source with the visible author revision",
+  "changes": [
+    "Higher horizontal turn of noise branch before final adder",
+    "Relocated e_ell label",
+    "Shorter lower panels and raised arithmetic title",
+    "Configuration branch without filled junction dot"
+  ],
+  "preserved": [
+    "Input w and output W",
+    "All source/target connections",
+    "Sampler, selector, accumulator, encoding and packetization functions",
+    "Manuscript caption and Description"
+  ],
+  "editable_source": "tfhe-encryption.drawio",
+  "builder": "revise_drawio.py",
+  "exporter": "export_drawio.py",
+  "image_model_used": false,
+  "placement": {
+    "width_mm": 178,
+    "height_mm": 77.29757785467127,
+    "source_width_px": 1156,
+    "source_height_px": 502
+  }
+}

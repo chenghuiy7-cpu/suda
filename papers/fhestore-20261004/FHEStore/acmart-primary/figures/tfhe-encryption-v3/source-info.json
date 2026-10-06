@@ -1,0 +1,17 @@
+{
+  "source": "tfhe-encryption-v2/tfhe-encryption.drawio",
+  "source_sha256": "285cdcbc476326a73bc2c3b8857fe31f6c1f3437d79a90d35610f1be78ce15a4",
+  "author_revision": "Input w, output W; author-supplied edited diagram in conversation",
+  "operation": "Retain native component layout and connections; revise the input-width label",
+  "input": "w-bit application value supplied to the radix encoder by the input adapter",
+  "output": "W-bit ciphertext beat emitted by the packetizer",
+  "renderer": "Official diagrams.net viewer + mxCodec/mxImageExport; rsvg-convert exports",
+  "editable_source": "tfhe-encryption.drawio",
+  "builder": "revise_drawio.py",
+  "exporter": "export_drawio.py",
+  "image_model_used": false,
+  "placement": {
+    "width_mm": 178,
+    "height_mm": 80.52380952380952
+  }
+}

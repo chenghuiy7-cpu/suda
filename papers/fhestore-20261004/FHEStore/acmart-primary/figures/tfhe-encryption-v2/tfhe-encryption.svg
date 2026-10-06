@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="80.5238mm" viewBox="0 6 504 228">
+<title>HLS architecture for TFHE encryption</title>
+<desc>Input and context, mask and noise sources, binary-key selection, dot accumulation with feedback, two body additions, and ciphertext packing.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7.6" refY="4" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 Z" fill="#202020"/></marker></defs>
+<rect x="20" y="10" width="105" height="220" fill="#bcbcbc" stroke="#202020" stroke-width="1.1"/>
+<rect x="129" y="10" width="245" height="76" fill="#bcbcbc" stroke="#202020" stroke-width="1.1"/>
+<rect x="129" y="90" width="245" height="140" fill="#bcbcbc" stroke="#202020" stroke-width="1.1"/>
+<rect x="378" y="10" width="106" height="220" fill="#bcbcbc" stroke="#202020" stroke-width="1.1"/>
+<text x="72.5" y="26" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">INPUT / CONTEXT</text>
+<text x="251.5" y="26" font-family="Arial, Liberation Sans, sans-serif" font-size="10" text-anchor="middle" fill="#202020">SAMPLER</text>
+<text x="251.5" y="222" font-family="Arial, Liberation Sans, sans-serif" font-size="10" text-anchor="middle" fill="#202020">ARITHMETIC</text>
+<text x="431" y="26" font-family="Arial, Liberation Sans, sans-serif" font-size="10" text-anchor="middle" fill="#202020">CIPHERTEXTS</text>
+<rect x="30" y="40" width="80" height="28" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="70" y="52" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Secret key</text>
+<text x="70" y="63" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">s₀, …, sₙ₋₁</text>
+<rect x="30" y="78" width="80" height="27" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="70" y="90" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Config / seed</text>
+<text x="70" y="101" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">n, Δ</text>
+<polyline points="110,91 117,91 117,33 150,33 150,42" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="117,33 281,33 281,42" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<circle cx="117" cy="33" r="1.6" fill="#202020"/>
+<polyline points="110,54 121,54 121,97 170,97 170,112.8" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="176" y="106" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">sᵢ</text>
+<rect x="30" y="133" width="80" height="58" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="70" y="147" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Radix encoder</text>
+<text x="70" y="162" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">w → K × p</text>
+<text x="70" y="179" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">μ<tspan baseline-shift="sub" font-size="6.8">ℓ</tspan> = d<tspan baseline-shift="sub" font-size="6.8">ℓ</tspan>Δ</text>
+<polyline points="1,153 30,153" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="12,156 16,150" fill="none" stroke="#202020" stroke-width="0.9" stroke-linejoin="miter"/>
+<text x="14" y="147" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="middle" fill="#202020">W</text>
+<rect x="143" y="42" width="83" height="28" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="184.5" y="59" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Mask PRNG</text>
+<rect x="270" y="42" width="79" height="28" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="309.5" y="59" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Noise source</text>
+<polyline points="184.5,70 184.5,102 145,102 145,123 156,123" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="181.5,98 187.5,94" fill="none" stroke="#202020" stroke-width="0.9" stroke-linejoin="miter"/>
+<text x="189.5" y="99" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="start" fill="#202020">q</text>
+<text x="195" y="75" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="start" fill="#202020">aᵢ</text>
+<circle cx="184.5" cy="78" r="1.6" fill="#202020"/>
+<polyline points="309.5,70 309.5,74 359,74 359,179 333,179 333,182" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="363" y="167" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="start" fill="#202020">e<tspan baseline-shift="sub" font-size="6.8">ℓ</tspan></text>
+<polyline points="184.5,78 354,78" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter"/>
+<path d="M354,78 Q359,90 364,78" fill="none" stroke="#bcbcbc" stroke-width="3.5"/>
+<path d="M354,78 Q359,90 364,78" fill="none" stroke="#202020" stroke-width="1"/>
+<polyline points="364,78 368,78 368,137 395,137" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polygon points="156,110 184,116.8 184,137.2 156,144" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="143" y="140" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">0</text>
+<polyline points="147,136 156,136" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="184,127 207,127" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<circle cx="217" cy="127" r="10" fill="#ffffff" stroke="#202020" stroke-width="1.1"/>
+<text x="217" y="131.5" font-family="Arial, Liberation Sans, sans-serif" font-size="15" text-anchor="middle" fill="#202020">+</text>
+<rect x="253" y="116" width="52" height="22" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="279" y="131" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">dot</text>
+<polyline points="227,127 253,127" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="305,127 315,127 315,103 217,103 217,117" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<circle cx="315" cy="127" r="1.6" fill="#202020"/>
+<polyline points="315,127 315,173 263,173 263,182" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="110,172 241,172 241,192 253,192" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="191" y="166" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">μ<tspan baseline-shift="sub" font-size="6.8">ℓ</tspan></text>
+<polyline points="226,175 230,169" fill="none" stroke="#202020" stroke-width="0.9" stroke-linejoin="miter"/>
+<text x="228" y="166" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="middle" fill="#202020">q</text>
+<circle cx="263" cy="192" r="10" fill="#ffffff" stroke="#202020" stroke-width="1.1"/>
+<text x="263" y="196.5" font-family="Arial, Liberation Sans, sans-serif" font-size="15" text-anchor="middle" fill="#202020">+</text>
+<polyline points="273,192 323,192" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<circle cx="333" cy="192" r="10" fill="#ffffff" stroke="#202020" stroke-width="1.1"/>
+<text x="333" y="196.5" font-family="Arial, Liberation Sans, sans-serif" font-size="15" text-anchor="middle" fill="#202020">+</text>
+<polyline points="343,192 395,192" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="382" y="185" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">b</text>
+<polyline points="361,195 365,189" fill="none" stroke="#202020" stroke-width="0.9" stroke-linejoin="miter"/>
+<text x="363" y="186" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="middle" fill="#202020">q</text>
+<rect x="395" y="95" width="76" height="112" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="433" y="109" font-family="Arial, Liberation Sans, sans-serif" font-size="9" text-anchor="middle" fill="#202020">Packetizer</text>
+<text x="433" y="125" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">q → W</text>
+<rect x="403" y="148" width="15" height="17" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="410.5" y="160" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">q</text>
+<rect x="418" y="148" width="15" height="17" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="425.5" y="160" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">q</text>
+<rect x="433" y="148" width="15" height="17" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="440.5" y="160" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">…</text>
+<rect x="448" y="148" width="15" height="17" fill="#ffffff" stroke="#202020" stroke-width="1"/>
+<text x="455.5" y="160" font-family="Arial, Liberation Sans, sans-serif" font-size="8.8" text-anchor="middle" fill="#202020">q</text>
+<text x="433" y="181" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="middle" fill="#202020">a₀, …, aₙ₋₁, b</text>
+<polyline points="471,156 502,156" fill="none" stroke="#202020" stroke-width="1" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<polyline points="489,159 493,153" fill="none" stroke="#202020" stroke-width="0.9" stroke-linejoin="miter"/>
+<text x="491" y="150" font-family="Arial, Liberation Sans, sans-serif" font-size="8.5" text-anchor="middle" fill="#202020">W</text>
+</svg>

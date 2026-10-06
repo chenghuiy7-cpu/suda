@@ -1,0 +1,20 @@
+{
+  "vertices": 77,
+  "edges": 21,
+  "unresolvedEdges": [
+    "cell-37",
+    "cell-38",
+    "cell-40",
+    "cell-43",
+    "cell-49",
+    "cell-52",
+    "cell-53",
+    "cell-54"
+  ],
+  "unrenderedCells": [],
+  "textElements": 41,
+  "rasterElements": 0,
+  "foreignObjects": 0,
+  "renderer": "Official diagrams.net viewer-static.min.js + mxCodec/mxImageExport",
+  "viewerSha256": "5e34069eaeefc1d08ffef6714615b4ec29e36928105a130725201775c149e1e6"
+}

@@ -1,0 +1,221 @@
+{
+  "source": "Author-selected Figure 1 v6 and latest explicit production-only revision",
+  "baseline": "../fhestore-overview-v6/fhestore-overview.png",
+  "baseline_sha256": "5ff9764235df0f711acf73bca3adc216b571c87eba7a5ccd4a1526b499e0cc99",
+  "canvas_units": [
+    1089,
+    370
+  ],
+  "placement_width_mm": 178,
+  "placement_height_mm": 60.47750229568411,
+  "generator": "build_drawio.py",
+  "imagegen_used": false,
+  "native_drawio": true,
+  "baseline_style": "v6 light headers, rectangular components and original colors",
+  "changes": [
+    "configure/execute and complete controls attach to Operator Pool",
+    "Ciphertext Relay renamed Ciphertext Transfer",
+    "remove pool-to-storage, Host-to-CSD and remote-to-Host blue return arrows",
+    "center remaining forward blue data path at y=270"
+  ],
+  "palette": {
+    "csd_fill": "#D6E3F5",
+    "host_fill": "#F7F8FA",
+    "remote_fill": "#E1D6E7",
+    "domain_edge": "#4B5C6B",
+    "remote_edge": "#6D5B7B",
+    "runtime_fill": "#EDF1F5",
+    "data": "#315D83",
+    "control": "#596A7A",
+    "pool_fill": "#D6E9F2",
+    "pool_edge": "#3C6584",
+    "persistent_fill": "#FFF2CC",
+    "storage_edge": "#778897",
+    "accelerator_fill": "#CEE7F2",
+    "accelerator_edge": "#3D6D92"
+  },
+  "topology": [
+    {
+      "id": "pcie-upper",
+      "source": "csd",
+      "target": "host",
+      "kind": "physical",
+      "source_point": [
+        471,
+        29
+      ],
+      "target_point": [
+        533,
+        29
+      ]
+    },
+    {
+      "id": "pcie-lower",
+      "source": "csd",
+      "target": "host",
+      "kind": "physical",
+      "source_point": [
+        471,
+        313
+      ],
+      "target_point": [
+        533,
+        313
+      ]
+    },
+    {
+      "id": "application-submit",
+      "source": "application",
+      "target": "task-runtime",
+      "kind": "control",
+      "source_point": [
+        658,
+        82
+      ],
+      "target_point": [
+        658,
+        111
+      ]
+    },
+    {
+      "id": "application-complete",
+      "source": "task-runtime",
+      "target": "application",
+      "kind": "control",
+      "source_point": [
+        696,
+        111
+      ],
+      "target_point": [
+        696,
+        82
+      ]
+    },
+    {
+      "id": "task-submit",
+      "source": "task-runtime",
+      "target": "device-runtime",
+      "kind": "control",
+      "source_point": [
+        556,
+        128
+      ],
+      "target_point": [
+        402,
+        128
+      ]
+    },
+    {
+      "id": "task-complete",
+      "source": "device-runtime",
+      "target": "task-runtime",
+      "kind": "control",
+      "source_point": [
+        402,
+        144
+      ],
+      "target_point": [
+        556,
+        144
+      ]
+    },
+    {
+      "id": "configure-execute",
+      "source": "device-runtime",
+      "target": "operator-pool",
+      "kind": "control",
+      "source_point": [
+        288,
+        161
+      ],
+      "target_point": [
+        288,
+        236
+      ]
+    },
+    {
+      "id": "operator-complete",
+      "source": "operator-pool",
+      "target": "device-runtime",
+      "kind": "control",
+      "source_point": [
+        317,
+        236
+      ],
+      "target_point": [
+        317,
+        161
+      ]
+    },
+    {
+      "id": "remote-submit",
+      "source": "server-software",
+      "target": "fhe-accelerator",
+      "kind": "control",
+      "source_point": [
+        958,
+        160
+      ],
+      "target_point": [
+        958,
+        221
+      ]
+    },
+    {
+      "id": "remote-complete",
+      "source": "fhe-accelerator",
+      "target": "server-software",
+      "kind": "control",
+      "source_point": [
+        995,
+        221
+      ],
+      "target_point": [
+        995,
+        160
+      ]
+    },
+    {
+      "id": "storage-to-pool",
+      "source": "persistent-data",
+      "target": "operator-pool",
+      "kind": "data",
+      "source_point": [
+        146,
+        270
+      ],
+      "target_point": [
+        211,
+        270
+      ]
+    },
+    {
+      "id": "pool-to-transfer",
+      "source": "operator-pool",
+      "target": "ciphertext-transfer",
+      "kind": "data",
+      "source_point": [
+        441,
+        270
+      ],
+      "target_point": [
+        549,
+        270
+      ]
+    },
+    {
+      "id": "transfer-to-consumer",
+      "source": "ciphertext-transfer",
+      "target": "fhe-accelerator",
+      "kind": "data",
+      "source_point": [
+        794,
+        270
+      ],
+      "target_point": [
+        884,
+        270
+      ]
+    }
+  ]
+}

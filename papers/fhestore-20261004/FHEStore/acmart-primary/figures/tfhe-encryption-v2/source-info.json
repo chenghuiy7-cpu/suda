@@ -1,0 +1,57 @@
+{
+  "renderer": "Native editable SVG + Inkscape vector PDF + pdftoppm preview",
+  "image_model_used": false,
+  "visual_reference": {
+    "paper": "James Victor Howe, Practical Lattice-Based Cryptography in Hardware",
+    "path": "../../HLS figure paper/thesis.pdf",
+    "figure": "4.1",
+    "pdf_page": 148,
+    "printed_page": 126
+  },
+  "source_topology": "FHEStore encryption datapath from ../tfhe-encryption-v1/",
+  "repository_revision": "e3d5b52e5862a93290e94efbe7c768e110516674",
+  "source_hashes": {
+    "device/operators/hls/lwe_encrypt/lwe_encrypt.cpp": "fd00a030987f5c8c3ad7dde8c0e269d9bd10d9d01889ca779600f0b8249ef80d",
+    "device/operators/hls/lwe_encrypt/lwe_encrypt.hpp": "a6fd2ec0afeb61621aace450789f73546957cefd4dad4be14e4fc03d7c95df46"
+  },
+  "placement": {
+    "columns": 2,
+    "width_mm": 178,
+    "height_mm": 80.52380952380952,
+    "minimum_font_pt": 8.5
+  },
+  "style": "Gray functional regions, white rectangular modules and trapezoid MUX, circular adders, black orthogonal wires and bus-width marks.",
+  "topology": [
+    "context \u2192 encoder/samplers/key gate",
+    "W-bit input \u2192 radix encoder \u2192 \u03bc",
+    "mask a_i \u2192 binary-key MUX(a_i,0) \u2192 dot accumulator",
+    "dot register \u2192 feedback addition",
+    "dot + \u03bc + e \u2192 body b",
+    "mask and body \u2192 packetizer \u2192 W-bit output"
+  ],
+  "parameter_labels": [
+    "W",
+    "q",
+    "w",
+    "K",
+    "p",
+    "n",
+    "\u0394"
+  ],
+  "scope": "Only Figure 2 is restyled; no system diagram, decryption datapath, or hardware code change.",
+  "qa": {
+    "semantic_evaluator": "Independent agent review against CPU encrypt_encoded_lwe source and actual PNG",
+    "visual_evaluator": "Root agent inspection of the exported preview and final full-paper page 5",
+    "checks": [
+      "grayscale only",
+      "editable SVG without raster content",
+      "embedded PDF fonts",
+      "key MUX and feedback connectivity",
+      "body additions and mask bypass",
+      "readable labels at manuscript width",
+      "Figure 1 and all body prose unchanged",
+      "full-paper compilation with resolved references"
+    ],
+    "formal_human_signoff": false
+  }
+}

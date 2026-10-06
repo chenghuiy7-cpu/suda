@@ -1,0 +1,17 @@
+{
+  "vertices": 23,
+  "edges": 15,
+  "unresolvedEdges": [],
+  "unrenderedCells": [],
+  "textElements": 24,
+  "rasterElements": 0,
+  "foreignObjects": 0,
+  "renderer": "Official diagrams.net viewer-static.min.js + mxCodec/mxImageExport",
+  "viewerSha256": "5e34069eaeefc1d08ffef6714615b4ec29e36928105a130725201775c149e1e6",
+  "drawioSha256": "76210560c89fa4f244f4f21900d8ebdaf2e850ab829a05b4d75e44ed47f8a433",
+  "preview": {
+    "width_mm": 178,
+    "width_px": 673,
+    "height_px": 229
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "status": "checked",
+  "connectivity": "All 21 edge source/target pairs retained from v3.",
+  "open_endpoints": "Eight open edges are intentional external input/output, width ticks and the constant-zero input; retained from v3.",
+  "rendering": {
+    "vertices": 77,
+    "edges": 21,
+    "unresolvedEdges": [
+      "cell-37",
+      "cell-38",
+      "cell-40",
+      "cell-43",
+      "cell-49",
+      "cell-52",
+      "cell-53",
+      "cell-54"
+    ],
+    "unrenderedCells": [],
+    "textElements": 41,
+    "rasterElements": 0,
+    "foreignObjects": 0,
+    "renderer": "Official diagrams.net viewer-static.min.js + mxCodec/mxImageExport",
+    "viewerSha256": "5e34069eaeefc1d08ffef6714615b4ec29e36928105a130725201775c149e1e6"
+  },
+  "visual_checks": [
+    "Inspected author-revision-preview.png at the reference canvas width.",
+    "Inspected Figure 2 in the whole manuscript on page 5 at 130 dpi.",
+    "Noise label and branch are clear; line jump separates mask output from noise.",
+    "Input w and output W retained; no component, label or arrow clipping."
+  ],
+  "manuscript": {
+    "page": 5,
+    "pages": 8,
+    "compile": "latexmk -pdf -interaction=nonstopmode -halt-on-error FHEStore_FPGA27.tex",
+    "fatal_errors": false,
+    "undefined_references": false
+  },
+  "review_type": "Native-source and rendered-figure agent checks; not human sign-off."
+}
