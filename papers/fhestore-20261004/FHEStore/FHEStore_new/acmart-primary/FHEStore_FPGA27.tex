@@ -27,7 +27,7 @@
 % Leave the draft copyright year empty to avoid printing an isolated year.
 \copyrightyear{}
 
-\title[FHEStore: A Streaming FHE Ciphertext Producer]{FHEStore: A Streaming FHE Ciphertext Producer with FPGA-Based Computational Storage}
+\title[FHEStore: A Framework for FHE Input Preparation]{FHEStore: An FPGA-based Computational Storage Framework for Input Preparation in Fully Homomorphic Encryption}
 
 % Author and affiliation fields are intentionally omitted during review.
 % For the accepted version, remove anonymous and add real author metadata.
@@ -40,13 +40,13 @@
 \begin{document}
 
 \begin{abstract}
-Fully homomorphic encryption (FHE) accelerators speed up privacy-preserving computation on encrypted data, serving as ciphertext consumers, while the host conventionally acts as the producer that converts persistent data into ciphertexts. As homomorphic computation is accelerated, host-side input preparation accounts for a larger share of workflow latency. Encryption also expands application values into larger ciphertext representations, increasing output buffering and data movement.
+Fully homomorphic encryption (FHE) accelerators speed up privacy-preserving computation on encrypted data, serving as ciphertext consumers, while the host conventionally acts as the producer. For applications over persistent data, the conventional host path loads stored data into host memory for encoding, encryption, and ciphertext organization. As homomorphic computation is accelerated, this input preparation accounts for a larger share of workflow latency. Encryption also expands application values into larger ciphertexts, increasing buffering requirements and data movement within this preparation stage.
 
-We present FHEStore, an FPGA-based computational storage system for storage-side ciphertext production. We develop a high-level synthesis (HLS) operator that integrates radix encoding with Fast Fully Homomorphic Encryption over the Torus (TFHE) encryption, using each generated mask coefficient for both dot-product accumulation and incremental ciphertext output. We further propose streaming ciphertext production, a method that composes optional preprocessing and encryption through operator streams, coordinating stream flow control and output allocation to accommodate ciphertext expansion.
+We present FHEStore, an FPGA-based computational storage framework for FHE input preparation. We develop a high-level synthesis (HLS) operator that integrates radix encoding with Fast Fully Homomorphic Encryption over the Torus (TFHE) encryption. Each generated mask coefficient feeds both dot-product accumulation and incremental ciphertext output, avoiding buffering a complete mask vector. We further propose an operator stream composition method that accounts for ciphertext expansion. It connects optional preprocessing to encryption, determines ciphertext buffer capacity from the value count and ciphertext representation, and coordinates the composed operators through stream flow control.
 
 \begingroup
 \emergencystretch=1em
-We prototype FHEStore and evaluate it against host CPU baselines using 1~KiB of plaintext input. The encryption operator achieves a $5.00\times$ speedup, while end-to-end ciphertext production achieves a $2.45\times$ speedup.
+We implement FHEStore and evaluate it against host CPU baselines. With 1~KiB of plaintext input, the encryption operator achieves a $5.00\times$ speedup, while input preparation achieves a $2.45\times$ speedup. The evaluation also shows lower cumulative host CPU time and peak host memory.
 \par\endgroup
 \end{abstract}
 
@@ -57,7 +57,10 @@ We prototype FHEStore and evaluate it against host CPU baselines using 1~KiB of 
 \ccsdesc[500]{Security and privacy~Cryptography}
 \keywords{Fully Homomorphic Encryption, TFHE, FPGA, High-Level Synthesis, Computational Storage, Streaming Dataflow}
 
+% Allow the longer title in the ACM reference block to break within the column.
+\emergencystretch=1em
 \maketitle
+\emergencystretch=0pt
 
 \section{Introduction}
 \label{sec:introduction}
@@ -71,19 +74,19 @@ We prototype FHEStore and evaluate it against host CPU baselines using 1~KiB of 
   \Description{Two side-by-side panels of thin horizontal stacked bars compare bitwise AND, addition, and multiplication, labeled AND, Add, and Mul. Each bar displays the mean shares of both input preparation and homomorphic computation. With the same host CPU input preparation, its share of preparation plus computation latency ranges from 0.11 to 0.75 percent for CPU homomorphic computation and from 17.7 to 36.6 percent for HPU homomorphic computation.}
 \end{figure}
 
-Fully homomorphic encryption (FHE) enables a data owner to outsource computation over encrypted data without revealing the plaintext to the evaluator~\cite{gentry2009fhe}. Hardware accelerators improve homomorphic computation through specialized arithmetic and memory-aware architectures~\cite{xu2026hera,zhou2023fhemem,vanbeirendonck2023fpt,kim2022bts,kim2022ark,samardzic2021f1,samardzic2022craterlake}. These accelerators act as ciphertext consumers. For persistent-data applications, a ciphertext producer must first convert stored application data into ciphertexts. Application performance therefore depends on both stages.
+Fully homomorphic encryption (FHE) enables a data owner to outsource computation over encrypted data without revealing the plaintext to the evaluator~\cite{gentry2009fhe}. Hardware accelerators improve homomorphic computation through specialized arithmetic and memory-aware architectures~\cite{xu2026hera,zhou2023fhemem,vanbeirendonck2023fpt,kim2022bts,kim2022ark,samardzic2021f1,samardzic2022craterlake}. These accelerators act as ciphertext consumers. For applications over persistent data, the host conventionally serves as the producer, coordinating data access, encoding, encryption, and ciphertext organization. This FHE input preparation supplies ciphertexts to the consumer, so application performance depends on both stages.
 \bodypar
 
-Figure~\ref{fig:preparation-motivation} compares bitwise AND, addition, and multiplication on a CPU and Zama's open-source FPGA-based homomorphic processing unit (HPU)~\cite{zama2025hpu}. Both workflows use the same host CPU input preparation: SSD reads, encoding, and encryption, ending with ciphertexts in host memory. Only homomorphic computation changes from CPU software to HPU acceleration. Shares are normalized to preparation plus computation latency, excluding network transfer; bars show means, and error bars span the observed minimum and maximum. Input preparation accounts for 0.11\%--0.75\% with CPU execution and 17.7\%--36.6\% with HPU acceleration, making host-side ciphertext production an increasingly important optimization target.
+Figure~\ref{fig:preparation-motivation} compares bitwise AND, addition, and multiplication on a CPU and Zama's open-source FPGA-based homomorphic processing unit (HPU)~\cite{zama2025hpu}. Both workflows use the same host CPU input preparation: SSD reads, encoding, and encryption, ending with ciphertexts in host memory. Only homomorphic computation changes from CPU software to HPU acceleration. Shares are normalized to preparation plus computation latency, excluding network transfer; bars show means, and error bars span the observed minimum and maximum. Input preparation accounts for 0.11\%--0.75\% with CPU execution and 17.7\%--36.6\% with HPU acceleration, making host-side input preparation an increasingly important optimization target.
 \bodypar
 
-Host-based ciphertext production couples cryptographic computation with data access and output management. Encoding and encryption consume CPU resources, while input batches and expanded ciphertexts occupy host memory. Optional preprocessing, such as record selection, can exclude unneeded data before encryption, reducing cryptographic computation and ciphertext movement. Efficient production requires coordinating data access and output buffering with accelerated encoding and encryption.
+Host-side input preparation couples cryptographic computation with data access and ciphertext organization. Encoding and encryption consume CPU resources, while input batches and expanded ciphertexts occupy host memory. Optional preprocessing, such as record selection, can exclude unneeded data before encryption, reducing cryptographic computation and ciphertext movement. Accelerating input preparation requires coordinating data access and ciphertext buffering with encoding and encryption.
 \bodypar
 
-Encryption accelerators optimize cryptographic arithmetic and parallel execution~\cite{mert2020bfv,lee2023ckks,feryputri2025lwe,syafalni2026multicore}. Client-side and end-to-end systems further coordinate cryptographic processing with encoding, memory organization, or communication~\cite{krieger2024aloha,yune2025abcfhe,vanderhagen2022choco,gupta2024memfhe}. Persistent-data production also encompasses storage access and optional preprocessing. Placing encoding and encryption alongside storage access connects device-local input, operator streams, and ciphertext output in one execution path.
+Encryption accelerators optimize cryptographic arithmetic and parallel execution~\cite{mert2020bfv,lee2023ckks,feryputri2025lwe,syafalni2026multicore}. Client-side and end-to-end systems further coordinate cryptographic processing with encoding, memory organization, or communication~\cite{krieger2024aloha,yune2025abcfhe,vanderhagen2022choco,gupta2024memfhe}. For persistent-data applications, input preparation also encompasses storage access and optional preprocessing. Placing encoding and encryption alongside storage access connects device-local input, operator streams, and ciphertext output in one execution path.
 \bodypar
 
-We present FHEStore, an FPGA-based computational storage system for storage-side ciphertext production. A computational storage device (CSD) places programmable processing alongside storage access~\cite{snia2025csmodel,ruan2019insider,wong2024dongle,woods2014ibex}. Using high-level synthesis (HLS), FHEStore implements radix encoding and Fast Fully Homomorphic Encryption over the Torus (TFHE)~\cite{chillotti2020tfhe} encryption in an encryption operator, a streaming FPGA processing module. A stream switch connects operators and directs ciphertext output to device-local buffers. Task control supplies each operator's parameters through an operator context and binds stream connections and memory ranges. The host coordinates execution and retrieves the completed ciphertexts. We jointly design the encryption operator and its placement within the production path.
+We present FHEStore, an FPGA-based computational storage framework for FHE input preparation. A computational storage device (CSD) places programmable processing alongside storage access~\cite{snia2025csmodel,ruan2019insider,wong2024dongle,woods2014ibex}. Using high-level synthesis (HLS), FHEStore implements radix encoding and Fast Fully Homomorphic Encryption over the Torus (TFHE)~\cite{chillotti2020tfhe} encryption in an encryption operator, a streaming FPGA processing module. A stream switch connects operators and directs ciphertext output to device-local buffers. An operator context holds task-specific parameters; task control installs these contexts and binds stream connections and memory ranges. The host coordinates execution and retrieves the completed ciphertexts.
 \bodypar
 
 \begingroup
@@ -94,9 +97,9 @@ We present FHEStore, an FPGA-based computational storage system for storage-side
 \setlength{\parsep}{0pt}
 We make the following contributions:
 \begin{itemize}
-  \item \textbf{HLS encoding and encryption.} A streaming TFHE encryption operator integrates radix encoding with one mask traversal per learning-with-errors (LWE) block, combining dot-product accumulation and incremental ciphertext output.
-  \item \textbf{Streaming ciphertext production.} Operator streams connect data access, optional preprocessing, and encryption. Task control binds execution to input and output ranges, while flow control and output management accommodate ciphertext expansion.
-  \item \textbf{Evaluation.} With 1~KiB of plaintext input, encryption and end-to-end ciphertext production achieve $5.00\times$ and $2.45\times$ speedups over host CPU encryption and the host CPU baseline, respectively (Section~\ref{sec:evaluation}). We also verify homomorphic computation with the generated ciphertexts.
+  \item \textbf{Integrated HLS operator for TFHE encoding and encryption.} A TFHE encryption operator integrates radix encoding and encryption, traversing the mask once per learning-with-errors (LWE) block. Each coefficient feeds dot-product accumulation and incremental ciphertext output without buffering a complete mask vector.
+  \item \textbf{Operator stream composition accounting for ciphertext expansion.} A method connects optional preprocessing to encryption, determines ciphertext buffer capacity from the value count and ciphertext representation, and coordinates the composed operators through stream flow control.
+  \item \textbf{Prototype implementation and evaluation.} We implement and evaluate an FHEStore prototype (Section~\ref{sec:evaluation}). With 1~KiB of plaintext input, the encryption operator and input preparation achieve $5.00\times$ and $2.45\times$ speedups over host CPU baselines, respectively, with lower cumulative host CPU time and peak host memory.
 \end{itemize}
 \endgroup
 
@@ -104,7 +107,7 @@ We make the following contributions:
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/fhestore-overview-v8/fhestore-overview.pdf}
-  \caption{FHEStore architecture for ciphertext production. Solid blue arrows denote data flow; dashed gray arrows denote control flow.}
+  \caption{FHEStore architecture for FHE input preparation. Solid blue arrows denote data flow; dashed gray arrows denote control flow.}
   \Description{Persistent data feed the CSD operator pool. The device runtime configures the pool and receives execution completion. The host application interacts with the task runtime, which submits tasks to the device runtime and receives completion notifications over PCIe. Ciphertext transfer retrieves generated ciphertexts from the CSD over PCIe into host memory. The host then forwards them over the network to the remote server. The remote server contains server-side software and an FHE accelerator.}
   \label{fig:pipeline}
 \end{figure*}
@@ -140,10 +143,10 @@ and recovers the encoded message when the phase remains within its decision regi
 A finite-precision representation stores each torus coefficient as a $q$-bit integer corresponding to a multiple of $2^{-q}$. Torus addition then becomes integer addition modulo $2^q$. This representation connects the encryption equation to coefficient arithmetic in hardware.
 \bodypar
 
-For integer inputs, radix encoding decomposes each application value into fixed-width digits. Each digit is encoded as a torus message and encrypted as an LWE block; the ordered blocks form a ciphertext bundle representing that value. Each block contains $n+1$ coefficients, so the bundle's size depends on the digit count, LWE dimension, and coefficient precision. This expansion determines the volume handled by production buffers and transfer interfaces.
+For integer inputs, radix encoding decomposes each application value into fixed-width digits. Each digit is encoded as a torus message and encrypted as an LWE block; the ordered blocks form a ciphertext bundle representing that value. Each block contains $n+1$ coefficients, so the bundle's size depends on the digit count, LWE dimension, and coefficient precision. The value count and ciphertext bundle size determine the ciphertext buffer capacity and transfer volume required during input preparation.
 
 \subsection{FHE Producer--Consumer Workflows}
-Outsourced FHE systems place ciphertext production in the data owner's trusted domain and homomorphic computation at an external consumer~\cite{krieger2024aloha,yune2025abcfhe,gupta2024memfhe}. The producer accesses, encodes, and encrypts application data. The consumer executes the encrypted program using ciphertexts and evaluation material; the secret key remains in the trusted domain.
+Outsourced FHE systems place input preparation in the data owner's trusted domain and homomorphic computation at an external consumer~\cite{krieger2024aloha,yune2025abcfhe,gupta2024memfhe}. The producer coordinates data access, encoding, encryption, and ciphertext organization. The consumer executes the encrypted program using ciphertexts and evaluation material; the secret key remains in the trusted domain.
 \bodypar
 
 Client-side accelerators connect encoding and encryption to software control and memory transfers~\cite{krieger2024aloha,yune2025abcfhe}, while FHE accelerators schedule encrypted operations over ciphertexts and evaluation keys in their memory systems~\cite{xu2026hera,zhou2023fhemem,vanbeirendonck2023fpt}. Producer and consumer must agree on cryptographic parameters, message encoding, and ciphertext layout. Client-side systems coordinate local processing with encrypted computation across this interface~\cite{vanderhagen2022choco}.
@@ -162,7 +165,7 @@ FPGA storage frameworks expose data access and processing through virtual files,
 
 \begingroup
 \emergencystretch=1em
-Figure~\ref{fig:pipeline} shows FHEStore's CSD and host software connected over PCIe. The CSD combines persistent storage, device-local buffers in Subsystem Local Memory (SLM)~\cite{nvme2025slm}, and an FPGA operator pool. The remote server represents an external privacy-preserving outsourcing service equipped with an FHE accelerator.
+FHEStore organizes input preparation across a CSD and host software connected over PCIe (Figure~\ref{fig:pipeline}). The CSD combines persistent storage, device-local buffers in Subsystem Local Memory (SLM)~\cite{nvme2025slm}, and an FPGA operator pool. The remote server represents an external privacy-preserving outsourcing service equipped with an FHE accelerator.
 \par
 \endgroup
 \bodypar
@@ -178,7 +181,7 @@ As in Section~\ref{sec:background}, the host and CSD belong to the data owner's 
 \subsection{Application Task Model}
 \label{subsec:application-task}
 
-An application specifies ciphertext production through a task $T=(D,Q,E,O)$. $D$ identifies the stored input and its layout, $Q$ specifies optional preprocessing, $E$ selects the encoding and cryptographic configuration, and $O$ identifies the output location in host memory. The task runtime checks these descriptions before submitting device execution.
+An application specifies input preparation through a task $T=(D,Q,E,O)$. $D$ identifies the stored input and its layout, $Q$ specifies optional preprocessing, $E$ selects the encoding and cryptographic configuration, and $O$ identifies the output location in host memory. The task runtime checks these descriptions before submitting device execution.
 \bodypar
 
 The input description combines a storage range with its content interpretation. With $Q$ omitted, packed application values enter encryption directly in source order; otherwise, preprocessing supplies the values to encrypt. Both forms define an ordered sequence $x_0,\ldots,x_{M-1}$ of $M$ application values. With configuration $E$ and secret key $\mathbf{s}$, the task produces
@@ -201,15 +204,15 @@ For a selective task, the host retains the source-record mapping $\mathcal{I}_Q$
 The task runtime translates $T$ into an operator graph, operator contexts, and input and output SLM ranges. Graph nodes identify operator functions, and edges specify the streams exchanged between their ports. An execution program records the graph's operator requirements, connections, and entry and terminal endpoints for submission to the device runtime. Keeping these objects distinct connects application semantics to device execution: the graph defines the computation, contexts supply its task-specific interpretation, and SLM ranges identify the data it consumes and produces.
 \bodypar
 
-Operator contexts carry the input interpretation from $D$, optional preprocessing settings from $Q$, and the encryption configuration from $E$. The encryption operator's context also contains its locally supplied key material. Contexts are associated with the graph's logical operators, so each operator receives the parameters appropriate to its role. For a selective task, the operator context for preprocessing determines which fields are inspected and which field is emitted, while the operator context for encryption determines how each emitted value becomes a ciphertext bundle. Section~\ref{sec:implementation} develops the encryption operator's internal design.
+Operator contexts carry the input interpretation from $D$, optional preprocessing settings from $Q$, and the encryption configuration from $E$. The encryption operator's context also contains its locally supplied key material. Contexts bind task-specific parameters to the graph's logical operators. For a selective task, the operator context for preprocessing determines which fields are inspected and which field is emitted, while the operator context for encryption determines how each emitted value becomes a ciphertext bundle. Section~\ref{sec:implementation} develops the encryption operator's internal design.
 \bodypar
 
 An input SLM range identifies the device-local input buffer, its offset, and its byte extent. An output SLM range identifies the destination buffer and the extent available for ciphertext reception. These ranges bind graph endpoints to data locations without encoding those locations into the operator's processing logic. Their extents also distinguish the bounded input consumed by an execution from the capacity reserved for its expanded output. The device runtime receives the range bindings together with the execution program and operator contexts.
 \bodypar
 
-Before execution, the device runtime assigns the graph to available operators, installs their contexts, and binds stream destinations through the stream switch. The graph's logical connections determine the downstream operator or output endpoint for each stream. A task without preprocessing uses the encryption operator alone; a selective task connects preprocessing to encryption. Connected operators exchange values through the operator interconnect during ciphertext production.
+Before execution, the device runtime assigns the graph to available operators, installs their contexts, and binds stream destinations through the stream switch. The graph's logical connections determine the downstream operator or output endpoint for each stream. A task without preprocessing uses the encryption operator alone; a selective task connects preprocessing to encryption. Connected operators exchange values through the operator interconnect during device execution.
 
-Device completion reports the valid ciphertext length in the output SLM range after the graph finishes, separately from allocated capacity and execution framing. The task runtime passes this length to ciphertext transfer. Application completion denotes availability at $O$ in host memory, with the source-record mapping retained for selective tasks. Section~\ref{sec:production} explains stream routing and management of the expanded output.
+Device completion reports the valid ciphertext length in the output SLM range after the graph finishes, separately from allocated capacity and execution framing. The task runtime passes this length to ciphertext transfer. Application completion denotes availability at $O$ in host memory, with the source-record mapping retained for selective tasks. Section~\ref{sec:production} develops the operator stream composition method, including stream routing and ciphertext buffer allocation.
 \section{HLS Design of TFHE Encoding and Encryption}
 \label{sec:implementation}
 
@@ -232,7 +235,7 @@ Let $w$ denote the application-value width, $p$ the message bits per radix digit
 The CPU coefficient layout serializes each block in natural order as $(a_0,\ldots,a_{n-1},b)$. This order gives a direct relationship between the mask index, key index, and output position. The arithmetic uses unsigned coefficients modulo $2^q$, implementing the finite-precision form of torus addition in Equation~\eqref{eq:torus-lwe-encryption}. The binary secret key contains $n$ bits, with $s_i\in\{0,1\}$. Consequently, multiplication by a key coefficient becomes selection of $a_i$ or zero, followed by modular addition.
 \bodypar
 
-Both physical ports use AXI4-Stream. The input adapter interprets application-value framing; the packetizer constructs ciphertext beats. Configuration and the bit-packed secret key arrive through the operator context stored in BRAM. Configuration includes the input mode, input count, and pseudorandom number generator (PRNG) seed and nonce. Key indexing selects a context word and a bit within that word. The same key supplies successive blocks, while the coefficient index restarts at each block boundary. The encryption operator reads execution configuration before consuming its first payload beat. The input count controls application-value consumption, whereas coefficient and digit counters control block production; these counts remain separate as encryption expands each accepted value into a bundle.
+Both physical ports use AXI4-Stream. The input adapter interprets application-value framing; the packetizer constructs ciphertext beats. Configuration and the bit-packed secret key arrive through the operator context stored in BRAM. Configuration includes the input mode, input count, and pseudorandom number generator (PRNG) seed and nonce. Key indexing selects a context word and a bit within that word. The same key supplies successive blocks, while the coefficient index restarts at each block boundary. The encryption operator reads execution configuration before consuming its first payload beat. The input count controls application-value consumption, whereas coefficient and digit counters control block generation; these counts remain separate as encryption expands each accepted value into a bundle.
 
 Each block's $n+1$ coefficients occupy $\lceil(n+1)/L\rceil$ ciphertext beats, including padding in unused positions. The serialized ciphertext bundle size in bytes is
 \begin{equation}
@@ -289,10 +292,10 @@ The packetizer maintains a $W$-bit register and a count of occupied coefficient 
 AXI4-Stream ready/valid flow control connects packetization to the surrounding data path. A blocked output write holds the pending beat and stalls progression through the coefficient traversal. The retained arithmetic and packet state preserve the relationship between generated coefficients, their accumulated contributions, and their output positions. The input adapter consequently waits while the core finishes the current ciphertext bundle.
 
 The operator accepts a fixed input count or a stream whose length is determined by an upstream terminal beat. With a fixed count, it encrypts the requested values and waits for the terminal beat; a premature terminal beat identifies an incomplete input. The terminal beat follows all ciphertext payload and carries completion metadata separately. Payload beats remain data beats regardless of a block boundary. Separating the terminal beat from block padding lets the receive path derive the valid ciphertext length and report device completion after ciphertext reception.
-\section{Storage-Side Ciphertext Production}
+\section{Storage-Side FHE Input Preparation}
 \label{sec:production}
 
-Figure~\ref{fig:ciphertext-production} shows the operator interconnect linking stored inputs, optional preprocessing, and encryption. The production path binds memory to the operator graph and coordinates stream routing with allocation and completion of the expanded output.
+FHEStore's operator stream composition method connects optional preprocessing to encryption while accounting for ciphertext expansion. It combines stream routing with ciphertext buffer allocation and stream flow control. Figure~\ref{fig:ciphertext-production} shows the operator interconnect through which the composed operators exchange data.
 
 \subsection{Operator Stream Composition}
 \label{subsec:streaming-production}
@@ -312,7 +315,7 @@ For packed values, the graph connects read DMA directly to encryption and routes
 For a selective task, the selection and projection operator implements $Q$ from Section~\ref{subsec:application-task}. Its context specifies record layout, predicate-field offsets and types, comparison operands, Boolean expression, and projected field. It captures required fields as record beats arrive and evaluates predicates at record boundaries. These settings can change independently of stream destinations.
 \bodypar
 
-During the selective task's production pass, each matching record supplies one projected value in source order to the encryption operator's scalar interface (Section~\ref{subsec:tfhe-encryption}). Values pass through the stream switch without an intermediate array in SLM, and ciphertext bundles follow the direct graph's output route.
+During the selective task's encryption pass, each matching record supplies one projected value in source order to the encryption operator's scalar interface (Section~\ref{subsec:tfhe-encryption}). Values pass through the stream switch without an intermediate array in SLM, and ciphertext bundles follow the direct graph's output route.
 \bodypar
 
 Ciphertext expansion couples flow control to operator composition: encryption may occupy many output beats for each input value. Input FIFOs absorb short rate differences, while AXI4-Stream backpressure stalls upstream processing when downstream capacity is unavailable. This mechanism coordinates preprocessing, encryption, and ciphertext reception within finite buffers.
@@ -336,7 +339,7 @@ The output SLM range must accommodate the representation produced by the graph. 
 where $A$ is the allocation alignment and $F$ is the terminal-beat size. Valid ciphertext length is $MC$; terminal-beat and allocation padding bytes belong only to the receive extent. Without selection, $M$ follows from the input count.
 \bodypar
 
-Packed inputs and projected scalar values share the same serialized output representation for a given configuration. The task runtime therefore sizes the receive range using $M$ and $C$, independently of intermediate routes.
+Because input framing leaves $C$ unchanged, the task runtime sizes the receive range using $M$ and $C$, independently of intermediate routes.
 \bodypar
 
 Execution begins by preparing the write DMA's receive descriptors before starting the read DMA. This ordering makes the bound output range available when the operator graph starts producing ciphertexts. After the payload, the encryption operator emits a separate terminal beat. The device runtime recognizes the terminal beat in receive completion, excludes its bytes from payload accounting, and reports the valid ciphertext length. Device completion identifies the point at which the graph's ciphertext output is available in SLM. Ciphertext transfer retrieves the aligned output range into host memory and identifies the valid ciphertext sequence using the reported length, including serialized block padding and excluding the terminal beat and allocation padding.
@@ -345,10 +348,10 @@ Execution begins by preparing the write DMA's receive descriptors before startin
 For a selective task, FHEStore determines the data-dependent $M$ through a discovery pass over the input SLM range. In this mode, preprocessing produces a selection manifest with an entry for each source record, containing its index, selection flag, and selected projected value, followed by a count summary. The stream switch directs this output to the write DMA and a temporary output SLM range. Its extent is determined by the source-record count, so the selection manifest can be received before the selected count is known. The host retrieves the selection manifest and checks its record identities, selection flags, task metadata, and summary count. It then obtains $M$ and the source-record mapping $\mathcal{I}_Q$.
 \bodypar
 
-The task runtime uses $M$ to allocate the ciphertext output SLM range and launches the production pass with the operator graph that connects preprocessing to encryption. This pass reads the same input SLM contents and applies the same selection and projection. For $M>0$, the task uses one SSD load and two SLM scans. The discovery pass establishes the output extent and mapping; during the production pass, projected values flow directly into encryption. The selection manifest remains host-side task metadata, and the host associates the retrieved ciphertext bundles with $\mathcal{I}_Q$. If $M=0$, the task skips the production pass and returns an empty ciphertext sequence and mapping.
+The task runtime uses $M$ to allocate the ciphertext output SLM range and launches the encryption pass with the operator graph that connects preprocessing to encryption. This pass reads the same input SLM contents and applies the same selection and projection. For $M>0$, the task uses one SSD load and two SLM scans. The selection manifest remains host-side task metadata, and the host associates the retrieved ciphertext bundles with $\mathcal{I}_Q$. If $M=0$, the task skips the encryption pass and returns an empty ciphertext sequence and mapping.
 \bodypar
 
-Larger selective tasks use batches with bounded source-record counts, bounding input buffers, manifests, and maximum ciphertext output even when every record matches. Each batch runs discovery, sizes output, and runs production when its selected count is nonzero.
+Larger selective tasks use batches with bounded source-record counts, bounding input buffers, manifests, and maximum ciphertext output even when every record matches. Each batch runs the discovery pass, allocates ciphertext buffers, and runs the encryption pass when its selected count is nonzero.
 \bodypar
 
 Batches execute sequentially, releasing device buffers after output retrieval. The host adjusts selected indices by each batch's source-record offset, preserving source-record mapping and ciphertext order across batch boundaries.
@@ -356,9 +359,11 @@ Batches execute sequentially, releasing device buffers after output retrieval. T
 \section{Experimental Evaluation}
 \label{sec:evaluation}
 \subsection{Experimental Setup}
-We implement FHEStore on a SoC FPGA-based computational storage platform and evaluate its performance in generating inputs for homomorphic computation from persistent data. The evaluation covers input preparation for HPU computation, encryption performance, host resource consumption, and ciphertext generation supporting application-specific preprocessing. The host software path serves as the baseline; figures and tables identify the two paths as CPU baseline and FHEStore.
+We implement FHEStore on a SoC FPGA-based computational storage platform and evaluate FHE input preparation from persistent data. The evaluation covers encryption operator performance, input-preparation performance, host resource consumption, and application-directed preprocessing. The host software path serves as the baseline; figures and tables identify the two paths as CPU baseline and FHEStore.
+\bodypar
 
 Table~\ref{tab:experimental-platform} summarizes the platform configuration. The device-side ARM processor runs the management software for SSD access, device memory management, and FPGA task scheduling, while the FPGA programmable logic executes preprocessing and encryption operators. The computational storage client submits tasks to the device and retrieves ciphertexts. It then transfers the ciphertexts over the network to a remote server equipped with a Zama HPU, which performs homomorphic computation.
+\bodypar
 
 \begin{table}[!htbp]
   \centering
@@ -386,6 +391,7 @@ Table~\ref{tab:experimental-platform} summarizes the platform configuration. The
 \end{table}
 
 The FPGA design is synthesized using Vivado 2020.2, and the encryption operator runs at 250~MHz. Table~\ref{tab:fpga-resources} summarizes FHEStore's FPGA resource usage, covering computational operators, storage access, data movement, interconnects, and control logic, based on the hierarchical synthesis report.
+\bodypar
 
 \begin{table}[!htbp]
   \centering
@@ -408,13 +414,17 @@ The FPGA design is synthesized using Vivado 2020.2, and the encryption operator 
 \end{table}
 
 The inputs are unsigned 8-bit integers (u8), each represented by four 2-bit radix blocks, with one LWE ciphertext per block. The LWE dimension is 2048, and coefficients are 64 bits wide. The encryption performance comparison uses the same 64-byte-padded ciphertext layout for both paths. Plaintext size is measured in bytes, with one byte per unsigned 8-bit input value.
+\bodypar
 
-The HPU experiments cover bitwise OR, bitwise AND, equality, right shift, addition, subtraction, and multiplication. Ciphertext generation with application-specific preprocessing is evaluated using lineitem data generated by TPC-H \texttt{dbgen} and the public Intel Lab sensor dataset, examining the combined execution of record filtering, field projection, and encryption.
+The HPU experiments cover bitwise OR, bitwise AND, equality, right shift, addition, subtraction, and multiplication. Application-directed input preparation is evaluated using lineitem data generated by TPC-H \texttt{dbgen}~\cite{tpch2022spec} and the public Intel Lab sensor dataset~\cite{bodik2004intellab}, examining the combined execution of record selection, field projection, and encryption.
+\bodypar
 
-We evaluate encryption latency, input-preparation latency, host CPU time, and peak memory usage. In all experiments, the host-side programs for both the CPU baseline and FHEStore run in the same KVM-accelerated QEMU guest described in Table~\ref{tab:experimental-platform}. All performance experiments exclude warm-up runs and use ten valid measurements per configuration; reported values are arithmetic means. Correctness is verified against plaintext reference results.
+We evaluate encryption latency, input-preparation latency, cumulative host CPU time, and peak host memory. In all experiments, the host-side programs for both the CPU baseline and FHEStore run in the same KVM-accelerated QEMU guest described in Table~\ref{tab:experimental-platform}. All performance experiments exclude warm-up runs and use ten valid measurements per configuration; reported values are arithmetic means. Correctness is verified against plaintext reference results.
+\bodypar
 
-\subsection{Encryption Performance Comparison}
-This subsection compares encryption-stage performance between the CPU baseline and FHEStore for plaintext sizes of 1--4096 bytes. FHEStore uses fixed-length binary records converted from TPC-H lineitem data as the plaintext source. Each byte is encrypted as an independent 8-bit plaintext integer, without record filtering or field projection.
+\subsection{Encryption Operator Performance}
+This subsection compares encryption-stage performance between the CPU baseline and FHEStore for plaintext sizes of 1--4096 bytes. FHEStore uses fixed-length binary records converted from TPC-H lineitem data as the plaintext source. Each byte is encrypted as an independent 8-bit plaintext integer, without record selection or field projection.
+\bodypar
 
 For the hardware-counter-based comparisons, the CPU baseline records encryption-function execution time, while FHEStore's device-task time is obtained by converting hardware-counter cycles using the operator clock frequency and includes stream-interface waiting during task execution. Speedup is defined as
 \begin{equation}
@@ -422,12 +432,9 @@ For the hardware-counter-based comparisons, the CPU baseline records encryption-
   \label{eq:speedup}
 \end{equation}
 where $b$ is the plaintext size in bytes. The numerator and denominator are the CPU baseline and FHEStore latencies in Table~\ref{tab:results}, respectively.
+\bodypar
 
-% Working-draft target protocol: unified TPC-H input and counter-based timing.
-% Actual 1--2048 means: figures/encrypt-stage-comparison/data.csv.
-% The 4096 legacy placeholder uses CPU encrypt-and-pack median and host-timed
-% FPGA execution median, not hardware-counter means. Source:
-% logs/lwe_encrypt_host_ready_sweep_20260923/encrypt_cpu_fpga_summary.csv.
+% Author confirmed the updated 4096-byte measurement and ten performance runs on 2026-10-08.
 \begin{table}[!htbp]
   \centering
   \caption{Encryption latency and speedup of FHEStore over the CPU baseline.}
@@ -464,57 +471,64 @@ where $b$ is the plaintext size in bytes. The numerator and denominator are the 
 \end{figure*}
 
 Table~\ref{tab:results} reports encryption latency and speedup across plaintext sizes. At 1 byte, the execution times are close, with a speedup of $1.05\times$. FHEStore achieves a $4.76\times$ speedup at 128 bytes. At 2048 bytes, FHEStore reduces encryption latency from the CPU baseline's 1016.276~ms to 202.442~ms, increasing the speedup to $5.02\times$. At 4096 bytes, the speedup reaches $5.33\times$.
+\bodypar
 
-These results show that FHEStore's device-side encryption path reduces the execution cost of batched ciphertext generation.
-
-\subsection{FHEStore--HPU Collaborative Processing Performance}
+\subsection{Input Preparation Performance}
 \label{sec:peripheral-overhead}
-This subsection compares the cost of preparing ciphertext inputs for the HPU using the CPU baseline and FHEStore. The CPU baseline reads plaintext from the SSD and performs encoding, encryption, and ciphertext organization on the host. FHEStore combines device-side data reads with FPGA encoding and encryption, returning ciphertexts to host memory. Input-preparation latency sums data reads, ciphertext generation, and required data movement.
+This subsection compares the cost of preparing ciphertext inputs for the HPU using the CPU baseline and FHEStore. The CPU baseline reads plaintext from the SSD and performs encoding, encryption, and ciphertext organization on the host. FHEStore combines device-side data reads with FPGA encoding and encryption, returning ciphertexts to host memory. Input-preparation latency covers SSD reads, encoding, encryption, ciphertext organization, and required data movement until ciphertexts are available in host memory.
 \bodypar
 
 Both paths use the same fixed-length binary records converted from TPC-H lineitem. Plaintext size $B$ is measured in bytes per operand, corresponding to $B$ unsigned 8-bit integers. The first operand uses the first $B$ bytes of the record file; the second adds one to each element modulo 256. The evaluation covers bitwise OR, bitwise AND, equality, right shift, addition, subtraction, and multiplication at plaintext sizes of 64, 128, 256, 512, and 1024 bytes.
+\bodypar
 
 Figure~\ref{fig:cpu-hpu-stage-breakdown} summarizes the stage measurements obtained under the unified-input evaluation setup described above. Panel~(a) reports mean input-preparation latency relative to the mean HPU computation latency measured for the corresponding path, including completion synchronization. This normalization characterizes preparation overhead relative to downstream homomorphic computation within each path; error bars show the sample standard deviation of run-level ratios. Panel~(b) directly compares input-preparation latencies: bars show the arithmetic mean of the seven operation-specific mean latencies, and error bars indicate their min--max range. The green line uses the right axis to report input-preparation speedup, defined as CPU baseline mean preparation latency divided by FHEStore mean preparation latency.
+\bodypar
 
-Input preparation amounts to 17.58\%--57.73\% of HPU computation latency for the CPU baseline and 7.29\%--22.57\% for FHEStore. For bitwise AND at a plaintext size of 64 bytes, the ratio decreases from 57.73\% to 22.57\%, indicating a substantial relative cost of ciphertext production for operations with short computation times. Different HPU computation latencies also produce different bar heights at the same plaintext size.
+Input preparation amounts to 17.58\%--57.73\% of HPU computation latency for the CPU baseline and 7.29\%--22.57\% for FHEStore. For bitwise AND at a plaintext size of 64 bytes, the ratio decreases from 57.73\% to 22.57\%, indicating a substantial relative cost of input preparation for operations with short computation times. Different HPU computation latencies also produce different bar heights at the same plaintext size.
+\bodypar
 
-Input-preparation speedups range from $2.45\times$ to $2.77\times$. At a plaintext size of 1024 bytes, mean preparation latency decreases from the CPU baseline's 1211.67~ms to 494.50~ms for FHEStore, yielding a $2.45\times$ speedup. These measurements illustrate the benefit of connecting data access, encoding, and encryption on the storage side to shorten ciphertext input production.
+Input-preparation speedups range from $2.45\times$ to $2.77\times$. At a plaintext size of 1024 bytes, mean preparation latency decreases from the CPU baseline's 1211.67~ms to 494.50~ms for FHEStore, yielding a $2.45\times$ speedup. These measurements illustrate the benefit of connecting data access, encoding, and encryption on the storage side to shorten input preparation.
+\bodypar
 
 \subsection{Host Resource Consumption}
 \label{sec:host-resources}
-This subsection examines how moving ciphertext production to the storage side affects host CPU work and memory requirements. The CPU baseline performs encoding, encryption, and ciphertext output organization on the host, whereas FHEStore generates ciphertexts on the device, with the host submitting tasks and receiving results. Both paths use the same SSD plaintext page and retain the resulting ciphertexts in host memory.
+This subsection examines how storage-side input preparation affects host CPU work and memory requirements. The CPU baseline performs encoding, encryption, and ciphertext organization on the host, whereas FHEStore generates ciphertexts on the device, with the host submitting tasks and retrieving ciphertexts. Both paths use the same SSD plaintext page and retain the resulting ciphertexts in host memory.
+\bodypar
 
-The experiment covers plaintext sizes of 64--4096 bytes and measures cumulative CPU time and peak memory over the complete execution of the host application process. Cumulative CPU time is the sum of user and system CPU time across threads, and peak memory is the maximum resident set size (RSS). Bar heights report means, and error bars show sample standard deviations.
+The experiment covers plaintext sizes of 64--4096 bytes and measures cumulative host CPU time and peak host memory over the complete execution of the host application process. Cumulative host CPU time is the sum of user and system CPU time across threads, and peak host memory is the maximum resident set size (RSS). The resource CPU baseline uses four workers, unlike the single-core encryption-stage comparison. Bar heights report means, and error bars show sample standard deviations.
+\bodypar
 
 % Resource data: logs/encrypt_resources_qemu4_20261004/{cpu,csd}/resource_summary.csv.
 % Both configurations record the same input-page SHA-256. The CPU resource
 % baseline uses four workers; these are not the single-core Section 6.2 results.
+\bodypar
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\columnwidth]{figures/host-resources/host-cpu-time.pdf}
   \caption{Cumulative host CPU time for the CPU baseline and FHEStore.}
-  \Description{Grouped bars compare cumulative application CPU time for plaintext sizes from 64 to 4096 bytes. FHEStore uses less CPU time at every size. At 2048 bytes, CPU time decreases from 1287.15 to 113.30 milliseconds. Error bars indicate sample standard deviations over ten measurements.}
+  \Description{Grouped bars compare cumulative host CPU time for plaintext sizes from 64 to 4096 bytes. FHEStore uses less CPU time at every size. At 2048 bytes, CPU time decreases from 1287.15 to 113.30 milliseconds. Error bars indicate sample standard deviations over ten measurements.}
   \label{fig:host-cpu-time}
 \end{figure}
 
-Figure~\ref{fig:host-cpu-time} shows that FHEStore reduces cumulative host CPU time at every measured plaintext size. The reductions reach 91.2\% and 92.7\% at plaintext sizes of 2048 and 4096 bytes, respectively. At 4096 bytes, cumulative CPU time decreases from 2366.46~ms for the CPU baseline to 172.60~ms for FHEStore. With encoding and encryption performed on the device, the host no longer executes the main ciphertext-generation computation; its work shifts to task submission, ciphertext reception, and related management.
+Figure~\ref{fig:host-cpu-time} shows that FHEStore reduces cumulative host CPU time at every measured plaintext size. The reductions reach 91.2\% and 92.7\% at plaintext sizes of 2048 and 4096 bytes, respectively. At 4096 bytes, cumulative host CPU time decreases from 2366.46~ms for the CPU baseline to 172.60~ms for FHEStore. With encoding and encryption performed on the device, the host no longer executes encoding and encryption; its work shifts to task submission, ciphertext retrieval, and related management.
+\bodypar
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\columnwidth]{figures/host-resources/host-memory.pdf}
-  \caption{Peak host memory for the CPU baseline and FHEStore.}
-  \Description{Grouped bars compare peak application resident memory for plaintext sizes from 64 to 4096 bytes. At 2048 bytes, peak memory decreases from 260.09 to 133.14 MiB. At 4096 bytes, it decreases from 517.53 to 261.88 MiB. Error bars indicate sample standard deviations over ten measurements.}
+  \caption{Peak host memory for the CPU baseline and \mbox{FHEStore}.}
+  \Description{Grouped bars compare peak host memory for plaintext sizes from 64 to 4096 bytes. At 2048 bytes, peak memory decreases from 260.09 to 133.14 MiB. At 4096 bytes, it decreases from 517.53 to 261.88 MiB. Error bars indicate sample standard deviations over ten measurements.}
   \label{fig:host-memory}
 \end{figure}
 
-Figure~\ref{fig:host-memory} shows the change in peak host memory. At a plaintext size of 2048 bytes, FHEStore reduces peak memory from 260.09~MiB to 133.14~MiB, a 48.8\% reduction; at 4096 bytes, the reduction reaches 49.4\%. Both paths retain output ciphertexts in host memory, while FHEStore's device-side production path reduces the intermediate buffering required for host-side ciphertext generation.
+Figure~\ref{fig:host-memory} shows the change in peak host memory. At a plaintext size of 2048 bytes, FHEStore reduces peak memory from 260.09~MiB to 133.14~MiB, a 48.8\% reduction; at 4096 bytes, the reduction reaches 49.4\%. Both paths retain output ciphertexts in host memory, while FHEStore's storage-side input preparation reduces the intermediate buffering required for host encoding, encryption, and ciphertext organization.
+\bodypar
 
-These results show that, in addition to accelerating the encryption stage, FHEStore reduces the host CPU time and memory required for ciphertext production, leaving more host resources available for other application tasks.
-
-\subsection{Application-Directed Ciphertext Generation}
+\subsection{Application-Directed Input Preparation}
 \label{sec:selective-generation}
-We evaluate FHEStore's ability to configure filtering conditions and output fields for application-directed ciphertext generation. The experiments use TPC-H lineitem and Intel Lab sensor data, with 1024 records in each dataset. Each source record is serialized into a fixed-length 512-byte binary layout for device-side preprocessing, with unused positions zero-filled. Table~\ref{tab:application-preprocessing-conditions} lists six preprocessing conditions covering different value ranges, composite predicates, and encrypted output fields.
+We evaluate FHEStore's ability to configure selection conditions and output fields for application-directed input preparation. The experiments use TPC-H lineitem and Intel Lab sensor data, with 1024 records in each dataset. Each source record is serialized into a fixed-length 512-byte binary layout for device-side preprocessing, with unused positions zero-filled. Table~\ref{tab:application-preprocessing-conditions} lists six preprocessing conditions covering different value ranges, composite predicates, and encrypted output fields.
+\bodypar
 
 \begin{table}[!htbp]
   \centering
@@ -540,9 +554,11 @@ We evaluate FHEStore's ability to configure filtering conditions and output fiel
   \end{tabular}
 \end{table}
 
-The amount upper bounds $T_{75}$ and $T_{50}$ and humidity lower bounds $H_{75}$ and $H_{50}$ are selected from the corresponding field distributions to target selectivities of 75\% and 50\%, respectively. C3 and C6 use fixed composite predicates. Amounts are represented in cents, dates as YYYYMMDD integers, temperatures in milli-degrees Celsius, and voltages in millivolts. The SQL predicates describe the filtering semantics of the tasks. These configurations vary the selected value range as well as the filtering fields, predicate combinations, and encrypted output fields.
+The amount upper bounds $T_{75}$ and $T_{50}$ and humidity lower bounds $H_{75}$ and $H_{50}$ are selected from the corresponding field distributions to target selectivities of 75\% and 50\%, respectively. C3 and C6 use fixed composite predicates. Amounts are represented in cents, dates as YYYYMMDD integers, temperatures in milli-degrees Celsius, and voltages in millivolts. The SQL predicates describe the selection semantics of the tasks. These configurations vary the selected value range as well as the predicate fields, predicate combinations, and encrypted output fields.
+\bodypar
 
-The CPU baseline performs filtering, projection, encoding, encryption, and ciphertext organization on the host. FHEStore connects these stages in a device-side processing path and generates ciphertext only for selected field values. Input preparation time includes data access and processing until the output ciphertexts are available in host memory. Error bars show sample standard deviations.
+The CPU baseline performs selection, projection, encoding, encryption, and ciphertext organization on the host. FHEStore connects these stages in a device-side processing path and generates ciphertext only for selected field values. Input-preparation latency includes data access and processing until the ciphertexts are available in host memory. Error bars show sample standard deviations.
+\bodypar
 
 \begin{figure}[!htbp]
   \centering
@@ -552,17 +568,22 @@ The CPU baseline performs filtering, projection, encoding, encryption, and ciphe
   \label{fig:selective-input-preparation}
 \end{figure}
 
-Figure~\ref{fig:selective-input-preparation} groups the six conditions by dataset. FHEStore reduces input preparation time in every configuration, achieving $3.29\times$--$3.65\times$ speedups over the CPU baseline. For the composite predicate C3 on TPC-H, time decreases from 183.92~ms to 50.38~ms; for C6 on Intel Lab, it decreases from 168.62~ms to 51.23~ms, corresponding to speedups of $3.65\times$ and $3.29\times$, respectively.
+Figure~\ref{fig:selective-input-preparation} groups the six conditions by dataset. FHEStore reduces input-preparation latency in every configuration, achieving $3.29\times$--$3.65\times$ speedups over the CPU baseline. For the composite predicate C3 on TPC-H, time decreases from 183.92~ms to 50.38~ms; for C6 on Intel Lab, it decreases from 168.62~ms to 51.23~ms, corresponding to speedups of $3.65\times$ and $3.29\times$, respectively.
+\bodypar
 
-Changing the selected value range also changes the ciphertext-generation cost. When target selectivity decreases from 75\% to 50\%, FHEStore input preparation time decreases from 124.54~ms to 85.90~ms for TPC-H and from 120.78~ms to 90.15~ms for Intel Lab. These results demonstrate task-configurable ciphertext generation across different filtering conditions and output fields, with preprocessing and encryption performed along the storage-side path.
+Changing the selected value range also changes the encryption workload. When target selectivity decreases from 75\% to 50\%, FHEStore input-preparation latency decreases from 124.54~ms to 85.90~ms for TPC-H and from 120.78~ms to 90.15~ms for Intel Lab. These results demonstrate application-directed input preparation across different selection conditions and output fields, using operator stream composition to connect preprocessing and encryption.
+\bodypar
 
 \subsection{Homomorphic Computation Correctness}
 \label{sec:hpu-correctness}
 We verify that ciphertexts generated by FHEStore support correct HPU homomorphic computation. The experiments cover bitwise OR, bitwise AND, equality, right shift, addition, subtraction, and multiplication, with plaintext sizes of 64, 128, 256, 512, and 1024 bytes per operand.
+\bodypar
 
 For the plaintext operands corresponding to each ciphertext batch, the host performs the same operation to generate reference results. After HPU computation, the host recovers the returned results using the corresponding key and compares the complete result sequence element by element, while also checking the output count. Addition, subtraction, and multiplication use results modulo 256, matching unsigned 8-bit arithmetic semantics.
+\bodypar
 
 Table~\ref{tab:hpu-correctness} summarizes the reference rules and verification results, where $x$ and $y$ denote the plaintext operands. Each configuration has three valid runs, except multiplication at a plaintext size of 1024 bytes, which has two.
+\bodypar
 
 % Counts derive from logs/csd_hpu_{64,128,256,512,1024}_{formal,eq_sub}_20261006/summary.csv.
 % Include only OR, AND, EQ, SHR, ADD, SUB, MUL; exclude the extra SHL runs at 64.
@@ -591,12 +612,13 @@ Table~\ref{tab:hpu-correctness} summarizes the reference rules and verification 
   \end{tabular*}
 \end{table}
 
-All 104 valid runs included in the statistics pass these checks: the returned result counts and element-wise values agree with the host references. These results verify the functional integration of FHEStore's ciphertext-generation path with HPU homomorphic computation.
+All 104 valid correctness runs match the host reference counts and element-wise values, confirming that FHEStore prepares compatible ciphertext inputs for HPU homomorphic computation.
+\bodypar
 
 \section{Related Work}
 \label{sec:related}
 \noindent\textbf{Homomorphic Computation Acceleration.}
-FHE accelerators improve homomorphic computation through specialized arithmetic and memory organization~\cite{xu2026hera,zhou2023fhemem,kim2022bts,kim2022ark}. F1 and CraterLake coordinate vector execution with data movement~\cite{samardzic2021f1,samardzic2022craterlake}, while FPT, MATCHA, and Strix optimize TFHE bootstrapping~\cite{vanbeirendonck2023fpt,jiang2022matcha,putra2023strix}. These designs accelerate the ciphertext consumer. FHEStore addresses the complementary producer stage, converting persistent application data into input ciphertexts.
+FHE accelerators improve homomorphic computation through specialized arithmetic and memory organization~\cite{xu2026hera,zhou2023fhemem,kim2022bts,kim2022ark}. F1 and CraterLake coordinate vector execution with data movement~\cite{samardzic2021f1,samardzic2022craterlake}, while FPT, MATCHA, and Strix optimize TFHE bootstrapping~\cite{vanbeirendonck2023fpt,jiang2022matcha,putra2023strix}. These designs accelerate the ciphertext consumer. FHEStore addresses the complementary input-preparation stage, coordinating persistent-data access, encoding, encryption, and ciphertext organization.
 \bodypar
 
 \noindent\textbf{Encryption and Client Processing.}
@@ -604,15 +626,15 @@ FPGA encryption engines have been developed for Brakerski/Fan--Vercauteren (BFV)
 \bodypar
 
 \noindent\textbf{Computational Storage.}
-Computational storage systems connect persistent data to programmable processing. Ibex offloads selection, projection, and aggregation~\cite{woods2014ibex}, and Biscuit composes host and device tasks through ordered data ports~\cite{gu2016biscuit}. INSIDER and DONGLE 2.0 provide programmable interfaces for data access and FPGA execution~\cite{ruan2019insider,wong2024dongle}. FHEStore applies operator stream composition to optional preprocessing and encryption, coordinating flow control and output allocation to accommodate ciphertext expansion.
+Computational storage systems connect persistent data to programmable processing. Ibex offloads selection, projection, and aggregation~\cite{woods2014ibex}, and Biscuit composes host and device tasks through ordered data ports~\cite{gu2016biscuit}. INSIDER and DONGLE 2.0 provide programmable interfaces for data access and FPGA execution~\cite{ruan2019insider,wong2024dongle}. FHEStore's operator stream composition method connects optional preprocessing to encryption and accounts for ciphertext expansion through value-count-based buffer allocation and stream flow control.
 \bodypar
 
 \noindent\textbf{Storage-Coupled FHE Evaluation.}
-Storage-coupled FHE designs integrate storage access with homomorphic evaluation~\cite{ohba2025nvme,suzuki2023isc}. Ohba et al. convey ciphertexts, keys, and programs through NVMe to an FPGA TFHE accelerator, while Suzuki and Yamana study CSD-coupled homomorphic execution. FHEStore's production task instead starts from persistent plaintext and supplies input ciphertexts to an external consumer.
+Storage-coupled FHE designs integrate storage access with homomorphic evaluation~\cite{ohba2025nvme,suzuki2023isc}. Ohba et al. convey ciphertexts, keys, and programs through NVMe to an FPGA TFHE accelerator, while Suzuki and Yamana study CSD-coupled homomorphic execution. FHEStore's input-preparation task starts from persistent plaintext and supplies input ciphertexts to an external consumer.
 
 \section{Conclusion}
 \label{sec:conclusion}
-FHEStore realizes streaming ciphertext production with FPGA-based computational storage. Its HLS encryption operator integrates radix encoding with TFHE encryption, using each generated mask coefficient for both dot-product accumulation and incremental ciphertext output. Operator stream composition connects optional preprocessing to encryption, while flow control and output allocation accommodate ciphertext expansion. With 1~KiB of plaintext input, the encryption operator and end-to-end ciphertext production achieve $5.00\times$ and $2.45\times$ speedups over host CPU encryption and the host CPU baseline, respectively. The evaluation also shows lower host CPU time and peak memory, and verifies HPU computation with the generated ciphertexts. These results demonstrate the benefit of coordinating accelerated encryption with storage-side dataflow.
+FHEStore is an FPGA-based computational storage framework for FHE input preparation from persistent data. Its HLS encryption operator integrates radix encoding with TFHE encryption, sharing each mask coefficient between dot-product accumulation and incremental ciphertext output. The operator stream composition method connects optional preprocessing to encryption, determines buffer capacity from the value count and ciphertext representation, and coordinates execution through stream flow control. With 1~KiB of plaintext input, the encryption operator and input preparation achieve $5.00\times$ and $2.45\times$ speedups over the corresponding host CPU baselines, with lower cumulative host CPU time and peak host memory. The prepared ciphertexts support correct HPU homomorphic computation.
 
 % Do not expose acknowledgments or identifying grant information in review.
 % Add this environment, with real content, in the accepted version.

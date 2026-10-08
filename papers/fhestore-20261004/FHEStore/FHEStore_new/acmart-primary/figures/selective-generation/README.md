@@ -41,3 +41,10 @@ legibility, grouping and visible uncertainty. This style revision preserves the
 requested existing one-axes placement; no experimental panels were invented.
 
 Old assets are retained under `/tmp/fhestore-fig6-8-before` for this session.
+
+## 2026-10-08 author-confirmed measurement update
+
+The author confirmed that the updated experimental manuscript uses ten valid
+measurements per performance configuration. The manuscript follows this update;
+the three-run samples retained in `combined-source-data.json` are historical
+source records and remain unchanged. No replacement raw samples are invented.

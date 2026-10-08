@@ -8,5 +8,12 @@
   "numerical_data_changed": false,
   "supersedes": "The historical comparability annotation in the preserved source snapshot.",
   "plaintext_input_author_statement": "2.45×是1 KiB明文的input preparation的FHEStore和CPU baseline的加速比",
-  "plaintext_input_definition": "Batch size B denotes plaintext input bytes. The second operand is derived from the first by adding one modulo 256; summing the two constructed operand buffers does not redefine the author-confirmed plaintext input size."
+  "plaintext_input_definition": "Batch size B denotes plaintext input bytes. The second operand is derived from the first by adding one modulo 256; summing the two constructed operand buffers does not redefine the author-confirmed plaintext input size.",
+  "performance_measurement_update": {
+    "date": "2026-10-08",
+    "source_commit": "d14429fde71f2e1a362e500729f70a9d2d4df7f4",
+    "author_statement": "这两项按师弟新稿，已有新测量",
+    "valid_measurements_per_configuration": 10,
+    "supersedes": "Historical performance run counts of three or two in the preserved source snapshot. The manuscript adopts the author-confirmed updated protocol; raw historical samples remain unchanged."
+  }
 }

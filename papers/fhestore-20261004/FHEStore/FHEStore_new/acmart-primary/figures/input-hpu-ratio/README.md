@@ -21,3 +21,12 @@ On 2026-10-08 the author confirmed that the comparison uses the same experimenta
 The final canvas is exactly 7.0 by 2.35 inches (504 by 169.2 PDF points), about 6.7 points taller than the old export at the same width. Two side-by-side panels are retained. Every batch label is 8 pt; axis labels are 8.25 pt; group labels, panel labels, and the legend are 8.5 pt. The PDF embeds bold Tinos, a Times-compatible serif. The SVG preserves editable text. CPU bars use `#4C78A8`; FHEStore bars use `#E58D5C` with `///` hatching; the ratio curve uses green `#397D54`. Axes are 0.65 pt with light grey horizontal grids.
 
 The script validates the source means, run counts, ratios, and standard deviations before export; `plotted-values.csv` preserves the exact source fields. `qa.json` records these checks and all visible text bounds. Agent inspection of both the PNG and a 144 dpi PDF rendering confirmed that all labels remain within the canvas without overlap. The original PDF backup is `/tmp/fhestore-figure5-before-20261008/input-hpu-two-panels.pdf`.
+
+## 2026-10-08 author-confirmed measurement update
+
+When merging commit `d14429fde`, the author confirmed new measurements and ten
+valid runs per performance configuration. The manuscript adopts this updated
+protocol. The three/two-run counts described above refer to the preserved
+historical snapshot, which remains unchanged; they do not override the new
+manuscript protocol. This confirmation is recorded in `author-confirmation.json`.
+The separate 104-run correctness evaluation remains unchanged.

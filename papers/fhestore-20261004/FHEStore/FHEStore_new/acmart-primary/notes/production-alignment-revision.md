@@ -836,3 +836,157 @@ Table 4 的 p 列单元格逐项使用末尾 \par，与 p 列自动追加的
 编译通过并检查第 9 页，表格更紧凑且无溢出。正文仍在第 10 页
 结束，PDF 共 11 页。备份与核验记录位于
 /tmp/fhestore-table4-spacing-20261008。未提交或 push。
+
+
+## 2026-10-08：更新 Framework 题目与 input preparation 摘要
+
+按作者最新确认，将题目改为 FHEStore: An FPGA-Based Computational
+Storage Framework for FHE Input Preparation，短标题为 FHEStore:
+A Framework for FHE Input Preparation。摘要采用三段结构：持久化
+数据的 Host 准备路径和 producer–consumer 动机；集成编码加密
+算子，以及应用任务、算子图、流控与密文缓冲分配的框架组织；
+1 KiB 下算子 5.00×、input preparation 2.45×，以及 Host CPU time
+和 peak host memory 结果。摘要未列动机占比或远端 HPU 演示句。
+
+本轮按作者“先”的范围更新题目、摘要和短标题，正文术语迁移
+留待后续任务。长题目改变了首页 ACM Reference Format 的断行，
+仅在 maketitle 期间使用 1em emergencystretch，结束后恢复 0pt，
+使该引用块正常换行；保留原字号、边距和标题定义。除这一必要
+版式调整外，abstract 环境之后的源文与修改前逐字节一致。
+
+编译通过，最终日志无 Overfull、未定义引用或重编译提示。
+Figure 1 仍在第一页单栏，Figure 2 仍在第三页顶部，Conclusion
+和正文在第 10 页结束，全文含参考文献 11 页。核验 8 幅图、
+5 张表、9 条公式、43 个 labels、31 个 citation keys 均保留。
+实际检查首页、第 3 页和末两页，无裁切或文字溢出；末页两栏齐底。
+备份、批准文本、编译日志和渲染位于
+/tmp/fhestore-framework-title-abstract-20261008。未提交或 push。
+
+
+## 2026-10-08：展开正式题目中的 FHE
+
+按作者确认，将正式题目改为 FHEStore: An FPGA-based Computational
+Storage Framework for Input Preparation in Fully Homomorphic Encryption，
+based 保持小写。短标题继续使用 FHEStore: A Framework for FHE Input
+Preparation，摘要和全部正文保持逐字节不变。
+
+编译通过；首页标题为两行，ACM Reference Format 换行正常，无
+Overfull 或未定义引用。Figure 1 在第一页，Figure 2 在第三页，
+Conclusion 在第 10 页结束，全文仍 11 页。备份和首页渲染位于
+/tmp/fhestore-full-title-20261008。未提交或 push。
+
+
+## 2026-10-08：合并师弟的 GitHub 实验修改
+
+获取并快进到 yuanzhihao 于北京时间 18:10 提交的 d14429fde，
+Update FHEStore manuscript and experiment figures。仅将实验新稿
+与更新的 Figure 5、6、7 合入当前文稿；合并前的题目、短标题、
+摘要、Introduction、Background、第三至第五章、Related Work
+和 Conclusion 均逐字节保留。文献库、Figure 1–4/8 和原始数值
+快照的文件摘要不变。原编译 PDF 根据合并后的源码重建，未使用
+上游旧题目 PDF 覆盖当前稿。其他代码、旧稿及未提交文件未改。
+
+作者明确确认 4096-byte 行（2197.291 / 411.879 ms、5.33×）及
+所有性能实验每配置 10 次有效测量来自新测量，采用该更新，
+删除源码里已被取代的 legacy placeholder 注释。原历史数据快照
+仍保留，不编造新样本；此次确认已记录在工作区 AGENTS 和相关
+图目录说明中。正确性验证的 104 次及对应 3/2 次计数属于独立
+验证实验，保持原值。Table 2 的资源计数未改。
+
+保留本地 6.2/6.3/6.5 的标题；恢复 TPC-H 与 Intel Lab 两处
+数据集引用，以及资源实验四 workers 与加密阶段 single-core
+的区别。统一实验段落里的 ciphertext retrieval、input-preparation
+latency，计时仍止于 Host 内存密文就绪。新稿的 per-operand
+说明描述派生操作数的长度，不改变 1 KiB 明文输入的定义。
+Figure 5 恢复较宽左面板及加粗文字，70 根比例柱、误差范围、
+10 根准备延迟柱和五个 speedup 值不变；Host 两图仅横轴标题
+大小写更新。新 Figure 5 为 D3 导出，现 SVG/Python 仍为旧布局，
+上游 README 已说明区别，未以重绘覆盖作者新图。
+
+初次编译虽为 11 页，但 References 完全移至末页，末行相差
+11.038 pt。仅删除 6.2/6.4 两句紧接数据之后的重复总结，让
+References 自然回到第 10 页；未改字体、边距、标题定义或
+增加负间距/强制分页。末页两栏墨迹底差 0.328 pt，视觉齐底。
+
+最终编译通过，无 Overfull、未定义引用或重编译提示；仍保留
+既有 Underfull 提示。正文与 Conclusion 在第 10 页结束，全文
+11 页；Figure 1 在第一页单栏，Figure 2 在第三页顶部，Figure 5
+在第八页。8 幅图、5 张表、9 条公式、43 个 labels、31 个
+citation keys 保留。实际检查实验页和末两页，无裁切或孤立标题。
+备份、三版本 diff、作者测量确认、编译日志、渲染及哈希核验
+位于 /tmp/fhestore-experiment-merge-20261008。Git main 已快进
+至师弟提交；本地合并结果未新建提交，未 push。
+
+
+## 2026-10-08：在摘要中明确算子流组合方法
+
+按作者确认，仅替换摘要第二段末两句：We further propose an
+operator stream composition method that accounts for ciphertext expansion.
+It connects optional preprocessing to encryption, determines ciphertext
+buffer capacity from the value count and ciphertext representation, and
+coordinates the composed operators through stream flow control.
+
+保留前半段 HLS 编码加密算子及 mask 系数复用的技术点；方法范围
+限定为算子流组合与密文容量、流控的协调，不以整体 FHE input
+preparation 作为这一项方法的名称。主文稿除批准的两句外，其他
+内容逐字节不变，CRLF 保留。题目、实验新测量及原图均未改。
+
+编译通过，无 Overfull、未定义引用或重编译提示；首页排版正常。
+正文在第 10 页结束，全文 11 页；第 2–11 页 PDF 文本及换行
+布局与修改前一致，末页两栏正常齐底。备份与渲染记录位于
+/tmp/fhestore-abstract-stream-method-20261008。未提交或 push。
+
+
+## 2026-10-08：全文对齐新的框架题目与摘要
+
+按作者“根据更新后的题目和摘要”要求，实际审阅主文稿第 1–8 章、
+图表说明及最终 PDF。已确认的题目、短标题和三段摘要逐字保留。
+
+整体阶段、任务、设计路径和性能指标统一为 FHE input preparation，
+简称 input preparation；FHEStore 定位为 FPGA-based computational storage
+framework。producer–consumer 保留为工作流角色，算子内部保留实际
+block/mask generation 和 incremental ciphertext output，不另造
+ciphertext preparation 或将 streaming 本身作为贡献名称。
+
+Introduction 明确 producer 协调数据访问、编码、加密与密文组织，
+将贡献整理为 HLS encoding and encryption、Operator stream composition、
+Input preparation efficiency。第一项明确集成编码和加密、mask 单遍复用
+且不缓存完整向量；第二项明确值数量和密文表示确定容量、流控协调组合
+算子；第三项对应 5.00×、2.45× 与 Host 资源收益。首次 operator context
+用任务参数块的功能解释，未新增字段、参数或抽象代码清单。
+
+Background 和第三章同步阶段名称、容量依赖与框架任务描述。第五章改名
+Storage-Side FHE Input Preparation，开篇以算子流组合方法承接摘要，
+5.1 解释内存绑定、路由与流控，5.2 解释 M、C、接收容量和执行顺序。
+选择性任务两阶段固定为 discovery pass / encryption pass；一次 SSD
+加载、两次 SLM 扫描、Host mapping 与空选择行为不变。
+
+实验章整体名称与指标统一为 input preparation、cumulative host CPU time
+和 peak host memory；本工作中的筛选统一称 selection，predicate fields
+表示谓词字段。明确 104 次为 correctness runs，独立于性能重复测量。
+Related Work 对比对应输入准备阶段与两项设计，Conclusion 与题目、
+摘要一致。Figure 2 图注同步为 FHE input preparation，Figure 7 图注
+防止系统名称 FHEStore 断词。
+
+为保持十页正文，删除引言重复总括、选择性执行中已解释过的重复总结，
+精简上下文、输入 framing、正确性与结论句；应用模型、路由、容量公式、
+两阶段机制、结果和文献均保留。未修改字体、页边距、标题定义、图尺寸，
+没有负间距或强制分页。
+
+最终编译通过，无 Overfull、未定义引用或重编译提示。实际查看全部页面；
+正文与 Conclusion 在第 10 页结束，全文 11 页；Figure 1 在第一页单栏、
+Figure 2 在第三页顶部。末页两栏墨迹底差 0.328 pt，视觉齐底。题目、
+摘要、9 条公式、5 张表、43 个 labels、全部 citation occurrences、
+8 个图文件均核验与修改前一致；实验新测量与原始数据未动。源码 CRLF
+保留。备份、全文 diff、内容保护核验、编译日志和页面渲染位于
+/tmp/fhestore-paper-alignment-20261008。未提交或 push。
+
+
+## 2026-10-08：Introduction 贡献条目标题
+
+依据作者要求，三个粗体标题分别改为 Integrated HLS operator for TFHE encoding and encryption、Operator stream composition accounting for ciphertext expansion、Prototype implementation and evaluation。第三项采用作者指定的原型搭建与评估定位，保留原有加速比和 Host 资源结果。除这些标题外，仅将第三项的 With 1 KiB of plaintext input 简化为 With 1 KiB of plaintext，以避免新标题引起的行超宽；含义和数据不变。逐字核验其余主文稿内容保留。重新编译通过，无 Overfull 或未定义引用；正文在第 10 页结束，全文 11 页，Figure 2 保持第三页顶部。检查第二页贡献部分和末页参考文献排版。核验文件位于 /tmp/fhestore-contribution-labels-20261008；未提交或 push。
+
+
+## 2026-10-08：第三项先交代原型实现
+
+作者要求第三项正文先说明原型搭建，再给出条件和结果。最终首句为 We implement and evaluate an FHEStore prototype (Section 6)，随后保留 1 KiB 明文输入、算子 5.00×、input preparation 2.45×、host CPU baselines，以及累计 Host CPU 时间和峰值 Host 内存结果。平台细节不在贡献条目重复展开。逐字核验仅第三项正文变化，其余主文稿内容不变。编译末次日志无 Overfull、未定义引用或重编译提示；检查第 2、10、11 页。正文包括 Conclusion 在第 10 页结束，参考文献从第 10 页开始，第 11 页仅有参考文献，全文 11 页；Figure 2 仍在第三页顶部，末页两栏墨迹底差 0.328 pt。满足作者最新再次明确的正文不超过 10 页要求，无需额外压缩其他章节。备份和核验位于 /tmp/fhestore-contribution-prototype-20261008；未提交或 push。

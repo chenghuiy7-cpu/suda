@@ -100,3 +100,83 @@ TPC-H 引用用于说明 dbgen 的来源，没有声称作者完成了规范要�
 - 候选文献和未采用的备选保存在同一临时目录，不计入最终 References。
 
 最终 PDF SHA-256：`a5c4b1f02b1bad16c08fb7c581feb2a18c0bcda9842b5b4066195aee2185e10b`。
+
+
+## 2026-10-08：全部参考文献的题名、作者与链接身份复核
+
+本轮依据作者要求重新逐条核验当前 31 条 References，未沿用此前覆盖
+检查作为身份结论。24 篇带 DOI 的文献逐项取得 Crossref 注册原始 JSON，
+与出版商页面、正式 PDF、作者原始版本或官方机构记录交叉核对；其余
+7 项按软件官方仓库、固定版本标准、预印本和数据集官方页面核对。
+完整题名、完整作者名单及顺序、年份与版本、DOI、已有 URL 均已检查。
+结果：未发现指向不同作品的题名／作者／链接错配，没有必须修改的
+BibTeX 身份字段。保留文献库、主文稿与 PDF，不为了造成改动而替换
+正确署名。
+
+同时检查 BibTeX → BBL → PDF：31 个不同条目、31 个正文引用键、31 个
+BBL 条目对应一致，无重复键、缺失键、未引用条目或 nocite。逐条确认
+PDF 实际点击目标为该条的 DOI 或官方 URL，共检查 43 个外部链接注释；
+31 条预期入口全部存在。带 DOI 的条目在 PDF 中使用正式 DOI 入口，
+作者稿的补充 URL 不会替代它。
+
+需保留的版本差异如下：
+
+- F1：正式注册作者顺序为 Nikola Samardzic、Axel Feldmann 等；作者
+  PDF 的两个共同第一作者排序与姓名简称有所不同。当前 BibTeX 符合
+  正式注册记录，PDF 点击链接指向该正式 DOI，无需按作者稿改序。
+- BTS / ARK：arXiv 摘要网页存在 John Kim、Minsoo Rhu 顺序差异，但
+  实际作者 PDF 首页和正式注册记录与现 BibTeX 相同，保持正式顺序。
+- MemFHE：正式 2024 期刊版与 Crossref 均署名 Tajana Šimunić；不因
+  其他版本或个人主页而补成 Rosing。FHEmem 保持所引用的 2023 arXiv v1，
+  不把后来的正式出版年份及作者信息混入该条。
+- HERA：正式论文、官方会议节目与注册记录均用 Viktor Prasanna，
+  不据 DBLP 作者身份规范化名称补 K。HERA 标题的下划线／换行是
+  排版标记。DONGLE 的 Jing (Jane) Li 与官方落地页 Jing Li 为同一作者。
+- Strix 的 Prasetiyo 是单名；F1 的 Christopher Peikert 与 CraterLake
+  的 Chris Peikert 均按各自正式记录保留。Mert 论文的姓名重音正确。
+- TFHE、Mert 等论文的在线先行年份与卷期年份不同，当前采用的正式
+  卷期年份正确。TPC-H PDF 本次直取超时，但官方索引、PDF 搜索缓存
+  的封面／修订历史和规范下载页核实了同一链接与 Revision 3.0.1，
+  2022-04-28；未把抓取超时当成文献不存在或死链接。
+
+下表列出全部条目的当前题名及引用入口。完整有序作者、逐字段检查、
+版本差异与多个一级证据 URL 见同目录
+[reference-metadata-audit-20261008.json](reference-metadata-audit-20261008.json)。
+
+| 引用键 | 题名 | 核验入口 | 结果 |
+|---|---|---|---|
+| `chillotti2020tfhe` | TFHE: Fast Fully Homomorphic Encryption Over the Torus | [正式 DOI](https://doi.org/10.1007/s00145-019-09319-x) | 匹配，保留 |
+| `zama2025hpu` | A systemVerilog implementation of the Homomorphic Processing Unit (HPU) targeting AMD Alveo V80 FPGA board | [官方来源](https://github.com/zama-ai/hpu_fpga) | 匹配，保留 |
+| `xu2026hera` | HERA: A Bandwidth-efficient Accelerator for Fully Homomorphic Encryption on HBM-enabled FPGA | [正式 DOI](https://doi.org/10.1145/3748173.3779201) | 匹配，保留 |
+| `zhou2023fhemem` | FHEmem: A Processing In-Memory Accelerator for Fully Homomorphic Encryption | [官方来源](https://arxiv.org/abs/2311.16293v1) | 匹配，保留 |
+| `vanbeirendonck2023fpt` | FPT: A Fixed-Point Accelerator for Torus Fully Homomorphic Encryption | [正式 DOI](https://doi.org/10.1145/3576915.3623159) | 匹配，保留 |
+| `ruan2019insider` | INSIDER: Designing In-Storage Computing System for Emerging High-Performance Drive | [官方来源](https://www.usenix.org/conference/atc19/presentation/ruan) | 匹配，保留 |
+| `wong2024dongle` | DONGLE 2.0: Direct FPGA-Orchestrated NVMe Storage for HLS | [正式 DOI](https://doi.org/10.1145/3650038) | 匹配，保留 |
+| `ohba2025nvme` | An NVMe-Based Secure Computing Platform With FPGA-Based TFHE Accelerator | [正式 DOI](https://doi.org/10.1109/ACCESS.2025.3561728) | 匹配，保留 |
+| `mert2020bfv` | Design and Implementation of Encryption/Decryption Architectures for BFV Homomorphic Encryption Scheme | [正式 DOI](https://doi.org/10.1109/TVLSI.2019.2943127) | 匹配，保留 |
+| `lee2023ckks` | Configurable Encryption and Decryption Architectures for CKKS-Based Homomorphic Encryption | [正式 DOI](https://doi.org/10.3390/s23177389) | 匹配，保留 |
+| `krieger2024aloha` | Aloha-HE: A Low-Area Hardware Accelerator for Client-Side Operations in Homomorphic Encryption | [正式 DOI](https://doi.org/10.23919/DATE58400.2024.10546608) | 匹配，保留 |
+| `yune2025abcfhe` | ABC-FHE: A Resource-Efficient Accelerator Enabling Bootstrappable Parameters for Client-Side Fully Homomorphic Encryption | [正式 DOI](https://doi.org/10.1109/DAC63849.2025.11132592) | 匹配，保留 |
+| `gupta2024memfhe` | MemFHE: End-to-end Computing with Fully Homomorphic Encryption in Memory | [正式 DOI](https://doi.org/10.1145/3569955) | 匹配，保留 |
+| `vanderhagen2022choco` | Client-Optimized Algorithms and Acceleration for Encrypted Compute Offloading | [正式 DOI](https://doi.org/10.1145/3503222.3507737) | 匹配，保留 |
+| `suzuki2023isc` | Designing In-Storage Computing for Low Latency and High Throughput Homomorphic Encrypted Execution | [正式 DOI](https://doi.org/10.1109/ICBDA57405.2023.10104970) | 匹配，保留 |
+| `feryputri2025lwe` | FPGA-Based Hardware Accelerator for LWE Encryption and Decryption with TFHE Scheme | [正式 DOI](https://doi.org/10.1109/SOCC66126.2025.11235379) | 匹配，保留 |
+| `syafalni2026multicore` | Multicore Encryption-Decryption Hardware Accelerator for Torus-Based RLWE FHE | [正式 DOI](https://doi.org/10.1109/COOLCHIPS68842.2026.11556998) | 匹配，保留 |
+| `kim2022bts` | BTS: An Accelerator for Bootstrappable Fully Homomorphic Encryption | [正式 DOI](https://doi.org/10.1145/3470496.3527415) | 匹配，保留 |
+| `kim2022ark` | ARK: Fully Homomorphic Encryption Accelerator with Runtime Data Generation and Inter-Operation Key Reuse | [正式 DOI](https://doi.org/10.1109/MICRO56248.2022.00086) | 匹配，保留 |
+| `gentry2009fhe` | Fully Homomorphic Encryption Using Ideal Lattices | [正式 DOI](https://doi.org/10.1145/1536414.1536440) | 匹配，保留 |
+| `snia2025csmodel` | Computational Storage Architecture and Programming Model | [官方来源](https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf) | 匹配，保留 |
+| `samardzic2021f1` | F1: A Fast and Programmable Accelerator for Fully Homomorphic Encryption | [正式 DOI](https://doi.org/10.1145/3466752.3480070) | 匹配，保留 |
+| `samardzic2022craterlake` | CraterLake: A Hardware Accelerator for Efficient Unbounded Computation on Encrypted Data | [正式 DOI](https://doi.org/10.1145/3470496.3527393) | 匹配，保留 |
+| `jiang2022matcha` | MATCHA: A Fast and Energy-Efficient Accelerator for Fully Homomorphic Encryption over the Torus | [正式 DOI](https://doi.org/10.1145/3489517.3530435) | 匹配，保留 |
+| `putra2023strix` | Strix: An End-to-End Streaming Architecture with Two-Level Ciphertext Batching for Fully Homomorphic Encryption with Programmable Bootstrapping | [正式 DOI](https://doi.org/10.1145/3613424.3614264) | 匹配，保留 |
+| `woods2014ibex` | Ibex---An Intelligent Storage Engine with Support for Advanced SQL Off-loading | [正式 DOI](https://doi.org/10.14778/2732967.2732972) | 匹配，保留 |
+| `gu2016biscuit` | Biscuit: A Framework for Near-Data Processing of Big Data Workloads | [正式 DOI](https://doi.org/10.1109/ISCA.2016.23) | 匹配，保留 |
+| `regev2009lwe` | On Lattices, Learning with Errors, Random Linear Codes, and Cryptography | [正式 DOI](https://doi.org/10.1145/1568318.1568324) | 匹配，保留 |
+| `nvme2025slm` | NVM Express Subsystem Local Memory Command Set Specification | [官方来源](https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf) | 匹配，保留 |
+| `tpch2022spec` | TPC Benchmark H Standard Specification | [官方来源](https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf) | 匹配，保留 |
+| `bodik2004intellab` | Intel Lab Data | [官方来源](https://db.csail.mit.edu/labdata/labdata.html) | 匹配，保留 |
+
+本轮原始 Crossref 响应、四组证据、修改前备份和 PDF 链接提取记录位于
+/tmp/fhestore-reference-audit-20261008。正文仍十页，含参考文献十一页；
+由于书目和排版无须改动，未重新生成 PDF，未提交或 push。

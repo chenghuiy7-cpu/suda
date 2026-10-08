@@ -1,0 +1,2175 @@
+{
+  "audit_date": "2026-10-08",
+  "scope": "Bibliographic identity and rendered-link matching for all 31 cited references; not a new audit of experimental results.",
+  "summary": {
+    "references": 31,
+    "doi_records_crosschecked": 24,
+    "software_standard_dataset_or_non_doi_records": 7,
+    "mandatory_identity_corrections": 0,
+    "bib_modified": false,
+    "manuscript_modified": false,
+    "pdf_modified": false
+  },
+  "records": [
+    {
+      "key": "chillotti2020tfhe",
+      "bibliography": {
+        "key": "chillotti2020tfhe",
+        "type": "article",
+        "author": "Chillotti, Ilaria and Gama, Nicolas and Georgieva, Mariya and Izabach{\\`e}ne, Malika",
+        "title": "{TFHE}: Fast Fully Homomorphic Encryption Over the Torus",
+        "year": "2020",
+        "doi": "10.1007/s00145-019-09319-x",
+        "journal": "Journal of Cryptology",
+        "pages": "34--91"
+      },
+      "evidence_record": {
+        "key": "chillotti2020tfhe",
+        "bib_line": 1,
+        "status": "verified_same_work",
+        "verified": {
+          "title": "TFHE: Fast Fully Homomorphic Encryption Over the Torus",
+          "authors_in_order": [
+            "Ilaria Chillotti",
+            "Nicolas Gama",
+            "Mariya Georgieva",
+            "Malika Izabachène"
+          ],
+          "year": 2020,
+          "doi": "10.1007/s00145-019-09319-x",
+          "venue": "Journal of Cryptology",
+          "volume": "33",
+          "pages": "34–91"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title",
+          "all ordered authors",
+          "accent in Izabachène",
+          "issue year",
+          "DOI",
+          "venue/volume/pages",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://link.springer.com/article/10.1007/s00145-019-09319-x",
+            "type": "publisher official article record",
+            "location": "Title and author heading; Cite this article; issue date January 2020; DOI"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1007/s00145-019-09319-x",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/chillotti2020tfhe-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "Online publication 25 April 2019 and issue year 2020 refer to the same journal article. Current year=2020 is correct."
+        ],
+        "unverified_fields": [],
+        "topic_check": "TFHE scheme and torus ciphertext construction match current Background citations.",
+        "crossref_observed": {
+          "DOI": "10.1007/s00145-019-09319-x",
+          "title": [
+            "TFHE: Fast Fully Homomorphic Encryption Over the Torus"
+          ],
+          "authors_in_order": [
+            "Ilaria Chillotti",
+            "Nicolas Gama",
+            "Mariya Georgieva",
+            "Malika Izabachène"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2020,
+                1
+              ]
+            ]
+          },
+          "published_online": {
+            "date-parts": [
+              [
+                2019,
+                4,
+                25
+              ]
+            ]
+          },
+          "published": {
+            "date-parts": [
+              [
+                2019,
+                4,
+                25
+              ]
+            ]
+          },
+          "pages": "34-91"
+        }
+      },
+      "rendered_links": {
+        "key": "chillotti2020tfhe",
+        "expected": "https://doi.org/10.1007/s00145-019-09319-x",
+        "rendered_links": [
+          "https://doi.org/10.1007/s00145-019-09319-x"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "zama2025hpu",
+      "bibliography": {
+        "key": "zama2025hpu",
+        "type": "misc",
+        "author": "{Zama}",
+        "title": "{A systemVerilog implementation of the Homomorphic Processing Unit (HPU) targeting AMD Alveo V80 FPGA board}",
+        "year": "2025",
+        "url": "https://github.com/zama-ai/hpu_fpga"
+      },
+      "evidence_record": {
+        "key": "zama2025hpu",
+        "bib_line": 12,
+        "status": "verified_same_software_repository",
+        "verified": {
+          "title": "A systemVerilog implementation of the Homomorphic Processing Unit (HPU) targeting AMD Alveo V80 FPGA board",
+          "authors_in_order": [
+            "Zama"
+          ],
+          "year": 2025,
+          "doi": null
+        },
+        "bib_url": "https://github.com/zama-ai/hpu_fpga",
+        "checked_fields": [
+          "exact recommended full title",
+          "corporate author",
+          "recommended citation year",
+          "repository URL"
+        ],
+        "evidence": [
+          {
+            "url": "https://github.com/zama-ai/hpu_fpga",
+            "type": "official Zama repository README",
+            "location": "Citations section lines 681–690; What is Zama's HPU on FPGA lines 216–225"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "README explicitly recommends this title, Zama, 2025, and the same repository URL. No DOI is supplied in the official recommended citation. This is a software/repository reference, not a conference paper."
+        ],
+        "unverified_fields": [],
+        "topic_check": "Open-source SystemVerilog HPU targeting AMD Alveo V80 FPGA matches the Introduction consumer reference."
+      },
+      "rendered_links": {
+        "key": "zama2025hpu",
+        "expected": "https://github.com/zama-ai/hpu_fpga",
+        "rendered_links": [
+          "https://github.com/zama-ai/hpu_fpga"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "xu2026hera",
+      "bibliography": {
+        "key": "xu2026hera",
+        "type": "inproceedings",
+        "author": "Xu, Zhihan and Kannan, Rajgopal and Prasanna, Viktor",
+        "title": "{HERA}: A Bandwidth-efficient Accelerator for Fully Homomorphic Encryption on {HBM}-enabled {FPGA}",
+        "year": "2026",
+        "doi": "10.1145/3748173.3779201",
+        "booktitle": "Proceedings of the 2026 ACM/SIGDA International Symposium on Field Programmable Gate Arrays",
+        "pages": "265--276"
+      },
+      "evidence_record": {
+        "key": "xu2026hera",
+        "bib_line": 19,
+        "status": "verified_same_formal_fpga_paper",
+        "verified": {
+          "title": "HERA: A Bandwidth-efficient Accelerator for Fully Homomorphic Encryption on HBM-enabled FPGA",
+          "authors_in_order": [
+            "Zhihan Xu",
+            "Rajgopal Kannan",
+            "Viktor Prasanna"
+          ],
+          "year": 2026,
+          "doi": "10.1145/3748173.3779201",
+          "venue": "Proceedings of the 2026 ACM/SIGDA International Symposium on Field Programmable Gate Arrays",
+          "pages": "265–276"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title",
+          "all ordered authors as printed",
+          "year",
+          "DOI printed in supplied formal ACM PDF",
+          "venue and pages",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://isfpga.org/program/",
+            "type": "official FPGA 2026 conference program",
+            "location": "Tuesday February 24, 2026, Paper Session VII, HERA title and three ordered authors"
+          },
+          {
+            "url": "https://sites.usc.edu/fpga/publications/",
+            "type": "official author laboratory publication list (search-index content)",
+            "location": "2026 HERA entry; same title and authors"
+          },
+          {
+            "url": "https://doi.org/10.1145/3748173.3779201",
+            "type": "publisher DOI printed in formal paper; direct remote fetch unavailable",
+            "location": "Supplied official ACM-formatted PDF page 265 title/authors, ACM Reference Format and DOI footer"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1145/3748173.3779201",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/xu2026hera-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "local_evidence": "/home/yangchenghui/suda/papers/fhestore-20261004/FHEStore/FHEStore_new/acmart-primary/Xu чнЙ - 2026 - HERA A Bandwidth-efficient Accelerator for Fully H omomorphic E nc r yption on HBM-enabled FPG A.pdf",
+        "differences": [
+          {
+            "field": "title markup",
+            "bib": "HERA: A Bandwidth-efficient Accelerator for Fully Homomorphic Encryption on HBM-enabled FPGA",
+            "crossref": "Title includes <u> underline tags and line breaks within H/E/r/A letters",
+            "severity": "non-substantive",
+            "assessment": "Formatting markup rather than different title; keep clean printed title in bib."
+          }
+        ],
+        "notes": [
+          "Crossref confirms Zhihan Xu, Rajgopal Kannan, Viktor Prasanna, year2026, DOI and pages265–276. Its title embeds underline HTML tags/newlines for H/E/r/A; the current plain-text normalized title accurately matches the formal paper. No middle initial K appears in the formal registration."
+        ],
+        "unverified_fields": [],
+        "topic_check": "Formal abstract describes FHE hardware arithmetic, HBM traffic and memory optimizations; current consumer citations correspond.",
+        "crossref_observed": {
+          "DOI": "10.1145/3748173.3779201",
+          "title": [
+            "HERA: A Bandwidth-efficient Accelerator for Fully\n                    <u>H</u>\n                    omomorphic\n                    <u>E</u>\n                    nc\n                    <u>r</u>\n                    yption on HBM-enabled FPG\n                    <u>A</u>"
+          ],
+          "authors_in_order": [
+            "Zhihan Xu",
+            "Rajgopal Kannan",
+            "Viktor Prasanna"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2026,
+                2,
+                22
+              ]
+            ]
+          },
+          "published_online": {
+            "date-parts": [
+              [
+                2026,
+                2,
+                21
+              ]
+            ]
+          },
+          "published": {
+            "date-parts": [
+              [
+                2026,
+                2,
+                21
+              ]
+            ]
+          },
+          "pages": "265-276"
+        }
+      },
+      "rendered_links": {
+        "key": "xu2026hera",
+        "expected": "https://doi.org/10.1145/3748173.3779201",
+        "rendered_links": [
+          "https://doi.org/10.1145/3748173.3779201"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "zhou2023fhemem",
+      "bibliography": {
+        "key": "zhou2023fhemem",
+        "type": "misc",
+        "author": "Zhou, Minxuan and Nam, Yujin and Gangwar, Pranav and Xu, Weihong and Dutta, Arpan and Subramanyam, Kartikeyan and Wilkerson, Chris and Cammarota, Rosario and Gupta, Saransh and Rosing, Tajana",
+        "title": "{FHEmem}: A Processing In-Memory Accelerator for Fully Homomorphic Encryption",
+        "year": "2023",
+        "url": "https://arxiv.org/abs/2311.16293v1"
+      },
+      "evidence_record": {
+        "key": "zhou2023fhemem",
+        "bib_line": 32,
+        "status": "verified_same_arxiv_v1",
+        "verified": {
+          "title": "FHEmem: A Processing In-Memory Accelerator for Fully Homomorphic Encryption",
+          "authors_in_order": [
+            "Minxuan Zhou",
+            "Yujin Nam",
+            "Pranav Gangwar",
+            "Weihong Xu",
+            "Arpan Dutta",
+            "Kartikeyan Subramanyam",
+            "Chris Wilkerson",
+            "Rosario Cammarota",
+            "Saransh Gupta",
+            "Tajana Rosing"
+          ],
+          "year": 2023,
+          "doi": "10.48550/arXiv.2311.16293",
+          "version": "arXiv:2311.16293v1; 27 November 2023"
+        },
+        "bib_url": "https://arxiv.org/abs/2311.16293v1",
+        "checked_fields": [
+          "full title",
+          "all ten authors and order",
+          "year",
+          "explicit URL version",
+          "arXiv identifier"
+        ],
+        "evidence": [
+          {
+            "url": "https://arxiv.org/abs/2311.16293v1",
+            "type": "official author-deposited preprint record",
+            "location": "Title, Authors, Submitted on 27 Nov 2023, v1 submission history, arXiv-issued DataCite DOI"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "Bib explicitly cites the 2023 v1 preprint, and its URL resolves to that version. arXiv shows an arXiv-issued DOI, which the current bib omits; adding it is optional metadata enrichment, not a wrong identity or missing journal DOI. Keep the version-specific URL if this remains the cited version."
+        ],
+        "unverified_fields": [],
+        "topic_check": "PIM FHE accelerator for encrypted computation matches current consumer/memory-system citations."
+      },
+      "rendered_links": {
+        "key": "zhou2023fhemem",
+        "expected": "https://arxiv.org/abs/2311.16293v1",
+        "rendered_links": [
+          "https://arxiv.org/abs/2311.16293v1"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "vanbeirendonck2023fpt",
+      "bibliography": {
+        "key": "vanbeirendonck2023fpt",
+        "type": "inproceedings",
+        "author": "Van Beirendonck, Michiel and D'Anvers, Jan-Pieter and Turan, Furkan and Verbauwhede, Ingrid",
+        "title": "{FPT}: A Fixed-Point Accelerator for Torus Fully Homomorphic Encryption",
+        "year": "2023",
+        "doi": "10.1145/3576915.3623159",
+        "booktitle": "Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security",
+        "pages": "741--755"
+      },
+      "evidence_record": {
+        "key": "vanbeirendonck2023fpt",
+        "bib_line": 40,
+        "status": "verified_same_formal_ccs_paper",
+        "verified": {
+          "title": "FPT: A Fixed-Point Accelerator for Torus Fully Homomorphic Encryption",
+          "authors_in_order": [
+            "Michiel Van Beirendonck",
+            "Jan-Pieter D'Anvers",
+            "Furkan Turan",
+            "Ingrid Verbauwhede"
+          ],
+          "year": 2023,
+          "doi": "10.1145/3576915.3623159",
+          "venue": "Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security",
+          "pages": "741–755"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "formal full title",
+          "all ordered authors",
+          "compound surname Van Beirendonck",
+          "hyphenated given name and apostrophe in D'Anvers",
+          "formal publication year",
+          "DOI",
+          "venue/pages",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://github.com/KULeuven-COSIC/fpt-demo",
+            "type": "official authors' COSIC artifact repository",
+            "location": "README ACM Ref/BibTex section lines 221–245; exact published ACM citation"
+          },
+          {
+            "url": "https://sigsac.hosting.acm.org/ccs/CCS2023/tocs/tocs-ccs23.html",
+            "type": "official ACM CCS 2023 table of contents",
+            "location": "FPT entry: title and all four ordered authors"
+          },
+          {
+            "url": "https://eprint.iacr.org/2022/1635.pdf",
+            "type": "author-deposited paper",
+            "location": "First page full ordered author names and title"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1145/3576915.3623159",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/vanbeirendonck2023fpt-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "The earlier 2022 ePrint/arXiv record and the cited 2023 CCS publication have the same authors and work; current year and DOI identify the formal CCS version. Curly vs ASCII apostrophe is typography, not an author mismatch."
+        ],
+        "unverified_fields": [],
+        "topic_check": "TFHE bootstrapping on FPGA, fixed-point arithmetic and streaming bootstrapping kernels match the Related Work topic. It is not cited as plaintext input preparation.",
+        "crossref_observed": {
+          "DOI": "10.1145/3576915.3623159",
+          "title": [
+            "FPT: A Fixed-Point Accelerator for Torus Fully Homomorphic Encryption"
+          ],
+          "authors_in_order": [
+            "Michiel Van Beirendonck",
+            "Jan-Pieter D'Anvers",
+            "Furkan Turan",
+            "Ingrid Verbauwhede"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2023,
+                11,
+                15
+              ]
+            ]
+          },
+          "published_online": {
+            "date-parts": [
+              [
+                2023,
+                11,
+                21
+              ]
+            ]
+          },
+          "published": {
+            "date-parts": [
+              [
+                2023,
+                11,
+                15
+              ]
+            ]
+          },
+          "pages": "741-755"
+        }
+      },
+      "rendered_links": {
+        "key": "vanbeirendonck2023fpt",
+        "expected": "https://doi.org/10.1145/3576915.3623159",
+        "rendered_links": [
+          "https://doi.org/10.1145/3576915.3623159"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "ruan2019insider",
+      "bibliography": {
+        "key": "ruan2019insider",
+        "type": "inproceedings",
+        "author": "Ruan, Zhenyuan and He, Tong and Cong, Jason",
+        "title": "{INSIDER}: Designing In-Storage Computing System for Emerging High-Performance Drive",
+        "year": "2019",
+        "url": "https://www.usenix.org/conference/atc19/presentation/ruan",
+        "booktitle": "2019 USENIX Annual Technical Conference (USENIX ATC 19)",
+        "pages": "379--394"
+      },
+      "evidence_record": {
+        "key": "ruan2019insider",
+        "bib_line": 52,
+        "status": "verified_same_formal_usenix_paper",
+        "verified": {
+          "title": "INSIDER: Designing In-Storage Computing System for Emerging High-Performance Drive",
+          "authors_in_order": [
+            "Zhenyuan Ruan",
+            "Tong He",
+            "Jason Cong"
+          ],
+          "year": 2019,
+          "doi": null,
+          "venue": "2019 USENIX Annual Technical Conference (USENIX ATC 19)",
+          "pages": "379–394"
+        },
+        "bib_url": "https://www.usenix.org/conference/atc19/presentation/ruan",
+        "checked_fields": [
+          "full title",
+          "all ordered authors",
+          "year",
+          "venue/pages",
+          "official landing URL",
+          "official recommended BibTeX"
+        ],
+        "evidence": [
+          {
+            "url": "https://www.usenix.org/conference/atc19/presentation/ruan",
+            "type": "official USENIX paper record and recommended BibTeX",
+            "location": "Title/authors lines 4–6; BibTeX lines 15–27"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "The official recommended BibTeX contains the same URL and no DOI. No DOI should be invented."
+        ],
+        "unverified_fields": [],
+        "topic_check": "Programmable FPGA in-storage execution, virtual file abstraction and runtime support match current storage-framework citations."
+      },
+      "rendered_links": {
+        "key": "ruan2019insider",
+        "expected": "https://www.usenix.org/conference/atc19/presentation/ruan",
+        "rendered_links": [
+          "https://www.usenix.org/conference/atc19/presentation/ruan"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "wong2024dongle",
+      "bibliography": {
+        "key": "wong2024dongle",
+        "type": "article",
+        "author": "Wong, Linus Y. and Zhang, Jialiang and Li, Jing (Jane)",
+        "title": "{DONGLE} 2.0: Direct {FPGA}-Orchestrated {NVMe} Storage for {HLS}",
+        "year": "2024",
+        "doi": "10.1145/3650038",
+        "journal": "ACM Transactions on Reconfigurable Technology and Systems"
+      },
+      "evidence_record": {
+        "key": "wong2024dongle",
+        "bib_line": 63,
+        "status": "verified_same_formal_trets_article",
+        "verified": {
+          "title": "DONGLE 2.0: Direct FPGA-Orchestrated NVMe Storage for HLS",
+          "authors_in_order": [
+            "Linus Y. Wong",
+            "Jialiang Zhang",
+            "Jing (Jane) Li"
+          ],
+          "publisher_landing_author_variant": [
+            "Linus Y. Wong",
+            "Jialiang Zhang",
+            "Jing Li"
+          ],
+          "year": 2024,
+          "doi": "10.1145/3650038",
+          "venue": "ACM Transactions on Reconfigurable Technology and Systems",
+          "volume": "17",
+          "issue": "3",
+          "article_number": "45",
+          "pages": "45:1–45:32",
+          "numpages": 32
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title",
+          "all ordered authors and middle initial Y.",
+          "year",
+          "DOI",
+          "journal/volume/issue/article number/page count",
+          "distinction from earlier DONGLE conference version",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://doi.org/10.1145/3650038",
+            "type": "official publisher article (actual publisher search-index content; direct fetch 403)",
+            "location": "Article header: full title, authors Linus Y. Wong/Jialiang Zhang/Jing Li, DOI, vol17 issue3 article45 pages1–32; publication history 17 September2024/Online AM5March2024"
+          },
+          {
+            "url": "https://dl.acm.org/doi/pdf/10.1145/3650038",
+            "type": "formal publisher PDF mirrored in Paperity preview; supplemental author-form evidence",
+            "location": "First page byline and page45:2 ACM Reference Format print Jing (Jane) Li"
+          },
+          {
+            "url": "https://paperity.org/p/376795859/dongle-2-0-direct-fpga-orchestrated-nvme-storage-for-hls",
+            "type": "secondary preview of explicitly identified ACM PDF (supplement only)",
+            "location": "Printed ACM Reference Format including Jing (Jane) Li; September2024,32pages, DOI"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1145/3650038",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/wong2024dongle-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [
+          {
+            "field": "author display variant",
+            "bib": "Jing (Jane) Li",
+            "official_landing": "Jing Li",
+            "severity": "non-substantive",
+            "assessment": "Same author and ORCID; formal PDF ACM Reference Format prints Jing (Jane) Li, so retain current bib author spelling."
+          }
+        ],
+        "notes": [
+          "Correctly cites DONGLE 2.0 2024 TRETS extended article, not DONGLE 2023 conference paper. March2024 online accepted manuscript versus September2024 formal publication are consistent within year2024."
+        ],
+        "unverified_fields": [],
+        "topic_check": "Unified HLS interfaces for FPGA/host-attached NVMe storage and DRAM match the current framework/interface comparison.",
+        "crossref_observed": {
+          "DOI": "10.1145/3650038",
+          "title": [
+            "DONGLE 2.0: Direct FPGA-Orchestrated NVMe Storage for HLS"
+          ],
+          "authors_in_order": [
+            "Linus Y. Wong",
+            "Jialiang Zhang",
+            "Jing Li"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2024,
+                9,
+                30
+              ]
+            ]
+          },
+          "published_online": {
+            "date-parts": [
+              [
+                2024,
+                9,
+                17
+              ]
+            ]
+          },
+          "published": {
+            "date-parts": [
+              [
+                2024,
+                9,
+                17
+              ]
+            ]
+          },
+          "pages": "1-32"
+        }
+      },
+      "rendered_links": {
+        "key": "wong2024dongle",
+        "expected": "https://doi.org/10.1145/3650038",
+        "rendered_links": [
+          "https://doi.org/10.1145/3650038"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "ohba2025nvme",
+      "bibliography": {
+        "key": "ohba2025nvme",
+        "type": "article",
+        "author": "Ohba, Yoshihiro and Sanuki, Tomoya and Gravel, Claude and Mihara, Kentaro and Wakasugi, Asuka and Adachi, Kenta",
+        "title": "An {NVMe}-Based Secure Computing Platform With {FPGA}-Based {TFHE} Accelerator",
+        "year": "2025",
+        "doi": "10.1109/ACCESS.2025.3561728",
+        "journal": "IEEE Access",
+        "pages": "69980--69997"
+      },
+      "evidence_record": {
+        "key": "ohba2025nvme",
+        "bib_line": 75,
+        "status": "verified_same_formal_ieee_access_article",
+        "verified": {
+          "title": "An NVMe-Based Secure Computing Platform With FPGA-Based TFHE Accelerator",
+          "authors_in_order": [
+            "Yoshihiro Ohba",
+            "Tomoya Sanuki",
+            "Claude Gravel",
+            "Kentaro Mihara",
+            "Asuka Wakasugi",
+            "Kenta Adachi"
+          ],
+          "year": 2025,
+          "doi": "10.1109/ACCESS.2025.3561728",
+          "venue": "IEEE Access",
+          "volume": "13",
+          "pages": "69980–69997"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title",
+          "all six ordered authors",
+          "year",
+          "DOI",
+          "journal/volume/pages",
+          "formal journal version",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://eaglys.co.jp/hubfs/An%20NVMe-based%20Secure%20Computing%20Platform%20with%20FPGA-based%20TFHE%20Accelerator.pdf",
+            "type": "formal IEEE Access article hosted by author institution EAGLYS",
+            "location": "PDF first page: title/all authors/DOI/date16April2025 and page69980; final page69997; volume13,2025"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1109/ACCESS.2025.3561728",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/ohba2025nvme-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [],
+        "notes": [
+          "Use the formal six-author 2025 IEEE Access version. Earlier ePrint/preprint metadata can have four authors; that does not supersede this journal byline.",
+          "Crossref DOI suffix is lowercased access.2025.3561728, while the printed article/bib use ACCESS; DOI matching is case-insensitive, so no repair is needed."
+        ],
+        "unverified_fields": [],
+        "topic_check": "NVMe commands convey ciphertexts, keys and secure computing programs to FPGA TFHE evaluation; current storage-coupled homomorphic-evaluation comparison is supported.",
+        "crossref_observed": {
+          "DOI": "10.1109/access.2025.3561728",
+          "title": [
+            "An NVMe-Based Secure Computing Platform With FPGA-Based TFHE Accelerator"
+          ],
+          "authors_in_order": [
+            "Yoshihiro Ohba",
+            "Tomoya Sanuki",
+            "Claude Gravel",
+            "Kentaro Mihara",
+            "Asuka Wakasugi",
+            "Kenta Adachi"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2025
+              ]
+            ]
+          },
+          "published_online": null,
+          "published": {
+            "date-parts": [
+              [
+                2025
+              ]
+            ]
+          },
+          "pages": "69980-69997"
+        }
+      },
+      "rendered_links": {
+        "key": "ohba2025nvme",
+        "expected": "https://doi.org/10.1109/ACCESS.2025.3561728",
+        "rendered_links": [
+          "https://doi.org/10.1109/ACCESS.2025.3561728"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "mert2020bfv",
+      "bibliography": {
+        "key": "mert2020bfv",
+        "type": "article",
+        "author": "Mert, Ahmet Can and {\\\"O}zt{\\\"u}rk, Erdin{\\c c} and Sava{\\c s}, Erkay",
+        "title": "Design and Implementation of Encryption/Decryption Architectures for {BFV} Homomorphic Encryption Scheme",
+        "year": "2020",
+        "doi": "10.1109/TVLSI.2019.2943127",
+        "journal": "IEEE Transactions on Very Large Scale Integration (VLSI) Systems",
+        "pages": "353--362"
+      },
+      "evidence_record": {
+        "key": "mert2020bfv",
+        "bib_line": 85,
+        "status": "verified_same_formal_tvlsi_article",
+        "verified": {
+          "title": "Design and Implementation of Encryption/Decryption Architectures for BFV Homomorphic Encryption Scheme",
+          "authors_in_order": [
+            "Ahmet Can Mert",
+            "Erdinç Öztürk",
+            "Erkay Savaş"
+          ],
+          "year": 2020,
+          "doi": "10.1109/TVLSI.2019.2943127",
+          "venue": "IEEE Transactions on Very Large Scale Integration (VLSI) Systems",
+          "volume": "28",
+          "issue": "2",
+          "pages": "353–362"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title ignoring title-case convention",
+          "all three ordered full author names and accents",
+          "issue year",
+          "DOI",
+          "journal/volume/issue/pages",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://research.sabanciuniv.edu/id/eprint/40087/",
+            "type": "official authors' university research database, deposited by Ahmet Can Mert",
+            "location": "Citation line: all authors with full names/accents,year2020,vol28(2),pp353–362; Official URL DOI"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.1109/TVLSI.2019.2943127",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/mert2020bfv-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [
+          {
+            "field": "author diacritics",
+            "bib": "Erdinç Öztürk; Erkay Savaş",
+            "crossref": "Erdinc Ozturk; Erkay Savas",
+            "severity": "non-substantive",
+            "assessment": "Crossref ASCII normalization of same named authors; official Sabanci author-deposited record supports current correctly accented forms."
+          }
+        ],
+        "notes": [
+          "Ahmet Can is the full given name; Erdinç/Öztürk/Savaş accents are already preserved in BibTeX. The DOI includes2019, but current journal issue publication is2020; this is not a year mismatch."
+        ],
+        "unverified_fields": [],
+        "topic_check": "The official abstract explicitly states BFV encryption/decryption hardware offloaded to FPGA, which supports the current encryption-engine comparison.",
+        "crossref_observed": {
+          "DOI": "10.1109/tvlsi.2019.2943127",
+          "title": [
+            "Design and Implementation of Encryption/Decryption Architectures for BFV Homomorphic Encryption Scheme"
+          ],
+          "authors_in_order": [
+            "Ahmet Can Mert",
+            "Erdinc Ozturk",
+            "Erkay Savas"
+          ],
+          "published_print": {
+            "date-parts": [
+              [
+                2020,
+                2
+              ]
+            ]
+          },
+          "published_online": null,
+          "published": {
+            "date-parts": [
+              [
+                2020,
+                2
+              ]
+            ]
+          },
+          "pages": "353-362"
+        }
+      },
+      "rendered_links": {
+        "key": "mert2020bfv",
+        "expected": "https://doi.org/10.1109/TVLSI.2019.2943127",
+        "rendered_links": [
+          "https://doi.org/10.1109/TVLSI.2019.2943127"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "lee2023ckks",
+      "bibliography": {
+        "key": "lee2023ckks",
+        "type": "article",
+        "author": "Lee, Jaehyeok and Duong, Phap Ngoc and Lee, Hanho",
+        "title": "Configurable Encryption and Decryption Architectures for {CKKS}-Based Homomorphic Encryption",
+        "year": "2023",
+        "doi": "10.3390/s23177389",
+        "journal": "Sensors",
+        "pages": "7389"
+      },
+      "evidence_record": {
+        "key": "lee2023ckks",
+        "bib_line": 96,
+        "status": "verified_same_formal_sensors_article",
+        "verified": {
+          "title": "Configurable Encryption and Decryption Architectures for CKKS-Based Homomorphic Encryption",
+          "authors_in_order": [
+            "Jaehyeok Lee",
+            "Phap Ngoc Duong",
+            "Hanho Lee"
+          ],
+          "year": 2023,
+          "doi": "10.3390/s23177389",
+          "venue": "Sensors",
+          "volume": "23",
+          "issue": "17",
+          "article_number": "7389"
+        },
+        "bib_url": null,
+        "checked_fields": [
+          "full title",
+          "all ordered full author names",
+          "year",
+          "DOI",
+          "journal/volume/issue/article identifier",
+          "actual DOI registry/Crossref metadata"
+        ],
+        "evidence": [
+          {
+            "url": "https://www.mdpi.com/1424-8220/23/17/7389/notes",
+            "type": "official publisher citation/version page (actual search-index content)",
+            "location": "MDPI Chicago/Turabian citation explicitly lists Jaehyeok Lee,Phap Ngoc Duong,Hanho Lee; year2023; DOI; Version of Record24Aug2023"
+          },
+          {
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10490559/",
+            "type": "PMC archive of formal author/publisher article, MDPI licensee",
+            "location": "Header lines35–67 title/date/DOI and full ordered byline; abstract and full article"
+          },
+          {
+            "url": "https://api.crossref.org/works/10.3390/s23177389",
+            "type": "actual Crossref DOI-registration REST response, retrieved read-only 2026-10-08",
+            "local_record": "/tmp/fhestore-reference-audit-20261008/lee2023ckks-crossref.json",
+            "location": "message.DOI,title,author,published-print/published-online,container-title,page"
+          }
+        ],
+        "differences": [
+          {
+            "field": "article identifier field",
+            "bib": "pages={7389}",
+            "official": "article identifier 7389 (not an actual single page)",
+            "severity": "optional metadata representation",
+            "assessment": "No identity error. Current output 23(17),7389 points to the correct article; root may use articleno if style requires."
+          }
+        ],
+        "notes": [
+          "The authoritative full name is Phap Ngoc Duong, encoded correctly as Duong, Phap Ngoc. OpenAlex authority normalization Phap Duong-Ngoc must not replace the paper byline.",
+          "Crossref also records page=7389. This supports leaving the existing pages field; it is an article identifier in the journal citation, not an identity problem."
+        ],
+        "unverified_fields": [],
+        "topic_check": "Official abstract explicitly proposes configurable FPGA CKKS encryption/decryption on the client, matching current comparison.",
+        "crossref_observed": {
+          "DOI": "10.3390/s23177389",
+          "title": [
+            "Configurable Encryption and Decryption Architectures for CKKS-Based Homomorphic Encryption"
+          ],
+          "authors_in_order": [
+            "Jaehyeok Lee",
+            "Phap Ngoc Duong",
+            "Hanho Lee"
+          ],
+          "published_print": null,
+          "published_online": {
+            "date-parts": [
+              [
+                2023,
+                8,
+                24
+              ]
+            ]
+          },
+          "published": {
+            "date-parts": [
+              [
+                2023,
+                8,
+                24
+              ]
+            ]
+          },
+          "pages": "7389"
+        }
+      },
+      "rendered_links": {
+        "key": "lee2023ckks",
+        "expected": "https://doi.org/10.3390/s23177389",
+        "rendered_links": [
+          "https://doi.org/10.3390/s23177389"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "krieger2024aloha",
+      "bibliography": {
+        "key": "krieger2024aloha",
+        "type": "inproceedings",
+        "author": "Krieger, Florian and Hirner, Florian and Mert, Ahmet Can and Roy, Sujoy Sinha",
+        "title": "{Aloha-HE}: A Low-Area Hardware Accelerator for Client-Side Operations in Homomorphic Encryption",
+        "year": "2024",
+        "doi": "10.23919/DATE58400.2024.10546608",
+        "url": "https://eprint.iacr.org/2023/1736",
+        "booktitle": "2024 Design, Automation \\& Test in Europe Conference \\& Exhibition (DATE)",
+        "pages": "1--6"
+      },
+      "evidence_record": {
+        "audit_group_item": 11,
+        "bib_key": "krieger2024aloha",
+        "status": "verified_keep",
+        "verified_title": "Aloha-HE: A Low-Area Hardware Accelerator for Client-Side Operations in Homomorphic Encryption",
+        "verified_authors_in_order": [
+          "Florian Krieger",
+          "Florian Hirner",
+          "Ahmet Can Mert",
+          "Sujoy Sinha Roy"
+        ],
+        "verified_year": 2024,
+        "verified_doi": "10.23919/date58400.2024.10546608",
+        "canonical_publication_url": "https://doi.org/10.23919/date58400.2024.10546608",
+        "bib_url": "https://eprint.iacr.org/2023/1736",
+        "bib_url_assessment": "same work, author-public version",
+        "venue": "2024 Design, Automation &amp;amp; Test in Europe Conference &amp;amp; Exhibition (DATE)",
+        "pages": "1-6",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.23919/date58400.2024.10546608",
+          "https://eprint.iacr.org/2023/1736",
+          "https://tugraz.elsevierpure.com/en/publications/aloha-he-a-low-area-hardware-accelerator-for-client-side-operatio/"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/krieger2024aloha-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "现url为ePrint 2023/1736，收到日期2023-11-09、修订2024-02-28，官方ePrint明确注明DATE 2024出版。它是同一工作的作者公开版，不是URL指错作品。",
+          "完整姓名及顺序匹配。Crossref把Sujoy Sinha列为given、Roy列为family；TU Graz页面使用Sinha Roy, Sujoy，属于复姓拆分差异，当前完整姓名没有身份或作者顺序错误。"
+        ],
+        "citation_topic_check": "Introduction L86 / Background L149,152 / Related Work L625: client-side CKKS encoding/encryption及统一本地处理，官方摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "krieger2024aloha",
+        "expected": "https://doi.org/10.23919/DATE58400.2024.10546608",
+        "rendered_links": [
+          "https://doi.org/10.23919/DATE58400.2024.10546608"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "yune2025abcfhe",
+      "bibliography": {
+        "key": "yune2025abcfhe",
+        "type": "inproceedings",
+        "author": "Yune, Sungwoong and Lee, Hyojeong and Putra, Adiwena and Cho, Hyunjun and Manh, Cuong Duong and Jeon, Jaeho and Kim, Joo-Young",
+        "title": "{ABC-FHE}: A Resource-Efficient Accelerator Enabling Bootstrappable Parameters for Client-Side Fully Homomorphic Encryption",
+        "year": "2025",
+        "doi": "10.1109/DAC63849.2025.11132592",
+        "url": "https://arxiv.org/abs/2506.08461v1",
+        "booktitle": "2025 62nd ACM/IEEE Design Automation Conference (DAC)",
+        "pages": "1--7"
+      },
+      "evidence_record": {
+        "audit_group_item": 12,
+        "bib_key": "yune2025abcfhe",
+        "status": "verified_keep",
+        "verified_title": "ABC-FHE: A Resource-Efficient Accelerator Enabling Bootstrappable Parameters for Client-Side Fully Homomorphic Encryption",
+        "verified_authors_in_order": [
+          "Sungwoong Yune",
+          "Hyojeong Lee",
+          "Adiwena Putra",
+          "Hyunjun Cho",
+          "Cuong Duong Manh",
+          "Jaeho Jeon",
+          "Joo-Young Kim"
+        ],
+        "verified_year": 2025,
+        "verified_doi": "10.1109/dac63849.2025.11132592",
+        "canonical_publication_url": "https://doi.org/10.1109/dac63849.2025.11132592",
+        "bib_url": "https://arxiv.org/abs/2506.08461v1",
+        "bib_url_assessment": "same work, author-public version",
+        "venue": "2025 62nd ACM/IEEE Design Automation Conference (DAC)",
+        "pages": "1-7",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1109/dac63849.2025.11132592",
+          "https://arxiv.org/abs/2506.08461v1",
+          "https://arxiv.org/pdf/2506.08461v1",
+          "https://pure.kaist.ac.kr/en/publications/abc-fhe-a-resource-efficient-accelerator-enabling-bootstrappable-/"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/yune2025abcfhe-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "作者顺序为Sungwoong Yune、Hyojeong Lee、Adiwena Putra、Hyunjun Cho、Cuong Duong Manh、Jaeho Jeon、Joo-Young Kim；现Bib与正式Crossref、arXiv网页及PDF首页一致。",
+          "Cuong Duong Manh按正式Crossref登记为given Cuong Duong / family Manh；当前Manh, Cuong Duong无误。无需改成杜撰的不同姓名排序。",
+          "现url固定arXiv v1（2025-06-10），doi为正式DAC 2025出版（2025-06-22）。两者为同一作品的公开作者版与正式会议版，文献身份一致。标题冒号旁空白仅排版。"
+        ],
+        "citation_topic_check": "Introduction L86 / Background L149,152 / Related Work L625: CKKS客户端编码加密、存储组织和流处理，作者摘要/PDF支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "yune2025abcfhe",
+        "expected": "https://doi.org/10.1109/DAC63849.2025.11132592",
+        "rendered_links": [
+          "https://doi.org/10.1109/DAC63849.2025.11132592"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "gupta2024memfhe",
+      "bibliography": {
+        "key": "gupta2024memfhe",
+        "type": "article",
+        "author": "Gupta, Saransh and Cammarota, Rosario and {\\v S}imuni{\\'c}, Tajana",
+        "title": "{MemFHE}: End-to-end Computing with Fully Homomorphic Encryption in Memory",
+        "year": "2024",
+        "doi": "10.1145/3569955",
+        "journal": "ACM Transactions on Embedded Computing Systems"
+      },
+      "evidence_record": {
+        "audit_group_item": 13,
+        "bib_key": "gupta2024memfhe",
+        "status": "verified_keep",
+        "verified_title": "MemFHE: End-to-end Computing with Fully Homomorphic Encryption in Memory",
+        "verified_authors_in_order": [
+          "Saransh Gupta",
+          "Rosario Cammarota",
+          "Tajana Šimunić"
+        ],
+        "verified_year": 2024,
+        "verified_doi": "10.1145/3569955",
+        "canonical_publication_url": "https://doi.org/10.1145/3569955",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "ACM Transactions on Embedded Computing Systems",
+        "pages": "1-23",
+        "publisher": "Association for Computing Machinery (ACM)",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1145/3569955",
+          "https://par.nsf.gov/servlets/purl/10534250",
+          "https://dl.acm.org/doi/10.1145/3569955"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/gupta2024memfhe-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "正式2024期刊PDF首页、ACM Reference format以及Crossref全部署名Tajana Šimunić；当前TeX重音姓名正确。不要因个人通用名或2022 arXiv使用Tajana Rosing而把正式版本强改为Šimunić Rosing。",
+          "正式PDF明确TECS 23(2), Article 28, March 2024, 23 pages，现volume/number/articleno/numpages/year全部正确。2022公开预印本不应替代正式2024年份。",
+          "原始PDF已下载到memfhe-official-nsf.pdf；首页提取在memfhe-official-first-page.txt。"
+        ],
+        "citation_topic_check": "Introduction L86 / Background L149 / Related Work L625: Ring-GSW客户端与服务器PIM、端到端和存储组织，正式摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "gupta2024memfhe",
+        "expected": "https://doi.org/10.1145/3569955",
+        "rendered_links": [
+          "https://doi.org/10.1145/3569955"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "vanderhagen2022choco",
+      "bibliography": {
+        "key": "vanderhagen2022choco",
+        "type": "inproceedings",
+        "author": "van der Hagen, McKenzie and Lucia, Brandon",
+        "title": "Client-Optimized Algorithms and Acceleration for Encrypted Compute Offloading",
+        "year": "2022",
+        "doi": "10.1145/3503222.3507737",
+        "booktitle": "Proceedings of the 27th ACM International Conference on Architectural Support for Programming Languages and Operating Systems",
+        "pages": "683--696"
+      },
+      "evidence_record": {
+        "audit_group_item": 14,
+        "bib_key": "vanderhagen2022choco",
+        "status": "verified_keep",
+        "verified_title": "Client-optimized algorithms and acceleration for encrypted compute offloading",
+        "verified_authors_in_order": [
+          "McKenzie van der Hagen",
+          "Brandon Lucia"
+        ],
+        "verified_year": 2022,
+        "verified_doi": "10.1145/3503222.3507737",
+        "canonical_publication_url": "https://doi.org/10.1145/3503222.3507737",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "Proceedings of the 27th ACM International Conference on Architectural Support for Programming Languages and Operating Systems",
+        "pages": "683-696",
+        "publisher": "ACM",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1145/3503222.3507737",
+          "https://course.ece.cmu.edu/~ece742/S23/paper_pdfs/choco_taco.pdf",
+          "https://dl.acm.org/doi/10.1145/3503222.3507737"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/vanderhagen2022choco-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "两位完整作者McKenzie van der Hagen、Brandon Lucia；姓名、顺序、2022、683–696、DOI及会议均一致。",
+          "Crossref采用sentence case标题，正式PDF采用title case；只是大小写，无题名身份差异。",
+          "CMU公开PDF为带ASPLOS 2022版权与同一DOI的正式会议版，14页，对应683–696。"
+        ],
+        "citation_topic_check": "Introduction L86 / Background L152 / Related Work L625: CHOCO参数与通信优化以及CHOCO-TACO客户端加解密加速，论文摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "vanderhagen2022choco",
+        "expected": "https://doi.org/10.1145/3503222.3507737",
+        "rendered_links": [
+          "https://doi.org/10.1145/3503222.3507737"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "suzuki2023isc",
+      "bibliography": {
+        "key": "suzuki2023isc",
+        "type": "inproceedings",
+        "author": "Suzuki, Takuya and Yamana, Hayato",
+        "title": "Designing In-Storage Computing for Low Latency and High Throughput Homomorphic Encrypted Execution",
+        "year": "2023",
+        "doi": "10.1109/ICBDA57405.2023.10104970",
+        "booktitle": "2023 IEEE 8th International Conference on Big Data Analytics (ICBDA)",
+        "pages": "127--136"
+      },
+      "evidence_record": {
+        "audit_group_item": 15,
+        "bib_key": "suzuki2023isc",
+        "status": "verified_keep",
+        "verified_title": "Designing In-Storage Computing for Low Latency and High Throughput Homomorphic Encrypted Execution",
+        "verified_authors_in_order": [
+          "Takuya Suzuki",
+          "Hayato Yamana"
+        ],
+        "verified_year": 2023,
+        "verified_doi": "10.1109/icbda57405.2023.10104970",
+        "canonical_publication_url": "https://doi.org/10.1109/icbda57405.2023.10104970",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "2023 IEEE 8th International Conference on Big Data Analytics (ICBDA)",
+        "pages": "127-136",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1109/icbda57405.2023.10104970",
+          "https://waseda.elsevierpure.com/en/publications/designing-in-storage-computing-for-low-latency-and-high-throughpu/"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/suzuki2023isc-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "Takuya Suzuki、Hayato Yamana完整姓名和顺序、题名、2023、ICBDA、127–136及DOI均一致。",
+          "该工作为CSD耦合模型和仿真研究；当前正文仅写study CSD-coupled homomorphic execution，没有错误声称其实现了本工作式存储侧明文准备。"
+        ],
+        "citation_topic_check": "Related Work L633: storage-coupled homomorphic execution，Waseda作者机构摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "suzuki2023isc",
+        "expected": "https://doi.org/10.1109/ICBDA57405.2023.10104970",
+        "rendered_links": [
+          "https://doi.org/10.1109/ICBDA57405.2023.10104970"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "feryputri2025lwe",
+      "bibliography": {
+        "key": "feryputri2025lwe",
+        "type": "inproceedings",
+        "author": "Feryputri, Najmi Azzahra and Syafalni, Infall and Sutisna, Nana and Ahmadi, Nur and Mulyawan, Rahmat and Adiono, Trio",
+        "title": "{FPGA}-Based Hardware Accelerator for {LWE} Encryption and Decryption with {TFHE} Scheme",
+        "year": "2025",
+        "doi": "10.1109/SOCC66126.2025.11235379",
+        "booktitle": "2025 IEEE 38th International System-on-Chip Conference (SOCC)",
+        "pages": "1--6"
+      },
+      "evidence_record": {
+        "audit_group_item": 16,
+        "bib_key": "feryputri2025lwe",
+        "status": "verified_keep",
+        "verified_title": "FPGA-Based Hardware Accelerator for LWE Encryption and Decryption with TFHE Scheme",
+        "verified_authors_in_order": [
+          "Najmi Azzahra Feryputri",
+          "Infall Syafalni",
+          "Nana Sutisna",
+          "Nur Ahmadi",
+          "Rahmat Mulyawan",
+          "Trio Adiono"
+        ],
+        "verified_year": 2025,
+        "verified_doi": "10.1109/socc66126.2025.11235379",
+        "canonical_publication_url": "https://doi.org/10.1109/socc66126.2025.11235379",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "2025 IEEE 38th International System-on-Chip Conference (SOCC)",
+        "pages": "1-6",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1109/socc66126.2025.11235379",
+          "https://ieeexplore.ieee.org/document/11235379/"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/feryputri2025lwe-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "完整六作者、顺序、LWE/TFHE题名、2025、SOCC、1–6及DOI均与正式Crossref一致。",
+          "保留Najmi Azzahra Feryputri；不以其他机构记录Najmi Az-Zahra别名覆写此正式出版登记。"
+        ],
+        "citation_topic_check": "Introduction L86 / Related Work L625: LWE/TFHE FPGA encryption/decryption硬件，正式题名支持研究类别；本轮未独立获取全文。",
+        "unverified": "Full-text mechanism claims beyond requested identity not independently reviewed for Feryputri and Syafalni; no required identity field unresolved."
+      },
+      "rendered_links": {
+        "key": "feryputri2025lwe",
+        "expected": "https://doi.org/10.1109/SOCC66126.2025.11235379",
+        "rendered_links": [
+          "https://doi.org/10.1109/SOCC66126.2025.11235379"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "syafalni2026multicore",
+      "bibliography": {
+        "key": "syafalni2026multicore",
+        "type": "inproceedings",
+        "author": "Syafalni, Infall and Feryputri, Najmi Azzahra and Sutisna, Nana and Ahmadi, Nur and Mulyawan, Rahmat and Juhana, Tutun and Adiono, Trio",
+        "title": "Multicore Encryption-Decryption Hardware Accelerator for Torus-Based {RLWE} {FHE}",
+        "year": "2026",
+        "doi": "10.1109/COOLCHIPS68842.2026.11556998",
+        "booktitle": "2026 IEEE Symposium on Low-Power and High-Speed Chips and Systems (COOL CHIPS)",
+        "pages": "1--3"
+      },
+      "evidence_record": {
+        "audit_group_item": 17,
+        "bib_key": "syafalni2026multicore",
+        "status": "verified_keep",
+        "verified_title": "Multicore Encryption-Decryption Hardware Accelerator for Torus-Based RLWE FHE",
+        "verified_authors_in_order": [
+          "Infall Syafalni",
+          "Najmi Azzahra Feryputri",
+          "Nana Sutisna",
+          "Nur Ahmadi",
+          "Rahmat Mulyawan",
+          "Tutun Juhana",
+          "Trio Adiono"
+        ],
+        "verified_year": 2026,
+        "verified_doi": "10.1109/coolchips68842.2026.11556998",
+        "canonical_publication_url": "https://doi.org/10.1109/coolchips68842.2026.11556998",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "2026 IEEE Symposium on Low-Power and High-Speed Chips and Systems (COOL CHIPS)",
+        "pages": "1-3",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1109/coolchips68842.2026.11556998",
+          "https://www.coolchips.org/archive/2026/2026/index.html@p=386.html",
+          "https://scholar.itb.ac.id/paper/multicore-encryption-decryption-hardware-accelerat_2-s2.0-105043405047"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/syafalni2026multicore-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "正式Crossref与COOL Chips 2026官方归档节目L123–124均列同样七作者与顺序；题名、2026、1–3及DOI一致。",
+          "旧官方PDF路径https://www.coolchips.org/2026/wp-content/uploads/2026/05/COOLChips29-Program.pdf现返回404；可访问的官方archive网页提供完整作者和题名，因此身份已核实，不需保留断链作唯一证据。",
+          "ITB机构记录把第二作者写成Najmi Az-Zahra Feryputri，正式Crossref与官方节目为Najmi Azzahra Feryputri；现Bib采用正式登记正确。"
+        ],
+        "citation_topic_check": "Introduction L86 / Related Work L625: multicore torus-RLWE encryption/decryption，官方题名和ITB机构摘要支持；本轮未获取全文。",
+        "unverified": "Full-text mechanism claims beyond requested identity not independently reviewed for Feryputri and Syafalni; no required identity field unresolved."
+      },
+      "rendered_links": {
+        "key": "syafalni2026multicore",
+        "expected": "https://doi.org/10.1109/COOLCHIPS68842.2026.11556998",
+        "rendered_links": [
+          "https://doi.org/10.1109/COOLCHIPS68842.2026.11556998"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "kim2022bts",
+      "bibliography": {
+        "key": "kim2022bts",
+        "type": "inproceedings",
+        "author": "Kim, Sangpyo and Kim, Jongmin and Kim, Michael Jaemin and Jung, Wonkyung and Kim, John and Rhu, Minsoo and Ahn, Jung Ho",
+        "title": "{BTS}: An Accelerator for Bootstrappable Fully Homomorphic Encryption",
+        "year": "2022",
+        "doi": "10.1145/3470496.3527415",
+        "booktitle": "Proceedings of the 49th Annual International Symposium on Computer Architecture",
+        "pages": "711--725"
+      },
+      "evidence_record": {
+        "audit_group_item": 18,
+        "bib_key": "kim2022bts",
+        "status": "verified_keep",
+        "verified_title": "BTS: an accelerator for bootstrappable fully homomorphic encryption",
+        "verified_authors_in_order": [
+          "Sangpyo Kim",
+          "Jongmin Kim",
+          "Michael Jaemin Kim",
+          "Wonkyung Jung",
+          "John Kim",
+          "Minsoo Rhu",
+          "Jung Ho Ahn"
+        ],
+        "verified_year": 2022,
+        "verified_doi": "10.1145/3470496.3527415",
+        "canonical_publication_url": "https://doi.org/10.1145/3470496.3527415",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "Proceedings of the 49th Annual International Symposium on Computer Architecture",
+        "pages": "711-725",
+        "publisher": "ACM",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1145/3470496.3527415",
+          "https://arxiv.org/abs/2112.15479v2",
+          "https://arxiv.org/pdf/2112.15479v2",
+          "https://dl.acm.org/doi/10.1145/3470496.3527415"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/kim2022bts-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "Crossref主标题BTS、subtitle an accelerator for bootstrappable fully homomorphic encryption，二者合起来正是现Bib完整题名；不能仅取Crossref title单字段判断缺副标题。",
+          "正式Crossref与实际v2 PDF首页/运行页眉顺序为John Kim在Minsoo Rhu之前，当前Bib正确。arXiv abstract metadata把二者交换；这是网页metadata差异，不应据此修改正式作者顺序。",
+          "arXiv v1为2021，v2为2022-04-29；正式ISCA版为2022，DOI亦在v2 PDF首页。现year=2022正确。"
+        ],
+        "citation_topic_check": "Introduction L77 / Related Work L621: FHE homomorphic evaluation/bootstrapping加速与存储组织，作者摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "kim2022bts",
+        "expected": "https://doi.org/10.1145/3470496.3527415",
+        "rendered_links": [
+          "https://doi.org/10.1145/3470496.3527415"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "kim2022ark",
+      "bibliography": {
+        "key": "kim2022ark",
+        "type": "inproceedings",
+        "author": "Kim, Jongmin and Lee, Gwangho and Kim, Sangpyo and Sohn, Gina and Rhu, Minsoo and Kim, John and Ahn, Jung Ho",
+        "title": "{ARK}: Fully Homomorphic Encryption Accelerator with Runtime Data Generation and Inter-Operation Key Reuse",
+        "year": "2022",
+        "doi": "10.1109/MICRO56248.2022.00086",
+        "booktitle": "2022 55th IEEE/ACM International Symposium on Microarchitecture (MICRO)",
+        "pages": "1237--1254"
+      },
+      "evidence_record": {
+        "audit_group_item": 19,
+        "bib_key": "kim2022ark",
+        "status": "verified_keep",
+        "verified_title": "ARK: Fully Homomorphic Encryption Accelerator with Runtime Data Generation and Inter-Operation Key Reuse",
+        "verified_authors_in_order": [
+          "Jongmin Kim",
+          "Gwangho Lee",
+          "Sangpyo Kim",
+          "Gina Sohn",
+          "Minsoo Rhu",
+          "John Kim",
+          "Jung Ho Ahn"
+        ],
+        "verified_year": 2022,
+        "verified_doi": "10.1109/micro56248.2022.00086",
+        "canonical_publication_url": "https://doi.org/10.1109/micro56248.2022.00086",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "2022 55th IEEE/ACM International Symposium on Microarchitecture (MICRO)",
+        "pages": "1237-1254",
+        "publisher": "IEEE",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1109/micro56248.2022.00086",
+          "https://arxiv.org/abs/2205.00922v3",
+          "https://arxiv.org/pdf/2205.00922v3"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/kim2022ark-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "正式Crossref与实际v3 PDF首页L2顺序均为Minsoo Rhu在John Kim之前，现Bib正确；arXiv abstract metadata将二者交换。不能混用网页列表重排正式出版版作者。",
+          "Jongmin Kim、Gwangho Lee为共同第一作者，但不改变刊载名单顺序。题名、2022、MICRO、1237–1254及DOI一致。"
+        ],
+        "citation_topic_check": "Introduction L77 / Related Work L621: FHE evaluation/bootstrapping及runtime data generation和key reuse，作者摘要支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "kim2022ark",
+        "expected": "https://doi.org/10.1109/MICRO56248.2022.00086",
+        "rendered_links": [
+          "https://doi.org/10.1109/MICRO56248.2022.00086"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "gentry2009fhe",
+      "bibliography": {
+        "key": "gentry2009fhe",
+        "type": "inproceedings",
+        "author": "Gentry, Craig",
+        "title": "Fully Homomorphic Encryption Using Ideal Lattices",
+        "year": "2009",
+        "doi": "10.1145/1536414.1536440",
+        "booktitle": "Proceedings of the Forty-First Annual ACM Symposium on Theory of Computing",
+        "pages": "169--178"
+      },
+      "evidence_record": {
+        "audit_group_item": 20,
+        "bib_key": "gentry2009fhe",
+        "status": "verified_keep",
+        "verified_title": "Fully homomorphic encryption using ideal lattices",
+        "verified_authors_in_order": [
+          "Craig Gentry"
+        ],
+        "verified_year": 2009,
+        "verified_doi": "10.1145/1536414.1536440",
+        "canonical_publication_url": "https://doi.org/10.1145/1536414.1536440",
+        "bib_url": null,
+        "bib_url_assessment": "No separate url field; DOI is the canonical locator.",
+        "venue": "Proceedings of the forty-first annual ACM symposium on Theory of computing",
+        "pages": "169-178",
+        "publisher": "ACM",
+        "evidence_urls": [
+          "https://api.crossref.org/works/10.1145/1536414.1536440",
+          "https://crypto.stanford.edu/craig/",
+          "https://www.cs.cmu.edu/~odonnell/hits09/gentry-homomorphic-encryption.pdf"
+        ],
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/gentry2009fhe-crossref.json",
+        "field_checks": {
+          "full_title": "pass; title case/punctuation normalization allowed",
+          "full_author_names_and_order": "pass",
+          "year_and_publication_version": "pass",
+          "doi_identity": "pass",
+          "url_identity": "pass / no separate field"
+        },
+        "required_bib_changes": [],
+        "notes": [
+          "单作者Craig Gentry，STOC 2009论文题名、169–178和DOI与正式Crossref匹配；Title Case和sentence case只属大小写。",
+          "Stanford作者网页明确区分STOC论文Fully homomorphic encryption using ideal lattices与学位论文A fully homomorphic encryption scheme；现Bib引用的是正确会议论文，没有混用学位论文身份。"
+        ],
+        "citation_topic_check": "Introduction L77 / Background L118: encrypted computation与基本FHE接口，正式论文Sec.1.1明确支持。",
+        "unverified": null
+      },
+      "rendered_links": {
+        "key": "gentry2009fhe",
+        "expected": "https://doi.org/10.1145/1536414.1536440",
+        "rendered_links": [
+          "https://doi.org/10.1145/1536414.1536440"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "snia2025csmodel",
+      "bibliography": {
+        "key": "snia2025csmodel",
+        "type": "manual",
+        "author": "{SNIA}",
+        "title": "Computational Storage Architecture and Programming Model",
+        "year": "2025",
+        "url": "https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf"
+      },
+      "evidence_record": {
+        "key": "snia2025csmodel",
+        "status": "verified",
+        "title": "Computational Storage Architecture and Programming Model",
+        "authors": [
+          "SNIA"
+        ],
+        "year": 2025,
+        "version": "Version 1.1",
+        "sources": [
+          "https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf"
+        ],
+        "locator": "Cover p.1; revision history p.7; Sec.3.1.3 p.14",
+        "result": "Title, corporate author, release 2025-05-31, fixed version and URL match. Computational-storage definition supports existing citations.",
+        "changes": []
+      },
+      "rendered_links": {
+        "key": "snia2025csmodel",
+        "expected": "https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf",
+        "rendered_links": [
+          "https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "samardzic2021f1",
+      "bibliography": {
+        "key": "samardzic2021f1",
+        "type": "inproceedings",
+        "author": "Samardzic, Nikola and Feldmann, Axel and Krastev, Aleksandar and Devadas, Srinivas and Dreslinski, Ronald and Peikert, Christopher and Sanchez, Daniel",
+        "title": "{F1}: A Fast and Programmable Accelerator for Fully Homomorphic Encryption",
+        "year": "2021",
+        "doi": "10.1145/3466752.3480070",
+        "url": "https://people.csail.mit.edu/devadas/pubs/micro21_fhe.pdf",
+        "booktitle": "MICRO-54: 54th Annual IEEE/ACM International Symposium on Microarchitecture",
+        "pages": "238--252"
+      },
+      "evidence_record": {
+        "verified_title": "F1: A Fast and Programmable Accelerator for Fully Homomorphic Encryption",
+        "verified_authors_in_order": [
+          "Nikola Samardzic",
+          "Axel Feldmann",
+          "Aleksandar Krastev",
+          "Srinivas Devadas",
+          "Ronald Dreslinski",
+          "Christopher Peikert",
+          "Daniel Sanchez"
+        ],
+        "year": 2021,
+        "doi": "10.1145/3466752.3480070",
+        "venue": "MICRO-54: 54th Annual IEEE/ACM International Symposium on Microarchitecture",
+        "pages": "238–252",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1145/3466752.3480070",
+            "checked": "Registry title, all 7 authors and order, venue, pages, year and DOI; publisher-deposited online date 2021-10-17, print date 2021-10-18. Raw response saved."
+          },
+          {
+            "url": "https://people.csail.mit.edu/devadas/pubs/micro21_fhe.pdf",
+            "checked": "Author PDF first page title, DOI, reference format and author list; abstract and introduction support vector execution and data-movement-aware architecture."
+          }
+        ],
+        "existing_url_identity": "Same F1 work and DOI, but an author manuscript with metadata differing from DOI registry: Axel Feldmann precedes Nikola Samardzic, and it uses Srini Devadas / Ron Dreslinski. It has 15 pages and a 15-page ACM reference format instead of final proceedings page numbering.",
+        "differences_from_local_bib": "No error relative to the DOI registry. Local author order and names match the publisher deposit. Do not change author order based on this author PDF. Ronald G. Dreslinski appears in secondary indexes, but the actual publisher deposit says Ronald Dreslinski, so do not add G. solely from those indexes.",
+        "recommended_action": "Retain current formal metadata. Optionally set url to https://doi.org/10.1145/3466752.3480070 to make the URL identify the formally cited version.",
+        "unavailable_checks": [
+          "ACM landing page and final publisher PDF returned HTTP 403; final printed author order could not independently be viewed. Publisher DOI deposit was successfully inspected."
+        ],
+        "citation_topic_check": "Current Introduction and Related Work claims about specialized arithmetic, vector execution and data movement are supported by the author PDF.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/samardzic2021f1-crossref.json"
+      },
+      "rendered_links": {
+        "key": "samardzic2021f1",
+        "expected": "https://doi.org/10.1145/3466752.3480070",
+        "rendered_links": [
+          "https://doi.org/10.1145/3466752.3480070"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "samardzic2022craterlake",
+      "bibliography": {
+        "key": "samardzic2022craterlake",
+        "type": "inproceedings",
+        "author": "Samardzic, Nikola and Feldmann, Axel and Krastev, Aleksandar and Manohar, Nathan and Genise, Nicholas and Devadas, Srinivas and Eldefrawy, Karim and Peikert, Chris and Sanchez, Daniel",
+        "title": "{CraterLake}: A Hardware Accelerator for Efficient Unbounded Computation on Encrypted Data",
+        "year": "2022",
+        "doi": "10.1145/3470496.3527393",
+        "url": "https://people.csail.mit.edu/devadas/pubs/craterlake.pdf",
+        "booktitle": "Proceedings of the 49th Annual International Symposium on Computer Architecture",
+        "pages": "173--187"
+      },
+      "evidence_record": {
+        "verified_title": "CraterLake: A Hardware Accelerator for Efficient Unbounded Computation on Encrypted Data",
+        "verified_authors_in_order": [
+          "Nikola Samardzic",
+          "Axel Feldmann",
+          "Aleksandar Krastev",
+          "Nathan Manohar",
+          "Nicholas Genise",
+          "Srinivas Devadas",
+          "Karim Eldefrawy",
+          "Chris Peikert",
+          "Daniel Sanchez"
+        ],
+        "year": 2022,
+        "doi": "10.1145/3470496.3527393",
+        "venue": "Proceedings of the 49th Annual International Symposium on Computer Architecture",
+        "pages": "173–187",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1145/3470496.3527393",
+            "checked": "Registry title plus subtitle, all 9 authors and order, venue, pages, year and DOI. Raw response saved."
+          },
+          {
+            "url": "https://doi.org/10.1145/3470496.3527393",
+            "checked": "Publisher search result directly confirms full title, author sequence including Chris Peikert, DOI and publication date 2022-06-11."
+          },
+          {
+            "url": "https://people.csail.mit.edu/devadas/pubs/craterlake.pdf",
+            "checked": "Author PDF first page and ACM reference format confirm complete title, all authors, Chris Peikert, DOI, ISCA 2022; abstract and §1 support coordination of vector execution and data movement."
+          },
+          {
+            "url": "https://dspace.mit.edu/entities/publication/f3fbe540-55af-4b82-9509-2088c05a876f",
+            "checked": "MIT author institution record confirms all authors, DOI, Final published version, ACM/ISCA 2022 and June 18 conference-issued date."
+          }
+        ],
+        "existing_url_identity": "Same work, all authors and DOI. Author-hosted 15-page PDF omits final proceedings page numbering; registry verifies 173–187.",
+        "differences_from_local_bib": "None. Chris Peikert is the actual registered and PDF author name for this paper and should remain Chris, even though F1 registers Christopher.",
+        "recommended_action": "Retain current formal metadata. Optional canonical DOI URL for consistency.",
+        "unavailable_checks": [],
+        "citation_topic_check": "Vector uniprocessor, vector chaining, compiler scheduling and data-movement reduction described by the original paper directly support the current summary.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/samardzic2022craterlake-crossref.json"
+      },
+      "rendered_links": {
+        "key": "samardzic2022craterlake",
+        "expected": "https://doi.org/10.1145/3470496.3527393",
+        "rendered_links": [
+          "https://doi.org/10.1145/3470496.3527393"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "jiang2022matcha",
+      "bibliography": {
+        "key": "jiang2022matcha",
+        "type": "inproceedings",
+        "author": "Jiang, Lei and Lou, Qian and Joshi, Nrushad",
+        "title": "{MATCHA}: A Fast and Energy-Efficient Accelerator for Fully Homomorphic Encryption over the Torus",
+        "year": "2022",
+        "doi": "10.1145/3489517.3530435",
+        "url": "https://arxiv.org/abs/2202.08814v1",
+        "booktitle": "Proceedings of the 59th ACM/IEEE Design Automation Conference",
+        "pages": "235--240"
+      },
+      "evidence_record": {
+        "verified_title": "MATCHA: A Fast and Energy-Efficient Accelerator for Fully Homomorphic Encryption over the Torus",
+        "verified_authors_in_order": [
+          "Lei Jiang",
+          "Qian Lou",
+          "Nrushad Joshi"
+        ],
+        "year": 2022,
+        "doi": "10.1145/3489517.3530435",
+        "venue": "Proceedings of the 59th ACM/IEEE Design Automation Conference",
+        "pages": "235–240",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1145/3489517.3530435",
+            "checked": "Registry title plus subtitle, complete 3-author order, venue, pages, year and DOI. Raw response saved."
+          },
+          {
+            "url": "https://arxiv.org/abs/2202.08814v1",
+            "checked": "Explicit v1 title, author order, submission date 2022-02-17, 6-page comment and DAC 2022 journal reference."
+          },
+          {
+            "url": "https://arxiv.org/pdf/2202.08814v1",
+            "checked": "PDF first page names and ACM reference format, title, DAC 2022, and §1 statement that MATCHA accelerates TFHE bootstrapping."
+          }
+        ],
+        "existing_url_identity": "Same work and title, an explicit February 2022 arXiv v1 preprint for the July 2022 DAC paper. Registered publisher DOI identifies the final 235–240 version.",
+        "differences_from_local_bib": "None; full subtitle must be retained rather than truncating to Crossref title field MATCHA.",
+        "recommended_action": "Retain formal metadata. Optional url https://doi.org/10.1145/3489517.3530435 for final-version URL; arXiv preprint URL is not a different work.",
+        "unavailable_checks": [
+          "ACM landing page and PDF could not be opened through web tool (403). Registry and author preprint were both verified."
+        ],
+        "citation_topic_check": "Current Related Work assertion that MATCHA optimizes TFHE bootstrapping is directly supported by preprint §1 and abstract.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/jiang2022matcha-crossref.json"
+      },
+      "rendered_links": {
+        "key": "jiang2022matcha",
+        "expected": "https://doi.org/10.1145/3489517.3530435",
+        "rendered_links": [
+          "https://doi.org/10.1145/3489517.3530435"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "putra2023strix",
+      "bibliography": {
+        "key": "putra2023strix",
+        "type": "inproceedings",
+        "author": "Putra, Adiwena and {Prasetiyo} and Chen, Yi and Kim, John and Kim, Joo-Young",
+        "title": "{Strix}: An End-to-End Streaming Architecture with Two-Level Ciphertext Batching for Fully Homomorphic Encryption with Programmable Bootstrapping",
+        "year": "2023",
+        "doi": "10.1145/3613424.3614264",
+        "url": "https://arxiv.org/abs/2305.11423v1",
+        "booktitle": "56th Annual IEEE/ACM International Symposium on Microarchitecture",
+        "pages": "1319--1331"
+      },
+      "evidence_record": {
+        "verified_title": "Strix: An End-to-End Streaming Architecture with Two-Level Ciphertext Batching for Fully Homomorphic Encryption with Programmable Bootstrapping",
+        "verified_authors_in_order": [
+          "Adiwena Putra",
+          "Prasetiyo",
+          "Yi Chen",
+          "John Kim",
+          "Joo-Young Kim"
+        ],
+        "year": 2023,
+        "doi": "10.1145/3613424.3614264",
+        "venue": "56th Annual IEEE/ACM International Symposium on Microarchitecture",
+        "pages": "1319–1331",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1145/3613424.3614264",
+            "checked": "Complete title, all 5 authors in order including family-only mononym Prasetiyo, venue, pages, year and DOI. Raw response saved."
+          },
+          {
+            "url": "https://arxiv.org/abs/2305.11423",
+            "checked": "Only listed arXiv version is v1, submitted 2023-05-19, exact title and complete names."
+          },
+          {
+            "url": "https://arxiv.org/pdf/2305.11423v1",
+            "checked": "First page complete names/title; abstract and §1 focus on TFHE programmable bootstrapping, two-level batching and streaming architecture. 14-page preprint."
+          },
+          {
+            "url": "https://pure.kaist.ac.kr/en/publications/strix-an-end-to-end-streaming-architecture-with-two-level-ciphert/",
+            "checked": "Author institution metadata identifies MICRO 2023 final proceedings paper, ACM publisher, pages 1319–1331 and DOI."
+          }
+        ],
+        "existing_url_identity": "Same work and complete title; arXiv v1 is a May 2023 14-page preprint, distinct in layout/version from the 13-page MICRO proceedings publication. Original versioned abstract URL cache miss; unversioned abstract explicitly resolves to the sole v1, and explicit v1 PDF opened successfully.",
+        "differences_from_local_bib": "None. Preserve {Prasetiyo} as a single name; do not fabricate a given name or split it.",
+        "recommended_action": "Retain formal metadata. Optional canonical DOI URL for the final publication.",
+        "unavailable_checks": [
+          "ACM landing page and final publisher PDF returned 403; final venue/page metadata verified against both registry and author institution."
+        ],
+        "citation_topic_check": "Current Related Work assertion that Strix optimizes TFHE bootstrapping is directly supported by the original paper.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/putra2023strix-crossref.json"
+      },
+      "rendered_links": {
+        "key": "putra2023strix",
+        "expected": "https://doi.org/10.1145/3613424.3614264",
+        "rendered_links": [
+          "https://doi.org/10.1145/3613424.3614264"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "woods2014ibex",
+      "bibliography": {
+        "key": "woods2014ibex",
+        "type": "article",
+        "author": "Woods, Louis and Istv{\\'a}n, Zsolt and Alonso, Gustavo",
+        "title": "{Ibex}---An Intelligent Storage Engine with Support for Advanced {SQL} Off-loading",
+        "year": "2014",
+        "doi": "10.14778/2732967.2732972",
+        "url": "https://vldb.org/pvldb/vol7/p963-woods.pdf",
+        "journal": "Proceedings of the VLDB Endowment",
+        "pages": "963--974"
+      },
+      "evidence_record": {
+        "verified_title": "Ibex—An Intelligent Storage Engine with Support for Advanced SQL Off-loading",
+        "verified_authors_in_order": [
+          "Louis Woods",
+          "Zsolt István",
+          "Gustavo Alonso"
+        ],
+        "year": 2014,
+        "doi": "10.14778/2732967.2732972",
+        "venue": "Proceedings of the VLDB Endowment",
+        "volume": "7",
+        "issue": "11",
+        "pages": "963–974",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.14778/2732967.2732972",
+            "checked": "Registry title plus subtitle, 3 author names/order including István accent, PVLDB 7(11), pages 963–974, July 2014 and DOI. Raw response saved."
+          },
+          {
+            "url": "https://vldb.org/pvldb/vol7/p963-woods.pdf",
+            "checked": "Official publisher-hosted PDF first-page title uses em dash and Off-loading; author list; PVLDB 7(11), copyright 2014; visible page numbering 963 and 974; abstract explicitly supports selection, projection and GROUP BY aggregation."
+          }
+        ],
+        "existing_url_identity": "Exact official PVLDB publication PDF, 12 pages, 963–974.",
+        "differences_from_local_bib": "None. PDF title punctuation/hyphenation matches the local entry. Registry normalizes the separator to a subtitle and offloading without hyphen; this is a typographical normalization, not a different work.",
+        "recommended_action": "Retain current entry and official PDF URL. DOI is valid.",
+        "unavailable_checks": [],
+        "citation_topic_check": "Current claim that Ibex offloads selection, projection and aggregation is stated explicitly by the original abstract and introduction.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/woods2014ibex-crossref.json"
+      },
+      "rendered_links": {
+        "key": "woods2014ibex",
+        "expected": "https://doi.org/10.14778/2732967.2732972",
+        "rendered_links": [
+          "https://doi.org/10.14778/2732967.2732972"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "gu2016biscuit",
+      "bibliography": {
+        "key": "gu2016biscuit",
+        "type": "inproceedings",
+        "author": "Gu, Boncheol and Yoon, Andre S. and Bae, Duck-Ho and Jo, Insoon and Lee, Jinyoung and Yoon, Jonghyun and Kang, Jeong-Uk and Kwon, Moonsang and Yoon, Chanho and Cho, Sangyeun and Jeong, Jaeheon and Chang, Duckhyun",
+        "title": "{Biscuit}: A Framework for Near-Data Processing of Big Data Workloads",
+        "year": "2016",
+        "doi": "10.1109/ISCA.2016.23",
+        "booktitle": "2016 ACM/IEEE 43rd Annual International Symposium on Computer Architecture (ISCA)",
+        "pages": "153--165"
+      },
+      "evidence_record": {
+        "verified_title": "Biscuit: A Framework for Near-Data Processing of Big Data Workloads",
+        "verified_authors_in_order": [
+          "Boncheol Gu",
+          "Andre S. Yoon",
+          "Duck-Ho Bae",
+          "Insoon Jo",
+          "Jinyoung Lee",
+          "Jonghyun Yoon",
+          "Jeong-Uk Kang",
+          "Moonsang Kwon",
+          "Chanho Yoon",
+          "Sangyeun Cho",
+          "Jaeheon Jeong",
+          "Duckhyun Chang"
+        ],
+        "year": 2016,
+        "doi": "10.1109/ISCA.2016.23",
+        "venue": "2016 ACM/IEEE 43rd Annual International Symposium on Computer Architecture (ISCA)",
+        "pages": "153–165",
+        "publisher": "IEEE",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1109/ISCA.2016.23",
+            "checked": "Full title, complete 12-author sequence and spellings, IEEE venue/publisher, pages, June 2016 and DOI. Raw response saved; registry case-normalizes doi to lowercase isca, which is equivalent."
+          },
+          {
+            "url": "https://class.ece.iastate.edu/tyagi/cpre581/papers/ISCA16Biscuit.pdf",
+            "checked": "University-hosted copy of IEEE-published PDF confirms all 12 authors and order, DOI, proceedings header, 2016 copyright and first page 153; full document 13 pages. Abstract and §III explicitly connect host/device tasks through typed, data-ordered ports."
+          }
+        ],
+        "existing_url_identity": "BibTeX currently has no url. DOI uniquely identifies the verified paper.",
+        "differences_from_local_bib": "None; the full 12-author list is correct.",
+        "recommended_action": "Retain current metadata. Optional addition url = https://doi.org/10.1109/ISCA.2016.23 for link consistency.",
+        "unavailable_checks": [
+          "IEEE official landing page not independently viewed; publisher-deposited registry metadata and recognizable original IEEE PDF were inspected."
+        ],
+        "citation_topic_check": "Current summary of ordered ports composing host and device tasks is directly supported by the original abstract and programming-model discussion.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/gu2016biscuit-crossref.json"
+      },
+      "rendered_links": {
+        "key": "gu2016biscuit",
+        "expected": "https://doi.org/10.1109/ISCA.2016.23",
+        "rendered_links": [
+          "https://doi.org/10.1109/ISCA.2016.23"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "regev2009lwe",
+      "bibliography": {
+        "key": "regev2009lwe",
+        "type": "article",
+        "author": "Regev, Oded",
+        "title": "On Lattices, Learning with Errors, Random Linear Codes, and Cryptography",
+        "year": "2009",
+        "doi": "10.1145/1568318.1568324",
+        "url": "https://cims.nyu.edu/~regev/papers/qcrypto.pdf",
+        "journal": "Journal of the ACM"
+      },
+      "evidence_record": {
+        "verified_title": "On Lattices, Learning with Errors, Random Linear Codes, and Cryptography",
+        "verified_authors_in_order": [
+          "Oded Regev"
+        ],
+        "year": 2009,
+        "doi": "10.1145/1568318.1568324",
+        "venue": "Journal of the ACM",
+        "volume": "56",
+        "issue": "6",
+        "article_number": "34",
+        "numpages": 40,
+        "month": "September",
+        "evidence": [
+          {
+            "url": "https://api.crossref.org/works/10.1145/1568318.1568324",
+            "checked": "Title, sole author, DOI, JACM 56(6), page count encoded as 1–40, print month 2009-09 and online date 2009-09-08. Raw response saved."
+          },
+          {
+            "url": "https://cims.nyu.edu/~regev/",
+            "checked": "Author publication list explicitly identifies Journal of the ACM 56(6), article 34, 2009, with preliminary version in STOC 2005 and a link to the current qcrypto.pdf."
+          },
+          {
+            "url": "https://cims.nyu.edu/~regev/papers/qcrypto.pdf",
+            "checked": "Author PDF first-page exact title, sole author and manuscript date May 2, 2009; 37 pages; §1 explicitly defines noisy equations modulo an integer and the LWE problem."
+          }
+        ],
+        "existing_url_identity": "Same journal work via author manuscript dated 2009-05-02, not the final 40-page publisher typesetting. Author publication list links that PDF to the 2009 JACM article, not just the 2005 conference preliminary version.",
+        "differences_from_local_bib": "None. September is supported by actual registered publication dates; article 34 is author-confirmed. A 37-page author PDF does not justify replacing numpages = 40.",
+        "recommended_action": "Retain current metadata. Optional canonical DOI URL makes the link identify the formally cited journal version.",
+        "unavailable_checks": [
+          "ACM final publisher PDF/landing pages returned 403. Article number independently verified on the author publication list, and formal 40-page count through registry."
+        ],
+        "citation_topic_check": "Current Background sentence describing LWE as noisy linear equations modulo an integer and a basis for lattice cryptography is supported by the original manuscript §1.",
+        "status": "verified; no mandatory metadata correction",
+        "crossref_snapshot": "/tmp/fhestore-reference-audit-20261008/regev2009lwe-crossref.json"
+      },
+      "rendered_links": {
+        "key": "regev2009lwe",
+        "expected": "https://doi.org/10.1145/1568318.1568324",
+        "rendered_links": [
+          "https://doi.org/10.1145/1568318.1568324"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "nvme2025slm",
+      "bibliography": {
+        "key": "nvme2025slm",
+        "type": "manual",
+        "author": "{NVM Express}",
+        "title": "{NVM Express} Subsystem Local Memory Command Set Specification",
+        "year": "2025",
+        "url": "https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf"
+      },
+      "evidence_record": {
+        "key": "nvme2025slm",
+        "status": "verified",
+        "title": "NVM Express Subsystem Local Memory Command Set Specification",
+        "authors": [
+          "NVM Express"
+        ],
+        "year": 2025,
+        "version": "Revision 1.2",
+        "sources": [
+          "https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf"
+        ],
+        "locator": "Cover p.1; copyright p.2; SLM definition p.7 Sec.1.4.3.1",
+        "result": "Title, corporate author, revision, year, URL and SLM term match. Cover date is July 30, 2025; filename has ratification date 2025.08.01. No month/day is given in current BibTeX, so no conflicting field.",
+        "changes": []
+      },
+      "rendered_links": {
+        "key": "nvme2025slm",
+        "expected": "https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf",
+        "rendered_links": [
+          "https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "tpch2022spec",
+      "bibliography": {
+        "key": "tpch2022spec",
+        "type": "manual",
+        "author": "{Transaction Processing Performance Council}",
+        "title": "{TPC Benchmark H} Standard Specification",
+        "year": "2022",
+        "url": "https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf"
+      },
+      "evidence_record": {
+        "key": "tpch2022spec",
+        "status": "verified",
+        "title": "TPC Benchmark H Standard Specification",
+        "authors": [
+          "Transaction Processing Performance Council"
+        ],
+        "year": 2022,
+        "version": "Revision 3.0.1",
+        "sources": [
+          "https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf",
+          "https://tpc.org/TPC_Documents_Current_Versions/current_specifications5.asp"
+        ],
+        "locator": "Official PDF search index cover p.1 and revision history p.5 (April 28, 2022); official specification listing TPC-H 3.0.1 pdf link",
+        "result": "Title, corporate author, 2022/April date, revision and exact link match. Direct PDF fetch timed out, but indexed publisher PDF pages and official hyperlink confirm identity; not treated as nonexistent or a bad link.",
+        "changes": []
+      },
+      "rendered_links": {
+        "key": "tpch2022spec",
+        "expected": "https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf",
+        "rendered_links": [
+          "https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    },
+    {
+      "key": "bodik2004intellab",
+      "bibliography": {
+        "key": "bodik2004intellab",
+        "type": "misc",
+        "author": "Bodik, Peter and Hong, Wei and Guestrin, Carlos and Madden, Samuel and Paskin, Mark and Thibaux, Romain",
+        "title": "{Intel Lab Data}",
+        "year": "2004",
+        "url": "https://db.csail.mit.edu/labdata/labdata.html"
+      },
+      "evidence_record": {
+        "key": "bodik2004intellab",
+        "status": "verified",
+        "title": "Intel Lab Data",
+        "authors": [
+          "Peter Bodik",
+          "Wei Hong",
+          "Carlos Guestrin",
+          "Samuel Madden",
+          "Mark Paskin",
+          "Romain Thibaux"
+        ],
+        "year": 2004,
+        "sources": [
+          "https://db.csail.mit.edu/labdata/labdata.html"
+        ],
+        "locator": "Dataset introduction; collector-credit paragraph; last-modified signature June 2, 2004",
+        "result": "Title, collector names and order, year and URL match. Official credit uses Sam Madden; footer signs Samuel Madden, confirming the full-name form. Dataset describes the sensor fields cited.",
+        "changes": []
+      },
+      "rendered_links": {
+        "key": "bodik2004intellab",
+        "expected": "https://db.csail.mit.edu/labdata/labdata.html",
+        "rendered_links": [
+          "https://db.csail.mit.edu/labdata/labdata.html"
+        ]
+      },
+      "assessment": "Title, ordered author list, year and DOI/URL identify the intended work or explicitly cited version; no mandatory correction."
+    }
+  ]
+}
