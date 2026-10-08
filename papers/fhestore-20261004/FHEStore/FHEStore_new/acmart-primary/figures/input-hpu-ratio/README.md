@@ -2,7 +2,9 @@
 
 ## Reproduction
 
-Run `python plot_input_hpu.py` from any directory with Matplotlib and NumPy installed. The script reads the sibling `source-data.json` and `author-confirmation.json` and writes PDF, SVG, PNG, two numeric CSVs, and `qa.json`. The manuscript keeps its existing `input-hpu-two-panels.pdf` asset path. The PNG is only a review preview.
+The current PDF and PNG restore the author's larger-left-panel layout, bold typography, aligned titles, and complete input-preparation labels, while retaining the coauthor's CPU blue (`#4C78A8`) and diagonally hatched FHEStore orange (`#E58D5C`). The renderer is `logs/input-preparation-paired-latency-preview_20261006/render.js`, loaded by `input-hpu-two-panels.html` in the same directory, and reads that directory's unchanged `data.json`. Export with the existing Playwright-based HTML-to-PDF exporter; the manuscript asset remains `input-hpu-two-panels.pdf`. The source canvas is 2550 by 775 pixels before export padding. Numeric values and uncertainty definitions are unchanged.
+
+The previous coauthor layout remains reproducible with `python plot_input_hpu.py`. It reads the sibling `source-data.json` and `author-confirmation.json`; the existing SVG, CSVs, and `qa.json` describe that previous layout, not the restored D3 layout. The PNG is only a review preview.
 
 ## Source
 
@@ -14,7 +16,7 @@ Panel (b) averages the seven operation-specific preparation means with equal wei
 
 On 2026-10-08 the author confirmed that the comparison uses the same experimental conditions. The green curve and right axis report **Speedup**, defined as CPU baseline preparation latency divided by FHEStore preparation latency. `author-confirmation.json` records this clarification, which supersedes the historical comparability annotation in the preserved source snapshot. The numeric snapshot, all source measurements, aggregation, and uncertainties are unchanged. Input preparation spans SSD data access through ciphertext availability in host memory; network transfer is excluded. Panel (a) retains each path's HPU computation and synchronization latency as its denominator.
 
-## Appearance and validation
+## Previous coauthor layout: appearance and validation
 
 The final canvas is exactly 7.0 by 2.35 inches (504 by 169.2 PDF points), about 6.7 points taller than the old export at the same width. Two side-by-side panels are retained. Every batch label is 8 pt; axis labels are 8.25 pt; group labels, panel labels, and the legend are 8.5 pt. The PDF embeds bold Tinos, a Times-compatible serif. The SVG preserves editable text. CPU bars use `#4C78A8`; FHEStore bars use `#E58D5C` with `///` hatching; the ratio curve uses green `#397D54`. Axes are 0.65 pt with light grey horizontal grids.
 

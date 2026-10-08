@@ -106,7 +106,7 @@ def export(fig, stem):
                 'CreationDate': None, 'ModDate': None}
     fig.savefig(stem.with_suffix('.pdf'), metadata=metadata)
     fig.savefig(stem.with_suffix('.svg'))
-    preview = Path('/tmp/fhestore-fig6-8-redraw')
+    preview = Path('/tmp/fhestore-format-two-fixes-20261008')
     preview.mkdir(exist_ok=True)
     fig.savefig(preview / (stem.name + '.png'), dpi=200)
     plt.close(fig)
@@ -150,7 +150,7 @@ def resources(data, name, metric, ylabel, upper, ticks):
     ax.set_xlim(-0.57, len(batches) - 0.43)
     ax.set_xticks(x)
     ax.set_xticklabels([str(b) for b in batches])
-    ax.set_xlabel('Plaintext size (bytes)', labelpad=4.5)
+    ax.set_xlabel('Plaintext Size (bytes)', labelpad=4.5)
     ax.set_ylabel(ylabel, labelpad=4.3)
     style(ax, ticks, upper)
     legend(fig)
