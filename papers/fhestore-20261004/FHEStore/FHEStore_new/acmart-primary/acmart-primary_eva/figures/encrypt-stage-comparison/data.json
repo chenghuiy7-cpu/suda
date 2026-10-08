@@ -1,0 +1,159 @@
+{
+  "units": "ms",
+  "aggregation": "arithmetic mean",
+  "error_bars": "sample standard deviation",
+  "sources": [
+    {
+      "path": "/home/yuanzhihao/suda/logs/lwe_encrypt_host_ready_sweep_20260923/cpu_raw.csv",
+      "sha256": "029926cceaeae65b8f17f545659bb83b1a83fa40403a449a8bf94bb1cfff84aa"
+    },
+    {
+      "path": "/home/yuanzhihao/.codex/attachments/36d67a93-a01a-496e-9e14-6353514677fc/已粘贴的文本.txt",
+      "sha256": "7e5457370b47a53bb54f7478521608495c869c7e3655903d2eef5092bf6cabf0"
+    }
+  ],
+  "comparison": "Historical CPU baseline versus current FPGA counters; plaintext identity is not verified.",
+  "boundaries": {
+    "cpu": "Encryption function only, excluding output packing and input reads.",
+    "fpga": "Hardware task cycles at 250 MHz, including stream waiting; excluding host configuration and external transfers."
+  },
+  "missing": "4096-element FPGA counter measurement is pending; no value is imputed.",
+  "rows": [
+    {
+      "batch": 1,
+      "cpu": {
+        "mean": 0.5972796,
+        "sd": 0.006600572789959652,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 0.5698772,
+        "sd": 0.2470007494585121,
+        "n": 10
+      },
+      "speedup": 1.048084745274947
+    },
+    {
+      "batch": 16,
+      "cpu": {
+        "mean": 8.3858122,
+        "sd": 0.7756080110523759,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 2.4427896000000002,
+        "sd": 0.3058299314249306,
+        "n": 10
+      },
+      "speedup": 3.4328835361015124
+    },
+    {
+      "batch": 32,
+      "cpu": {
+        "mean": 15.517775499999999,
+        "sd": 0.01137792776729511,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 3.6586091999999995,
+        "sd": 0.34798748617628333,
+        "n": 10
+      },
+      "speedup": 4.241441119209999
+    },
+    {
+      "batch": 64,
+      "cpu": {
+        "mean": 31.054312699999997,
+        "sd": 0.02972210154843691,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 6.900495599999999,
+        "sd": 0.3904094651878545,
+        "n": 10
+      },
+      "speedup": 4.500301789917814
+    },
+    {
+      "batch": 128,
+      "cpu": {
+        "mean": 62.2888545,
+        "sd": 0.15713685383501363,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 13.091221200000001,
+        "sd": 0.36638935686652635,
+        "n": 10
+      },
+      "speedup": 4.758062945265946
+    },
+    {
+      "batch": 256,
+      "cpu": {
+        "mean": 124.63977760000003,
+        "sd": 0.04296792034168025,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 26.008424400000003,
+        "sd": 0.3581227703354137,
+        "n": 10
+      },
+      "speedup": 4.792284825988921
+    },
+    {
+      "batch": 512,
+      "cpu": {
+        "mean": 252.33001560000002,
+        "sd": 0.2334190197859275,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 51.26052,
+        "sd": 0.3871598481798782,
+        "n": 10
+      },
+      "speedup": 4.922502065917397
+    },
+    {
+      "batch": 1024,
+      "cpu": {
+        "mean": 507.5771446,
+        "sd": 0.32340517527474194,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 101.596186,
+        "sd": 0.36721238029601894,
+        "n": 10
+      },
+      "speedup": 4.996025585054935
+    },
+    {
+      "batch": 2048,
+      "cpu": {
+        "mean": 1016.2758238000002,
+        "sd": 0.8501197118740533,
+        "n": 10
+      },
+      "fpga": {
+        "mean": 202.4424956,
+        "sd": 0.44356352098261326,
+        "n": 10
+      },
+      "speedup": 5.02007160496593
+    },
+    {
+      "batch": 4096,
+      "cpu": {
+        "mean": 2056.0883975999996,
+        "sd": 18.88860944396541,
+        "n": 10
+      },
+      "fpga": null,
+      "speedup": null
+    }
+  ]
+}

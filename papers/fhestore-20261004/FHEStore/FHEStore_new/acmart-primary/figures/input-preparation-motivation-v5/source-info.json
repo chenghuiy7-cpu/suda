@@ -1,0 +1,74 @@
+{
+  "source": "../input-preparation-motivation-v1/author-upload.png",
+  "source_sha256": "471e27fcb20ed8b90b7fde11c2497d9e1aa2d424e9403cf904ad07f17adedc0b",
+  "mean_data": "Six author-confirmed percentages, selected from ../input-preparation-motivation-v1/source-info.json",
+  "generator": "build_figure.py; Python standard library and rsvg-convert",
+  "manuscript_export": {
+    "source": "input-preparation-motivation.svg",
+    "source_sha256": "ce790e694e48bb7a1d8b0f6b190e1f70a4c477474961c08ef1a8e7f433fa846c",
+    "method": "Direct rsvg-convert export of the author-approved existing SVG to input-preparation-motivation.pdf; manuscript includes this PDF at column width",
+    "verified": "2026-10-06: manuscript rebuilt successfully; rendered page 1 inspected, with Figure 1 in the first-page right column"
+  },
+  "layout": "Two side-by-side panels in one row on page 1 at single-column width; three thin horizontal 100% stacked bars per panel",
+  "font": "Liberation Serif bold, 8–9 pt in the source, approximately 7.9–8.9 pt at the manuscript placement",
+  "uncertainty": "Original raster min/max marks retained through small image clips and a 90-degree axis rotation: x=plot_x+(444-y_source)*100/359; no numerical bounds inferred or synthesized",
+  "raw_measurements": "Not supplied; original author source and repetition count remain unavailable",
+  "format": "Vector bars and text, with image-backed original error-bar marks; self-contained editable SVG and PDF",
+  "verification": {
+    "figure_1_page": 1,
+    "architecture_figure_2_page": 3,
+    "agent_visual_qa": "Rendered final-width main PDF pages 1 and 3 inspected on 2026-10-06, with independent agent review. All twelve values, pair sums of 100%, bold fonts, tight label spacing, min/max coordinate mapping, and figure placement verified; no annotation overlap."
+  },
+  "annotation": "Both stage shares explicitly annotated beneath each bar, preparation in blue at the left and computation in dark orange at the right; percentage unit supplied by the value axis",
+  "operation_labels": {
+    "AND": "bitwise_and",
+    "Add": "addition",
+    "Mul": "multiplication"
+  },
+  "caption": "Latency shares with (a) CPU and (b) HPU homomorphic computation.",
+  "measurement_details": "Identical host CPU preparation, normalization denominator, means/min–max, and network exclusion are stated in the corresponding Introduction paragraph",
+  "value_axis": {
+    "label": "Latency share (%)",
+    "orientation": "horizontal",
+    "range": [
+      0,
+      100
+    ]
+  },
+  "source_size_pt": [
+    242,
+    133
+  ],
+  "bar_height_pt": 8,
+  "displayed_operations": [
+    "bitwise_and",
+    "addition",
+    "multiplication"
+  ],
+  "omitted_operation": "right_shift; omitted from both panels at the author's request, with corresponding Introduction and Description changes",
+  "row_pitch_pt": 23,
+  "input_preparation_percent": {
+    "cpu_only": [
+      0.75,
+      0.38,
+      0.11
+    ],
+    "hpu_accelerated": [
+      36.6,
+      26.9,
+      17.7
+    ]
+  },
+  "homomorphic_computation_percent": {
+    "cpu_only": [
+      99.25,
+      99.62,
+      99.89
+    ],
+    "hpu_accelerated": [
+      63.4,
+      73.1,
+      82.3
+    ]
+  }
+}

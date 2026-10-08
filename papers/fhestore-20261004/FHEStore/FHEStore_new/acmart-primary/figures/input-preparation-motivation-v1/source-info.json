@@ -1,0 +1,27 @@
+{
+  "source": "Author-provided image attached to the Introduction discussion on 2026-10-06",
+  "asset": "author-upload.png",
+  "width_px": 1504,
+  "height_px": 639,
+  "sha256": "471e27fcb20ed8b90b7fde11c2497d9e1aa2d424e9403cf904ad07f17adedc0b",
+  "transformation": "None; original PNG preserved",
+  "measurement_boundary": "SSD read, encoding and encryption until ciphertexts are ready in host memory; network transfer excluded",
+  "comparison": "Identical host CPU input preparation in both panels; homomorphic computation changes from CPU software to HPU acceleration",
+  "input_preparation_percent": {
+    "cpu_only": {
+      "bitwise_and": 0.75,
+      "right_shift": 0.17,
+      "addition": 0.38,
+      "multiplication": 0.11
+    },
+    "hpu_accelerated": {
+      "bitwise_and": 36.6,
+      "right_shift": 27.1,
+      "addition": 26.9,
+      "multiplication": 17.7
+    }
+  },
+  "raw_measurements": "Not provided in the current paper workspace",
+  "uncertainty_definition": "Author confirmed on 2026-10-06: bars use mean values; error bars show observed minimum and maximum",
+  "repetition_count": "Not supplied"
+}

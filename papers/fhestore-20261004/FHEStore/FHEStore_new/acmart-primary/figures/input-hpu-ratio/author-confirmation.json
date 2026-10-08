@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-08",
+  "authority": "Author clarification in the manuscript-editing conversation",
+  "author_statement": "实则是相同的，不用过于防御性写作",
+  "comparison": "The author confirms that the CPU baseline and FHEStore comparison uses the same experimental conditions. The CPU/FHEStore preparation-latency quotient is reported as input-preparation speedup.",
+  "source_snapshot": "source-data.json",
+  "source_snapshot_sha256": "bb4b7b1e5ca18f5ce999f340f4b0a3f047fef4fb8f8d2017f1823ac9cef27a11",
+  "numerical_data_changed": false,
+  "supersedes": "The historical comparability annotation in the preserved source snapshot.",
+  "plaintext_input_author_statement": "2.45×是1 KiB明文的input preparation的FHEStore和CPU baseline的加速比",
+  "plaintext_input_definition": "Batch size B denotes plaintext input bytes. The second operand is derived from the first by adding one modulo 256; summing the two constructed operand buffers does not redefine the author-confirmed plaintext input size."
+}

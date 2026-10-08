@@ -1,0 +1,10 @@
+{
+  "source": "Latest user inline attachment; original PNG bytes decoded without transformation",
+  "timestamp": "2026-10-05T12:33:57.648Z",
+  "recovery_method": "Locate the latest user input_image content block in the session JSONL; base64-decode its data:image/png image_url directly to author-upload.png. No rendering, redraw, crop, resampling, or re-encoding.",
+  "dimensions_px": [
+    686,
+    523
+  ],
+  "sha256": "5122e60429ac019c11736e870426481fb080fddec3c768801d3a9d33ff8dfc7c"
+}

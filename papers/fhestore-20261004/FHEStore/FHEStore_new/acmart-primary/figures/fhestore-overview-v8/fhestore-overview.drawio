@@ -1,0 +1,170 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device" version="24.7.17" compressed="false">
+  <diagram id="fhestore-overview-v8" name="Author-selected input production">
+    <mxGraphModel dx="1089" dy="370" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1089" pageHeight="370" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="csd" value="" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#D6E3F5;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="11" y="12" width="460" height="316" as="geometry" />
+        </mxCell>
+        <mxCell id="host" value="" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#F7F8FA;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="533" y="12" width="276" height="316" as="geometry" />
+        </mxCell>
+        <mxCell id="remote" value="" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#E1D6E7;strokeColor=#6D5B7B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="869" y="12" width="205" height="316" as="geometry" />
+        </mxCell>
+        <mxCell id="csd-title" value="FHEStore CSD" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=24;fontColor=#101010;fontStyle=1;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=left;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="19" y="19" width="400" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="host-title" value="Host" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=24;fontColor=#101010;fontStyle=1;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=left;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="541" y="16" width="245" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="remote-title" value="Remote Server" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=23;fontColor=#101010;fontStyle=1;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="880" y="19" width="184" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="storage-data-path" value="" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=#778897;strokeWidth=1.7;shadow=0;align=center;verticalAlign=middle;spacing=0;dashed=1;dashPattern=4 3;" vertex="1" parent="1">
+          <mxGeometry x="26" y="205" width="430" height="108" as="geometry" />
+        </mxCell>
+        <mxCell id="storage-title" value="Storage-side data path" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=19;fontColor=#101010;fontStyle=1;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=left;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="35" y="208" width="290" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="device-runtime" value="Device Runtime" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=21;fontColor=#101010;fontStyle=1;fillColor=#EDF1F5;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="172" y="111" width="230" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="application" value="Application" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=21;fontColor=#101010;fontStyle=1;fillColor=#FFFFFF;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="556" y="44" width="230" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="task-runtime" value="Task Runtime" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=21;fontColor=#101010;fontStyle=1;fillColor=#EDF1F5;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="556" y="111" width="230" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="persistent-data" value="Persistent&#10;data" style="shape=cylinder;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#FFF2CC;strokeColor=#778897;strokeWidth=2.2;shadow=1;align=center;verticalAlign=middle;spacing=0;size=0.12;boundedLbl=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="237" width="106" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="operator-pool" value="Operator Pool" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=21;fontColor=#101010;fontStyle=1;fillColor=#D6E9F2;strokeColor=#3C6584;strokeWidth=2.2;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="211" y="236" width="230" height="67" as="geometry" />
+        </mxCell>
+        <mxCell id="ciphertext-transfer" value="Ciphertext Transfer" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=1;fillColor=#F8F9FA;strokeColor=#778897;strokeWidth=1.7;shadow=0;align=center;verticalAlign=middle;spacing=0;dashed=1;dashPattern=4 3;" vertex="1" parent="1">
+          <mxGeometry x="549" y="204" width="245" height="109" as="geometry" />
+        </mxCell>
+        <mxCell id="server-software" value="Server-side&#10;Software" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#FFFFFF;strokeColor=#4B5C6B;strokeWidth=2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="887" y="96" width="172" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="fhe-accelerator" value="FHE&#10;Accelerator" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=0;fillColor=#CEE7F2;strokeColor=#3D6D92;strokeWidth=2.2;shadow=1;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="884" y="221" width="176" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="pcie-upper" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#202020;strokeWidth=2;endArrow=none;endFill=1;endSize=10;startArrow=none;exitX=1.0;exitY=0.05379746835443038;exitPerimeter=0;entryX=0.0;entryY=0.05379746835443038;entryPerimeter=0;" edge="1" parent="1" source="csd" target="host">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="471" y="29" as="sourcePoint" />
+            <mxPoint x="533" y="29" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pcie-lower" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#202020;strokeWidth=2;endArrow=none;endFill=1;endSize=10;startArrow=none;exitX=1.0;exitY=0.9525316455696202;exitPerimeter=0;entryX=0.0;entryY=0.9525316455696202;entryPerimeter=0;" edge="1" parent="1" source="csd" target="host">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="471" y="313" as="sourcePoint" />
+            <mxPoint x="533" y="313" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pcie-label" value="PCIe" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=20;fontColor=#101010;fontStyle=1;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="478" y="42" width="50" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="application-submit" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.4434782608695652;exitY=1.0;exitPerimeter=0;entryX=0.4434782608695652;entryY=0.0;entryPerimeter=0;" edge="1" parent="1" source="application" target="task-runtime">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="658" y="82" as="sourcePoint" />
+            <mxPoint x="658" y="111" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="application-complete" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.6086956521739131;exitY=0.0;exitPerimeter=0;entryX=0.6086956521739131;entryY=1.0;entryPerimeter=0;" edge="1" parent="1" source="task-runtime" target="application">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="696" y="111" as="sourcePoint" />
+            <mxPoint x="696" y="82" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="task-submit" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.0;exitY=0.34;exitPerimeter=0;entryX=1.0;entryY=0.34;entryPerimeter=0;" edge="1" parent="1" source="task-runtime" target="device-runtime">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="556" y="128" as="sourcePoint" />
+            <mxPoint x="402" y="128" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="task-complete" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=1.0;exitY=0.66;exitPerimeter=0;entryX=0.0;entryY=0.66;entryPerimeter=0;" edge="1" parent="1" source="device-runtime" target="task-runtime">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="402" y="144" as="sourcePoint" />
+            <mxPoint x="556" y="144" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="task-submit-label" value="Submit&#10;task" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=14;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="476" y="89" width="53" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="task-complete-label" value="Complete&#10;task" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=14;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="473" y="151" width="59" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="configure-execute" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.5043478260869565;exitY=1.0;exitPerimeter=0;entryX=0.3347826086956522;entryY=0.0;entryPerimeter=0;" edge="1" parent="1" source="device-runtime" target="operator-pool">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="288" y="161" as="sourcePoint" />
+            <mxPoint x="288" y="236" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="operator-complete" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.4608695652173913;exitY=0.0;exitPerimeter=0;entryX=0.6304347826086957;entryY=1.0;entryPerimeter=0;" edge="1" parent="1" source="operator-pool" target="device-runtime">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="317" y="236" as="sourcePoint" />
+            <mxPoint x="317" y="161" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="configure-label" value="configure / execute" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=14;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="146" y="171" width="135" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="operator-complete-label" value="complete" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=14;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=center;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="328" y="171" width="74" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="remote-submit" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.4127906976744186;exitY=1.0;exitPerimeter=0;entryX=0.42045454545454547;entryY=0.0;entryPerimeter=0;" edge="1" parent="1" source="server-software" target="fhe-accelerator">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="958" y="160" as="sourcePoint" />
+            <mxPoint x="958" y="221" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="remote-complete" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;exitX=0.6306818181818182;exitY=0.0;exitPerimeter=0;entryX=0.627906976744186;entryY=1.0;entryPerimeter=0;" edge="1" parent="1" source="fhe-accelerator" target="server-software">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="995" y="221" as="sourcePoint" />
+            <mxPoint x="995" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="storage-to-pool" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#315D83;strokeWidth=2.5;endArrow=block;endFill=1;endSize=12;startArrow=none;exitX=1.0;exitY=0.4852941176470588;exitPerimeter=0;entryX=0.0;entryY=0.5074626865671642;entryPerimeter=0;" edge="1" parent="1" source="persistent-data" target="operator-pool">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="146" y="270" as="sourcePoint" />
+            <mxPoint x="211" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pool-to-transfer" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#315D83;strokeWidth=2.5;endArrow=block;endFill=1;endSize=12;startArrow=none;exitX=1.0;exitY=0.5074626865671642;exitPerimeter=0;entryX=0.0;entryY=0.6055045871559633;entryPerimeter=0;" edge="1" parent="1" source="operator-pool" target="ciphertext-transfer">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="441" y="270" as="sourcePoint" />
+            <mxPoint x="549" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="transfer-to-consumer" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#315D83;strokeWidth=2.5;endArrow=block;endFill=1;endSize=12;startArrow=none;exitX=1.0;exitY=0.6055045871559633;exitPerimeter=0;entryX=0.0;entryY=0.7538461538461538;entryPerimeter=0;" edge="1" parent="1" source="ciphertext-transfer" target="fhe-accelerator">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="794" y="270" as="sourcePoint" />
+            <mxPoint x="884" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-data" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#315D83;strokeWidth=2.5;endArrow=block;endFill=1;endSize=12;startArrow=none;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="325" y="352" as="sourcePoint" />
+            <mxPoint x="377" y="352" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-data-label" value="Data flow" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=16;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=left;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="390" y="340" width="134" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-control" value="" style="edgeStyle=none;rounded=0;html=0;strokeColor=#596A7A;strokeWidth=2;endArrow=block;endFill=1;endSize=10;startArrow=none;dashed=1;dashPattern=5 3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="548" y="352" as="sourcePoint" />
+            <mxPoint x="600" y="352" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-control-label" value="Control flow" style="shape=rectangle;rounded=0;html=0;whiteSpace=wrap;overflow=visible;fontFamily=Arial;fontSize=16;fontColor=#101010;fontStyle=0;fillColor=none;strokeColor=none;strokeWidth=0;shadow=0;align=left;verticalAlign=middle;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="614" y="340" width="143" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
