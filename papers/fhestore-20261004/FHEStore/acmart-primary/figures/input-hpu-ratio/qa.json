@@ -1,0 +1,54 @@
+{
+  "source_data_sha256": "bb4b7b1e5ca18f5ce999f340f4b0a3f047fef4fb8f8d2017f1823ac9cef27a11",
+  "source_group_count": 70,
+  "panel_a_bar_count": 70,
+  "panel_a_batch_labels": 35,
+  "panel_b_bar_count": 10,
+  "panel_a_ratio_error_max_pct": 0.0,
+  "panel_a_sd_error_max_pct": 0.0,
+  "source_n_counts": {
+    "three_runs": 69,
+    "two_runs": 1
+  },
+  "two_run_group": [
+    "CSD",
+    "mul",
+    1024
+  ],
+  "latency_ratios_by_batch": {
+    "64": 2.578591233375942,
+    "128": 2.769051413417686,
+    "256": 2.608705513448269,
+    "512": 2.525980086035516,
+    "1024": 2.4502912869969755
+  },
+  "figure_width_inches": 7.0,
+  "figure_height_inches": 2.35,
+  "font_family": "Tinos",
+  "font_file": "/usr/share/fonts/truetype/croscore/Tinos-Bold.ttf",
+  "font_sizes_points": {
+    "ticks": 8.0,
+    "axis_labels": 8.25,
+    "group_labels": 8.5,
+    "panel_labels": 8.5,
+    "legend": 8.5,
+    "line_annotations": 8.0
+  },
+  "statistics": {
+    "a_height": "100 * mean(input preparation) / mean(HPU execution and synchronization)",
+    "a_error": "Sample SD of per-run ratios; 3 valid measurements except CSD MUL at 1024: 2.",
+    "b_height": "Equal-weight mean of seven operation-specific preparation means",
+    "b_error": "Range across those seven operation-specific means",
+    "right_axis": "CPU mean preparation / FHEStore mean preparation, input-preparation speedup"
+  },
+  "comparability": "The author confirms that the CPU baseline and FHEStore comparison uses the same experimental conditions. The CPU/FHEStore preparation-latency quotient is reported as input-preparation speedup.",
+  "comparison_authority": "Author clarification in the manuscript-editing conversation",
+  "comparison_confirmation_file": "author-confirmation.json",
+  "text_bounds_points": {
+    "minimum_x": 5.463999999999998,
+    "maximum_x": 499.95799999999997,
+    "minimum_y": 2.0,
+    "maximum_y": 163.26200000000003
+  },
+  "visual_qa": "Agent inspection of final-width PDF and PNG: all 35 batch labels remain readable; no text clipping or overlap"
+}

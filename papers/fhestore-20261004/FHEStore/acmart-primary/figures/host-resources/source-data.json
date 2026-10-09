@@ -1,0 +1,255 @@
+{
+  "batches": [
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "points": [
+    {
+      "backend": "cpu",
+      "batch": 64,
+      "n": 10,
+      "cpu_ms_mean": 59.803,
+      "cpu_ms_sd": 1.1371898111866212,
+      "cores_mean": 1.8251377473749637,
+      "cores_sd": 0.032442984114968154,
+      "rss_mean": 23.640625,
+      "rss_sd": 0.0
+    },
+    {
+      "backend": "cpu",
+      "batch": 128,
+      "n": 10,
+      "cpu_ms_mean": 104.0234,
+      "cpu_ms_sd": 2.4807810687586107,
+      "cores_mean": 2.3676761202732153,
+      "cores_sd": 0.04311369711551883,
+      "rss_mean": 23.640625,
+      "rss_sd": 0.0
+    },
+    {
+      "backend": "cpu",
+      "batch": 256,
+      "n": 10,
+      "cpu_ms_mean": 179.9041,
+      "cpu_ms_sd": 5.148346950451397,
+      "cores_mean": 2.8610178454721154,
+      "cores_sd": 0.11156095206565547,
+      "rss_mean": 34.600390625,
+      "rss_sd": 0.10161340204122861
+    },
+    {
+      "backend": "cpu",
+      "batch": 512,
+      "n": 10,
+      "cpu_ms_mean": 348.1996,
+      "cpu_ms_sd": 3.2283383135394366,
+      "cores_mean": 3.257259287288984,
+      "cores_sd": 0.10280917214295876,
+      "rss_mean": 66.92578125,
+      "rss_sd": 0.17180593625047644
+    },
+    {
+      "backend": "cpu",
+      "batch": 1024,
+      "n": 10,
+      "cpu_ms_mean": 641.5886,
+      "cpu_ms_sd": 22.87022512253769,
+      "cores_mean": 3.4907193572126265,
+      "cores_sd": 0.040352955008982935,
+      "rss_mean": 131.216796875,
+      "rss_sd": 0.16442636980496644
+    },
+    {
+      "backend": "cpu",
+      "batch": 2048,
+      "n": 10,
+      "cpu_ms_mean": 1287.1542,
+      "cpu_ms_sd": 66.1180627174686,
+      "cores_mean": 3.635133256434685,
+      "cores_sd": 0.09237278403837308,
+      "rss_mean": 260.087109375,
+      "rss_sd": 0.1860845189367832
+    },
+    {
+      "backend": "cpu",
+      "batch": 4096,
+      "n": 10,
+      "cpu_ms_mean": 2366.4595,
+      "cpu_ms_sd": 83.28665952033107,
+      "cores_mean": 3.75976387826125,
+      "cores_sd": 0.07078295126655754,
+      "rss_mean": 517.534375,
+      "rss_sd": 0.21248148918559417
+    },
+    {
+      "backend": "csd",
+      "batch": 64,
+      "n": 10,
+      "cpu_ms_mean": 18.624499999999998,
+      "cpu_ms_sd": 16.759585325352703,
+      "cores_mean": 0.3298865540030266,
+      "cores_sd": 0.10568175496929184,
+      "rss_mean": 17.9296875,
+      "rss_sd": 0.0
+    },
+    {
+      "backend": "csd",
+      "batch": 128,
+      "n": 10,
+      "cpu_ms_mean": 13.1817,
+      "cpu_ms_sd": 0.8450255814668173,
+      "cores_mean": 0.2384612292750689,
+      "cores_sd": 0.011774668656895925,
+      "rss_mean": 17.9296875,
+      "rss_sd": 0.0
+    },
+    {
+      "backend": "csd",
+      "batch": 256,
+      "n": 10,
+      "cpu_ms_mean": 19.0281,
+      "cpu_ms_sd": 2.3128454552779796,
+      "cores_mean": 0.23580741691712687,
+      "cores_sd": 0.02324924017915473,
+      "rss_mean": 20.73125,
+      "rss_sd": 0.028156329001615646
+    },
+    {
+      "backend": "csd",
+      "batch": 512,
+      "n": 10,
+      "cpu_ms_mean": 36.150299999999994,
+      "cpu_ms_sd": 4.034422471405019,
+      "cores_mean": 0.2568980576906541,
+      "cores_sd": 0.018962571327423558,
+      "rss_mean": 36.735546875,
+      "rss_sd": 0.0859779339852876
+    },
+    {
+      "backend": "csd",
+      "batch": 1024,
+      "n": 10,
+      "cpu_ms_mean": 58.003299999999996,
+      "cpu_ms_sd": 5.92732077474019,
+      "cores_mean": 0.23662672050537922,
+      "cores_sd": 0.019344035277797808,
+      "rss_mean": 68.9421875,
+      "rss_sd": 0.03545876786846943
+    },
+    {
+      "backend": "csd",
+      "batch": 2048,
+      "n": 10,
+      "cpu_ms_mean": 113.3022,
+      "cpu_ms_sd": 28.24998943873942,
+      "cores_mean": 0.23989073064793529,
+      "cores_sd": 0.041321294096150256,
+      "rss_mean": 133.1421875,
+      "rss_sd": 0.024234146091941335
+    },
+    {
+      "backend": "csd",
+      "batch": 4096,
+      "n": 10,
+      "cpu_ms_mean": 172.6014,
+      "cpu_ms_sd": 14.27872955911072,
+      "cores_mean": 0.2013133248607705,
+      "cores_sd": 0.012491470610269102,
+      "rss_mean": 261.8828125,
+      "rss_sd": 0.035990299377826176
+    }
+  ],
+  "sources": [
+    {
+      "path": "logs/encrypt_resources_qemu4_20261004/cpu/resource_raw.csv",
+      "sha256": "368e11be026609cdb7fa9cfd343b48a495114ba023368e1c669bca14f7e91af6"
+    },
+    {
+      "path": "logs/encrypt_resources_qemu4_20261004/csd/resource_raw.csv",
+      "sha256": "1087c0a0d8a2695588f066f201c00123513f2958e048e9fd61fbc8bb18c6d5ff"
+    }
+  ],
+  "configs": {
+    "cpu": {
+      "backend": "cpu",
+      "command": [
+        "taskset",
+        "-c",
+        "0-3",
+        "/mnt/suda/hpu/cpu-baseline/target/release/suda-lwe-cpu-baseline",
+        "--encrypt-only",
+        "--encrypt-output-layout",
+        "cpu",
+        "--storage-backend",
+        "fidus-ssd",
+        "--input-ssd",
+        "/dev/nvmq0n1",
+        "--input-lba",
+        "65536",
+        "--plaintext-bytes",
+        "{batch}",
+        "--cpu-threads",
+        "4",
+        "--client-key",
+        "/mnt/suda/hpu/keys/psi64/psi64_shortint_ks32_client_key.bincode"
+      ],
+      "platform": "Linux-5.4.211-dirty-x86_64-with-glibc2.36",
+      "cpu_affinity": "0-3",
+      "cpu_workers": 4,
+      "input_page_sha256": "534b300c117c55bbcc1f613e3704da6993db15c14f400a4433f51731c9db96ae",
+      "binary_sha256": "4cee4aaad7b5d808a75d77b3275ab92647cf78728db47517f358ab117335bd7a",
+      "key_sha256": "582947a24c185d9b90f52cb12bec9f608b66dcf9a0a47e8c347c6dc9e0184c76",
+      "scope": "complete host process; verification and dump disabled",
+      "cpu_time": "wait4 user+system across threads",
+      "peak_rss": "wait4 ru_maxrss in KiB; device SLM excluded",
+      "read_policy": "buffered application read; no forced cache eviction"
+    },
+    "csd": {
+      "backend": "csd",
+      "command": [
+        "taskset",
+        "-c",
+        "0-3",
+        "/mnt/suda/host/applications/vscode-lwe-encrypt-offload/vscode-lwe-encrypt-offload",
+        "--ssd-nsid",
+        "1",
+        "--ssd-lba",
+        "65536",
+        "--input-lbas",
+        "1",
+        "--plaintext-bytes",
+        "{batch}",
+        "--output-layout",
+        "cpu",
+        "--slm-read-chunk-bytes",
+        "134217728",
+        "--slm-read-queue-depth",
+        "1",
+        "--key",
+        "/mnt/suda/device/operators/hls/lwe_encrypt/testdata/psi64_big_lwe_secret_key.bin",
+        "--benchmark",
+        "--skip-dump",
+        "--skip-verify"
+      ],
+      "platform": "Linux-5.4.211-dirty-x86_64-with-glibc2.36",
+      "cpu_affinity": "0-3",
+      "cpu_workers": null,
+      "input_page_sha256": "534b300c117c55bbcc1f613e3704da6993db15c14f400a4433f51731c9db96ae",
+      "binary_sha256": "c68e31288e4cfd6f1283c24ec9c0a52c45b47e97f0e55b075293b75c7710e05d",
+      "key_sha256": "b5f4d159d1b14870a5b3e45da870c1dd281175485a4f649d5405c76c30fd47e9",
+      "scope": "complete host process; verification and dump disabled",
+      "cpu_time": "wait4 user+system across threads",
+      "peak_rss": "wait4 ru_maxrss in KiB; device SLM excluded",
+      "read_policy": "buffered application read; no forced cache eviction"
+    }
+  },
+  "aggregation": "Mean and sample SD of 10 valid invocations per backend/batch; no outlier exclusions.",
+  "scope": "Complete QEMU host application process; device SLM, ARM runtime and QEMU host process excluded.",
+  "generator": "CipherStore/samples/figures/build_encrypt_host_resources.py",
+  "placement": "single-column; 900px source canvas; text >= 26px (~9pt at 3.33in)"
+}

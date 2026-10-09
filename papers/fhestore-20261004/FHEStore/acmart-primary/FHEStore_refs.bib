@@ -8,6 +8,14 @@
   doi = {10.1007/s00145-019-09319-x}
 }
 
+% Recommended citation verified in the official repository README, Citations.
+@misc{zama2025hpu,
+  author = {{Zama}},
+  title = {{A systemVerilog implementation of the Homomorphic Processing Unit (HPU) targeting AMD Alveo V80 FPGA board}},
+  year = {2025},
+  url = {https://github.com/zama-ai/hpu_fpga}
+}
+
 @inproceedings{xu2026hera,
   author = {Xu, Zhihan and Kannan, Rajgopal and Prasanna, Viktor},
   title = {{HERA}: A Bandwidth-efficient Accelerator for Fully Homomorphic Encryption on {HBM}-enabled {FPGA}},
@@ -224,4 +232,125 @@
   month = may,
   note = {Released May 31, 2025},
   url = {https://www.snia.org/sites/default/files/technical-work/computational/release/SNIA-Computational-Storage-Architecture-and-Programming-Model-1.1.pdf}
+}
+
+
+% Additional primary literature checked on 2026-10-07.
+@inproceedings{samardzic2021f1,
+  author = {Samardzic, Nikola and Feldmann, Axel and Krastev, Aleksandar and Devadas, Srinivas and Dreslinski, Ronald and Peikert, Christopher and Sanchez, Daniel},
+  title = {{F1}: A Fast and Programmable Accelerator for Fully Homomorphic Encryption},
+  booktitle = {MICRO-54: 54th Annual IEEE/ACM International Symposium on Microarchitecture},
+  series = {MICRO '21},
+  pages = {238--252},
+  year = {2021},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3466752.3480070},
+  url = {https://people.csail.mit.edu/devadas/pubs/micro21_fhe.pdf}
+}
+
+@inproceedings{samardzic2022craterlake,
+  author = {Samardzic, Nikola and Feldmann, Axel and Krastev, Aleksandar and Manohar, Nathan and Genise, Nicholas and Devadas, Srinivas and Eldefrawy, Karim and Peikert, Chris and Sanchez, Daniel},
+  title = {{CraterLake}: A Hardware Accelerator for Efficient Unbounded Computation on Encrypted Data},
+  booktitle = {Proceedings of the 49th Annual International Symposium on Computer Architecture},
+  series = {ISCA '22},
+  pages = {173--187},
+  year = {2022},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3470496.3527393},
+  url = {https://people.csail.mit.edu/devadas/pubs/craterlake.pdf}
+}
+
+@inproceedings{jiang2022matcha,
+  author = {Jiang, Lei and Lou, Qian and Joshi, Nrushad},
+  title = {{MATCHA}: A Fast and Energy-Efficient Accelerator for Fully Homomorphic Encryption over the Torus},
+  booktitle = {Proceedings of the 59th ACM/IEEE Design Automation Conference},
+  series = {DAC '22},
+  pages = {235--240},
+  year = {2022},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3489517.3530435},
+  url = {https://arxiv.org/abs/2202.08814v1}
+}
+
+@inproceedings{putra2023strix,
+  author = {Putra, Adiwena and {Prasetiyo} and Chen, Yi and Kim, John and Kim, Joo-Young},
+  title = {{Strix}: An End-to-End Streaming Architecture with Two-Level Ciphertext Batching for Fully Homomorphic Encryption with Programmable Bootstrapping},
+  booktitle = {56th Annual IEEE/ACM International Symposium on Microarchitecture},
+  series = {MICRO '23},
+  pages = {1319--1331},
+  year = {2023},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3613424.3614264},
+  url = {https://arxiv.org/abs/2305.11423v1}
+}
+
+@article{woods2014ibex,
+  author = {Woods, Louis and Istv{\'a}n, Zsolt and Alonso, Gustavo},
+  title = {{Ibex}---An Intelligent Storage Engine with Support for Advanced {SQL} Off-loading},
+  journal = {Proceedings of the VLDB Endowment},
+  volume = {7},
+  number = {11},
+  pages = {963--974},
+  year = {2014},
+  doi = {10.14778/2732967.2732972},
+  url = {https://vldb.org/pvldb/vol7/p963-woods.pdf}
+}
+
+@inproceedings{gu2016biscuit,
+  author = {Gu, Boncheol and Yoon, Andre S. and Bae, Duck-Ho and Jo, Insoon and Lee, Jinyoung and Yoon, Jonghyun and Kang, Jeong-Uk and Kwon, Moonsang and Yoon, Chanho and Cho, Sangyeun and Jeong, Jaeheon and Chang, Duckhyun},
+  title = {{Biscuit}: A Framework for Near-Data Processing of Big Data Workloads},
+  booktitle = {2016 ACM/IEEE 43rd Annual International Symposium on Computer Architecture (ISCA)},
+  pages = {153--165},
+  year = {2016},
+  publisher = {IEEE},
+  doi = {10.1109/ISCA.2016.23}
+}
+
+% Author's journal paper, Sec. 1; formal journal metadata cross-checked.
+@article{regev2009lwe,
+  author = {Regev, Oded},
+  title = {On Lattices, Learning with Errors, Random Linear Codes, and Cryptography},
+  journal = {Journal of the ACM},
+  volume = {56},
+  number = {6},
+  articleno = {34},
+  numpages = {40},
+  year = {2009},
+  month = sep,
+  doi = {10.1145/1568318.1568324},
+  url = {https://cims.nyu.edu/~regev/papers/qcrypto.pdf}
+}
+
+% Official fixed-version standard, p. 7, Sec. 1.4.3.1.
+@manual{nvme2025slm,
+  author = {{NVM Express}},
+  title = {{NVM Express} Subsystem Local Memory Command Set Specification},
+  organization = {NVM Express, Inc.},
+  edition = {Revision 1.2},
+  year = {2025},
+  url = {https://nvmexpress.org/wp-content/uploads/NVM-Express-Subsystem-Local-Memory-Command-Set-Specification-Revision-1.2-2025.08.01-Ratified.pdf}
+}
+
+% Official specification, history p. 5 and DBGEN definition Sec. 4.2.1.
+@manual{tpch2022spec,
+  author = {{Transaction Processing Performance Council}},
+  title = {{TPC Benchmark H} Standard Specification},
+  organization = {Transaction Processing Performance Council},
+  edition = {Revision 3.0.1},
+  year = {2022},
+  month = apr,
+  url = {https://www.tpc.org/TPC_Documents_Current_Versions/pdf/TPC-H_v3.0.1.pdf}
+}
+
+% Dataset collectors credited by the official MIT CSAIL data page.
+@misc{bodik2004intellab,
+  author = {Bodik, Peter and Hong, Wei and Guestrin, Carlos and Madden, Samuel and Paskin, Mark and Thibaux, Romain},
+  title = {{Intel Lab Data}},
+  year = {2004},
+  url = {https://db.csail.mit.edu/labdata/labdata.html},
+  urldate = {2026-10-07}
 }

@@ -1,0 +1,408 @@
+{
+  "placement": {
+    "width_in": 3.337,
+    "single_column": true
+  },
+  "font": {
+    "family": "Tinos",
+    "bold_file": "/usr/share/fonts/truetype/croscore/Tinos-Bold.ttf",
+    "axis_label_pt": 8.8,
+    "ticks_pt": 8.3,
+    "resource_mean_labels_pt": 8.2
+  },
+  "palette": {
+    "CPU baseline": "#4C78A8",
+    "FHEStore": "#E58D5C",
+    "FHEStore_hatch": "///"
+  },
+  "sources": [
+    {
+      "file": "host-resources/source-data.json",
+      "sha256": "6b8e88c1874efcca000a4c1e31e353d5ac7040df47b069fb22f2f2308d96ebdb"
+    },
+    {
+      "file": "selective-generation/combined-source-data.json",
+      "sha256": "88dad337d75ec6c698d921fb657b6108cd8c30949bcf6fe5d17099d3902b71d8"
+    }
+  ],
+  "host-cpu-time": {
+    "source_metric": "cpu_ms",
+    "units": "ms",
+    "height_pt": 154,
+    "error": "sample SD",
+    "points": [
+      {
+        "backend": "cpu",
+        "batch": 64,
+        "mean": 59.803,
+        "sample_sd": 1.1371898111866212,
+        "n": 10,
+        "mean_label": "60"
+      },
+      {
+        "backend": "cpu",
+        "batch": 128,
+        "mean": 104.0234,
+        "sample_sd": 2.4807810687586107,
+        "n": 10,
+        "mean_label": "104"
+      },
+      {
+        "backend": "cpu",
+        "batch": 256,
+        "mean": 179.9041,
+        "sample_sd": 5.148346950451397,
+        "n": 10,
+        "mean_label": "180"
+      },
+      {
+        "backend": "cpu",
+        "batch": 512,
+        "mean": 348.1996,
+        "sample_sd": 3.2283383135394366,
+        "n": 10,
+        "mean_label": "348"
+      },
+      {
+        "backend": "cpu",
+        "batch": 1024,
+        "mean": 641.5886,
+        "sample_sd": 22.87022512253769,
+        "n": 10,
+        "mean_label": "642"
+      },
+      {
+        "backend": "cpu",
+        "batch": 2048,
+        "mean": 1287.1542,
+        "sample_sd": 66.1180627174686,
+        "n": 10,
+        "mean_label": "1287"
+      },
+      {
+        "backend": "cpu",
+        "batch": 4096,
+        "mean": 2366.4595,
+        "sample_sd": 83.28665952033107,
+        "n": 10,
+        "mean_label": "2366"
+      },
+      {
+        "backend": "csd",
+        "batch": 64,
+        "mean": 18.624499999999998,
+        "sample_sd": 16.759585325352703,
+        "n": 10,
+        "mean_label": "19"
+      },
+      {
+        "backend": "csd",
+        "batch": 128,
+        "mean": 13.1817,
+        "sample_sd": 0.8450255814668173,
+        "n": 10,
+        "mean_label": "13"
+      },
+      {
+        "backend": "csd",
+        "batch": 256,
+        "mean": 19.0281,
+        "sample_sd": 2.3128454552779796,
+        "n": 10,
+        "mean_label": "19"
+      },
+      {
+        "backend": "csd",
+        "batch": 512,
+        "mean": 36.150299999999994,
+        "sample_sd": 4.034422471405019,
+        "n": 10,
+        "mean_label": "36"
+      },
+      {
+        "backend": "csd",
+        "batch": 1024,
+        "mean": 58.003299999999996,
+        "sample_sd": 5.92732077474019,
+        "n": 10,
+        "mean_label": "58"
+      },
+      {
+        "backend": "csd",
+        "batch": 2048,
+        "mean": 113.3022,
+        "sample_sd": 28.24998943873942,
+        "n": 10,
+        "mean_label": "113"
+      },
+      {
+        "backend": "csd",
+        "batch": 4096,
+        "mean": 172.6014,
+        "sample_sd": 14.27872955911072,
+        "n": 10,
+        "mean_label": "173"
+      }
+    ],
+    "raised_cpu_labels": [
+      128,
+      256
+    ]
+  },
+  "host-memory": {
+    "source_metric": "rss",
+    "units": "MiB",
+    "height_pt": 154,
+    "error": "sample SD",
+    "points": [
+      {
+        "backend": "cpu",
+        "batch": 64,
+        "mean": 23.640625,
+        "sample_sd": 0.0,
+        "n": 10,
+        "mean_label": "24"
+      },
+      {
+        "backend": "cpu",
+        "batch": 128,
+        "mean": 23.640625,
+        "sample_sd": 0.0,
+        "n": 10,
+        "mean_label": "24"
+      },
+      {
+        "backend": "cpu",
+        "batch": 256,
+        "mean": 34.600390625,
+        "sample_sd": 0.10161340204122861,
+        "n": 10,
+        "mean_label": "35"
+      },
+      {
+        "backend": "cpu",
+        "batch": 512,
+        "mean": 66.92578125,
+        "sample_sd": 0.17180593625047644,
+        "n": 10,
+        "mean_label": "67"
+      },
+      {
+        "backend": "cpu",
+        "batch": 1024,
+        "mean": 131.216796875,
+        "sample_sd": 0.16442636980496644,
+        "n": 10,
+        "mean_label": "131"
+      },
+      {
+        "backend": "cpu",
+        "batch": 2048,
+        "mean": 260.087109375,
+        "sample_sd": 0.1860845189367832,
+        "n": 10,
+        "mean_label": "260"
+      },
+      {
+        "backend": "cpu",
+        "batch": 4096,
+        "mean": 517.534375,
+        "sample_sd": 0.21248148918559417,
+        "n": 10,
+        "mean_label": "518"
+      },
+      {
+        "backend": "csd",
+        "batch": 64,
+        "mean": 17.9296875,
+        "sample_sd": 0.0,
+        "n": 10,
+        "mean_label": "18"
+      },
+      {
+        "backend": "csd",
+        "batch": 128,
+        "mean": 17.9296875,
+        "sample_sd": 0.0,
+        "n": 10,
+        "mean_label": "18"
+      },
+      {
+        "backend": "csd",
+        "batch": 256,
+        "mean": 20.73125,
+        "sample_sd": 0.028156329001615646,
+        "n": 10,
+        "mean_label": "21"
+      },
+      {
+        "backend": "csd",
+        "batch": 512,
+        "mean": 36.735546875,
+        "sample_sd": 0.0859779339852876,
+        "n": 10,
+        "mean_label": "37"
+      },
+      {
+        "backend": "csd",
+        "batch": 1024,
+        "mean": 68.9421875,
+        "sample_sd": 0.03545876786846943,
+        "n": 10,
+        "mean_label": "69"
+      },
+      {
+        "backend": "csd",
+        "batch": 2048,
+        "mean": 133.1421875,
+        "sample_sd": 0.024234146091941335,
+        "n": 10,
+        "mean_label": "133"
+      },
+      {
+        "backend": "csd",
+        "batch": 4096,
+        "mean": 261.8828125,
+        "sample_sd": 0.035990299377826176,
+        "n": 10,
+        "mean_label": "262"
+      }
+    ],
+    "raised_cpu_labels": []
+  },
+  "six-conditions": {
+    "units": "ms",
+    "height_pt": 137,
+    "error": "sample SD",
+    "statistic": "arithmetic mean",
+    "points": [
+      {
+        "condition": "C1",
+        "dataset": "TPC-H",
+        "source_panel": 0,
+        "source_row": "75",
+        "backend": "cpu",
+        "mean": 414.936608,
+        "sample_sd": 0.9931574833766474,
+        "n": 3
+      },
+      {
+        "condition": "C2",
+        "dataset": "TPC-H",
+        "source_panel": 0,
+        "source_row": "50",
+        "backend": "cpu",
+        "mean": 288.026018,
+        "sample_sd": 16.735404978677273,
+        "n": 3
+      },
+      {
+        "condition": "C3",
+        "dataset": "TPC-H",
+        "source_panel": 2,
+        "source_row": "Q2",
+        "backend": "cpu",
+        "mean": 183.9233,
+        "sample_sd": 9.847826559738493,
+        "n": 3
+      },
+      {
+        "condition": "C4",
+        "dataset": "Intel Lab",
+        "source_panel": 1,
+        "source_row": "75",
+        "backend": "cpu",
+        "mean": 416.4085566666667,
+        "sample_sd": 1.6148544545841799,
+        "n": 3
+      },
+      {
+        "condition": "C5",
+        "dataset": "Intel Lab",
+        "source_panel": 1,
+        "source_row": "50",
+        "backend": "cpu",
+        "mean": 299.4563376666667,
+        "sample_sd": 2.6377836140177053,
+        "n": 3
+      },
+      {
+        "condition": "C6",
+        "dataset": "Intel Lab",
+        "source_panel": 2,
+        "source_row": "Q4",
+        "backend": "cpu",
+        "mean": 168.621478,
+        "sample_sd": 16.12681677437193,
+        "n": 3
+      },
+      {
+        "condition": "C1",
+        "dataset": "TPC-H",
+        "source_panel": 0,
+        "source_row": "75",
+        "backend": "fhestore",
+        "mean": 124.53633333333333,
+        "sample_sd": 2.912995422813659,
+        "n": 3
+      },
+      {
+        "condition": "C2",
+        "dataset": "TPC-H",
+        "source_panel": 0,
+        "source_row": "50",
+        "backend": "fhestore",
+        "mean": 85.89766666666667,
+        "sample_sd": 4.418125658391048,
+        "n": 3
+      },
+      {
+        "condition": "C3",
+        "dataset": "TPC-H",
+        "source_panel": 2,
+        "source_row": "Q2",
+        "backend": "fhestore",
+        "mean": 50.376,
+        "sample_sd": 0.2837551761642419,
+        "n": 3
+      },
+      {
+        "condition": "C4",
+        "dataset": "Intel Lab",
+        "source_panel": 1,
+        "source_row": "75",
+        "backend": "fhestore",
+        "mean": 120.77566666666667,
+        "sample_sd": 0.34255267234883624,
+        "n": 3
+      },
+      {
+        "condition": "C5",
+        "dataset": "Intel Lab",
+        "source_panel": 1,
+        "source_row": "50",
+        "backend": "fhestore",
+        "mean": 90.15333333333334,
+        "sample_sd": 3.1192693588937352,
+        "n": 3
+      },
+      {
+        "condition": "C6",
+        "dataset": "Intel Lab",
+        "source_panel": 2,
+        "source_row": "Q4",
+        "backend": "fhestore",
+        "mean": 51.23466666666667,
+        "sample_sd": 1.5774968568378622,
+        "n": 3
+      }
+    ]
+  },
+  "validation": {
+    "plotted_means_sample_sds_and_n_equal_source_exactly": true,
+    "rounded_resource_labels_unchanged": true,
+    "selective_samples_recomputed_in_generator": true,
+    "text_clipping_checked_at_final_width": true,
+    "all_text_bold": true
+  }
+}
